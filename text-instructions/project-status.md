@@ -1,25 +1,24 @@
-# Spotter App - AI Workout Processing Status
+# Spotter App - Workout Processing Status
 
 ## Project Overview
-We've successfully implemented a complete AI-powered workout import and processing system for the Spotter fitness app. The system allows users to import Instagram workout posts, process them with OpenAI's language models, and save structured workout data.
+Transitioning from AI-powered workout processing to a simpler, user-controlled workout builder. The system will allow users to import Instagram workout posts, manually build workouts from captions, and save structured workout data.
 
 ## ✅ Completed Features
 
-### 1. **AI Integration (Complete)**
-- **OpenAI Integration**: Fully functional with gpt-4o-mini (primary) and o4-mini (fallback) models
-- **Layered Model Approach**: Cost-optimized routing with confidence gating (0.8 threshold)
-- **Structured Output**: AI extracts individual exercises with sets, reps, weights, and rest periods
-- **Enhanced Prompt**: Strict Instagram caption parser that doesn't hallucinate missing data
-
-### 2. **Complete User Workflow (Complete)**
-- **Import Flow**: Instagram URL → Fetch content → AI processing → Edit → Save → Display
-- **Loading States**: Sophisticated loading animations and LLM processing indicators
+### 1. **Instagram Integration (Complete)**
+- **Apify Integration**: Instagram URL fetching with workout caption extraction
+- **Clean Caption Parsing**: Basic workout pattern recognition for initial structure
 - **Error Handling**: Graceful fallbacks and user-friendly error messages
 
-### 3. **UI Components (Complete)**
-- **Import Page**: Multi-tab interface (URL/Image/Manual) with AI integration
+### 2. **Current User Workflow (Needs Update)**
+- **Import Flow**: Instagram URL → Fetch content → Manual workout building → Save → Display
+- **Loading States**: Loading animations for Instagram fetching
+- **Error Handling**: Basic error handling for failed Instagram fetches
+
+### 3. **UI Components (Partially Complete)**
+- **Import Page**: Multi-tab interface (URL/Image/Manual) - needs AI removal
 - **Edit Page**: Structured exercise table with inline editing capabilities
-- **View Page**: Complete workout display with AI enhancement badges
+- **View Page**: Complete workout display - needs AI badge removal
 - **Dark Theme**: All components match platform design language
 
 ### 4. **Data Structure (Complete)**
@@ -31,116 +30,153 @@ We've successfully implemented a complete AI-powered workout import and processi
 
 ### **File Structure**
 ```
-spotter-fresh/
+spotter-free/
 ├── src/
 │   ├── app/
-│   │   ├── add/page.tsx (Import page with AI integration)
+│   │   ├── add/page.tsx (Import page - needs AI removal)
 │   │   ├── add/edit/page.tsx (Exercise editing interface)
 │   │   ├── workout/[id]/page.tsx (Workout display)
-│   │   └── api/ingest/route.ts (AI processing endpoint)
-│   ├── lib/llm/
+│   │   ├── api/instagram-fetch/route.ts (Instagram fetching)
+│   │   └── api/ingest/route.ts (TO BE REMOVED - AI processing)
+│   ├── lib/llm/ (TO BE REMOVED)
 │   │   ├── repair.ts (OpenAI function calling)
 │   │   ├── router.ts (Layered model routing)
 │   │   └── tools.ts (Structured output schema)
 │   ├── components/ui/
-│   │   ├── llm-processing.tsx (AI processing overlay)
+│   │   ├── llm-processing.tsx (TO BE REMOVED - AI processing overlay)
 │   │   └── loading-spinner.tsx (Loading animations)
 │   └── lib/editable-workout-table.tsx (Exercise table component)
 ```
 
 ### **Current Server Status**
-- **Running on**: `localhost:3007`
+- **Running on**: `localhost:3000` (default Next.js port)
 - **Status**: ✅ Clean - No Jest worker errors
-- **APIs**: All functional (Instagram fetch, LLM processing)
-- **Environment**: `.env.local` configured with OpenAI keys
+- **APIs**: Instagram fetch functional, AI processing to be removed
+- **Environment**: `.env.local` configured with Apify token
 
 ## 📊 What's Working Now
 
 ### **Core Functionality**
 1. **Instagram Import**: 
    - Paste Instagram URL → Auto-fetch content
-   - AI processes caption into structured exercises
+   - Basic caption parsing for exercise detection
    - Real-time loading indicators
 
-2. **AI Processing**:
-   ```json
-   // Example output:
-   "exercises":[
-     {"movement":"push-ups","sets":3,"reps":"10","weight":"bodyweight","restSeconds":60},
-     {"movement":"squats","sets":3,"reps":"15","weight":"bodyweight","restSeconds":60}
-   ]
-   ```
+2. **Manual Workout Building** (NEW APPROACH):
+   - Each line from Instagram caption becomes a table row
+   - Users manually remove unwanted lines
+   - Users manually structure exercises (sets, reps, etc.)
+   - Simple, user-controlled workflow
 
 3. **Exercise Editing**:
    - Inline editing of all exercise fields
    - Add/remove/duplicate exercises
-   - Auto-suggestions for movements and weights
+   - Manual entry for movements and weights
 
 4. **Data Persistence**:
    - Saves to localStorage as complete workout objects
-   - Includes AI metadata and source tracking
+   - No AI metadata, simple source tracking
 
-## 🔧 Recent Fixes Applied
+## 🔧 Required Changes
 
-### **Jest Worker Error Resolution**
-- **Issue**: TypeScript compilation errors causing Jest worker crashes
-- **Solution**: Disabled non-essential problematic files (image processing, unused APIs)
-- **Status**: ✅ Completely resolved - server runs cleanly
+### **🚨 HIGH PRIORITY - Remove AI Implementation**
+1. **Remove AI Processing**:
+   - Delete `/api/ingest/route.ts` (OpenAI processing endpoint)
+   - Remove `lib/llm/` folder (repair.ts, router.ts, tools.ts)
+   - Remove `llm-processing.tsx` component
+   - Remove OpenAI environment variables
 
-### **UI Improvements**
-- **Table Styling**: Updated to match dark theme with proper spacing
-- **Icons**: Replaced emojis with professional SVG icons
-- **Interactions**: Better hover states and transitions
+2. **Update Import Flow**:
+   - Remove AI processing calls from import page
+   - Implement simple line-by-line caption parsing
+   - Each caption line becomes an editable table row
 
-### **OpenAI Integration**
-- **Temperature Fix**: Conditional temperature setting for different models
-- **Function Calling**: Proper type checking for OpenAI responses
-- **Error Handling**: Graceful degradation when API unavailable
+### **🛠️ BUILD OUT - Simple Workout Builder**
+1. **Caption-to-Table Logic**:
+   - Split Instagram caption into individual lines
+   - Filter out hashtags, mentions, emojis (optional)
+   - Present each line as an editable table row
+   - Allow users to delete unwanted rows
 
-## 🎯 Next Steps / Future Enhancements
+2. **Manual Exercise Structuring**:
+   - Users manually fill in sets, reps, weight columns
+   - Simple dropdown suggestions for common exercises
+   - No AI processing - pure user input
 
-### **Immediate (Optional)**
-1. **Image Upload Re-enablement**: 
-   - Restore `extractWorkoutFromImage.ts` with fixed TypeScript issues
-   - Re-enable OCR processing tab
+3. **Save Workflow**:
+   - Save manually created workouts to library
+   - Include source Instagram URL for reference
 
-2. **Additional Workout Sources**:
-   - TikTok URL support
-   - YouTube video description parsing
+## 🎯 Implementation Tasks
 
-### **Future Features**
-1. **Workout Templates**: Save frequently used workout structures
-2. **Exercise Database**: Expandable movement library with form videos
-3. **Progress Tracking**: Save workout completion data
-4. **Social Features**: Share processed workouts
+### **🚨 IMMEDIATE - Remove AI (Required)**
+1. **Remove AI Implementation**:
+   - Delete AI processing endpoint and LLM folder
+   - Remove OpenAI dependencies from package.json
+   - Clean up AI-related UI components
+   - Update environment variable requirements
+
+2. **Build Simple Workout Builder**:
+   - Create line-by-line caption parser
+   - Build table interface for manual exercise entry
+   - Implement row deletion functionality
+   - Create save-to-library workflow
+
+### **Future Features (Lower Priority)**
+1. **Enhanced Manual Builder**:
+   - Exercise name suggestions/autocomplete
+   - Common weight/rep templates
+   - Workout categories and tags
+
+2. **Additional Sources**:
+   - Manual text paste input
+   - Image OCR (non-AI based)
+   - Template-based workout creation
 
 ## 🗂️ File Locations
 
 ### **Key Configuration Files**
-- **Environment**: `spotter-fresh/.env.local` (OpenAI keys)
-- **LLM Prompt**: `src/lib/llm/repair.ts:6-37` (System prompt)
-- **Schema**: `src/lib/llm/tools.ts` (Structured output definition)
+- **Environment**: `spotter-free/.env.local` (Apify API token only)
+- **Instagram Parser**: `src/app/api/instagram-fetch/route.ts` (Keep)
+- **Workout Builder**: `src/lib/editable-workout-table.tsx` (Update)
 
-### **Temporarily Disabled (Can be re-enabled)**
-- `src/app/api/parse-workout/route.ts.bak`
-- `src/lib/extractWorkoutFromImage.ts.bak`
+### **Files to Remove**
+- `src/app/api/ingest/route.ts` (AI processing)
+- `src/lib/llm/` (entire folder)
+- `src/components/ui/llm-processing.tsx`
+- OpenAI dependencies in package.json
+
+### **Files to Update**
+- `src/app/add/page.tsx` (remove AI calls)
+- `src/app/add/edit/page.tsx` (simple manual builder)
 
 ## 🚀 Current State
 
-The application is **fully functional** with:
-- ✅ AI-powered workout extraction
-- ✅ Complete user workflow
-- ✅ Clean, modern UI
-- ✅ Error-free server operation
-- ✅ Structured exercise data output
+**TRANSITION REQUIRED** - Moving from AI to manual approach:
+- ✅ Instagram URL fetching functional
+- ❌ AI processing needs removal
+- ✅ Basic UI structure in place
+- ❌ Manual workout builder needs implementation
+- ✅ Data persistence working
 
-**Ready for**: Production use, user testing, or additional feature development.
+**Next Steps**: Remove AI dependencies and implement simple workout builder.
 
-## 🔄 How to Continue Development
+## 🔄 Development Plan
 
-1. **Start Server**: `cd spotter-fresh && npm run dev` (runs on port 3007)
-2. **Test Flow**: Import Instagram workout → Edit exercises → Save → View
-3. **Modify AI**: Update prompts in `src/lib/llm/repair.ts`
-4. **Extend Schema**: Add fields in `src/lib/llm/tools.ts`
+### **Phase 1: Remove AI (Critical)**
+1. **Clean Removal**: Delete AI files and dependencies
+2. **Update Import Flow**: Remove AI processing calls
+3. **Test**: Ensure Instagram fetching still works
 
-The core AI workout processing system is complete and production-ready.
+### **Phase 2: Build Manual Workflow**
+1. **Caption Parser**: Split lines into table rows
+2. **Row Management**: Add/delete row functionality
+3. **Manual Input**: User-controlled exercise structuring
+4. **Save Flow**: Persist manually created workouts
+
+### **Phase 3: Polish**
+1. **UI Cleanup**: Remove AI badges and indicators
+2. **User Testing**: Validate manual workflow
+3. **Documentation**: Update setup instructions
+
+**Goal**: Simple, user-controlled workout builder without AI complexity.
