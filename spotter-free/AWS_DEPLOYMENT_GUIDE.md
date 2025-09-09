@@ -83,7 +83,7 @@ docker build -t spotter-app .
 ### 3.2 Test Docker Image Locally (Optional)
 ```bash
 # Test locally first
-docker run -p 3000:3000 -e OPENAI_API_KEY=your_openai_key_here spotter-app
+docker run -p 3000:3000 spotter-app
 
 # Visit http://localhost:3000 to verify it works
 # Press Ctrl+C to stop
@@ -117,16 +117,15 @@ I've created a PowerShell script that automates the entire deployment process!
 
 ```powershell
 # Run this command from PowerShell in your project directory:
-.\deploy-to-aws.ps1 -OpenAIKey "your_openai_api_key_here"
+.\deploy-to-aws.ps1
 
 # Optional: specify different region
-.\deploy-to-aws.ps1 -OpenAIKey "your_openai_api_key_here" -Region "us-west-2"
+.\deploy-to-aws.ps1 -Region "us-west-2"
 ```
 
 **What the script does:**
 ✅ Creates ECR repository  
 ✅ Builds and pushes Docker image  
-✅ Stores OpenAI API key securely in AWS Systems Manager  
 ✅ Creates IAM roles and policies  
 ✅ Sets up ECS cluster  
 ✅ Creates Application Load Balancer  
@@ -146,17 +145,8 @@ I've created a PowerShell script that automates the entire deployment process!
 
 If you prefer to do each step manually, continue with the sections below:
 
-### 5.1 Store OpenAI API Key Securely
-```bash
-# Store your OpenAI API key in AWS Systems Manager
-aws ssm put-parameter \
-  --name "/spotter-app/openai-api-key" \
-  --value "your_openai_api_key_here" \
-  --type "SecureString" \
-  --region us-east-1
-```
 
-### 5.2 Create IAM Roles
+### 5.1 Create IAM Roles
 ```bash
 # Create ECS task execution role
 aws iam create-role \
@@ -198,7 +188,7 @@ aws iam put-role-policy \
   }'
 ```
 
-### 5.3 Update Task Definition
+### 5.2 Update Task Definition
 ```bash
 # Get your AWS account ID
 aws sts get-caller-identity --query Account --output text
@@ -207,19 +197,19 @@ aws sts get-caller-identity --query Account --output text
 # Replace "YOUR_ACCOUNT_ID" with your actual AWS account ID
 ```
 
-### 5.4 Create CloudWatch Log Group
+### 5.3 Create CloudWatch Log Group
 ```bash
 aws logs create-log-group --log-group-name "/ecs/spotter-app" --region us-east-1
 ```
 
-### 5.5 Register Task Definition
+### 5.4 Register Task Definition
 ```bash
 aws ecs register-task-definition \
   --cli-input-json file://aws-task-definition.json \
   --region us-east-1
 ```
 
-### 5.6 Set Up Load Balancer and Security Groups
+### 5.5 Set Up Load Balancer and Security Groups
 ```bash
 # Get default VPC ID
 VPC_ID=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text --region us-east-1)
@@ -283,7 +273,7 @@ aws elbv2 create-listener \
   --region us-east-1
 ```
 
-### 5.7 Create ECS Service
+### 5.6 Create ECS Service
 ```bash
 aws ecs create-service \
   --cluster spotter-cluster \
@@ -296,7 +286,7 @@ aws ecs create-service \
   --region us-east-1
 ```
 
-### 5.8 Get Your Application URL
+### 5.7 Get Your Application URL
 ```bash
 # Get the ALB DNS name
 aws elbv2 describe-load-balancers \
@@ -408,7 +398,7 @@ aws application-autoscaling put-scaling-policy \
 **For fastest deployment, use the PowerShell script:**
 
 ```powershell
-.\deploy-to-aws.ps1 -OpenAIKey "your_openai_api_key_here"
+.\deploy-to-aws.ps1
 ```
 
 This will handle all the complexity and give you a working deployment in ~5-10 minutes!
@@ -424,7 +414,7 @@ This will handle all the complexity and give you a working deployment in ~5-10 m
 
 **2. "Task failed to start"**
 - Check CloudWatch logs for error messages
-- Verify OpenAI API key is correctly stored
+- 
 
 **3. "Service unhealthy"**
 - Check security group settings

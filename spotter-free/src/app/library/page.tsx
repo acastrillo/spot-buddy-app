@@ -127,17 +127,17 @@ export default function LibraryPage() {
   // Transform saved workouts to display format
   const displayWorkouts = workouts.map(workout => {
     const contentLines = workout.content.split('\n').filter((line: string) => line.trim())
-    const exercises = workout.parsedData?.exercises || []
-    const equipmentTags = workout.parsedData?.equipment || []
-    
+    const exercises = workout.exercises || workout.parsedData?.exercises || []
+    const equipmentTags = workout.tags || workout.parsedData?.equipment || []
+
     return {
       id: workout.id,
       title: workout.title,
       date: new Date(workout.createdAt).toLocaleDateString(),
       steps: `${contentLines.length} steps`,
       exercises: `${exercises.length} exercises`,
-      duration: "0 min", // Could be calculated from parsed data
-      tags: equipmentTags.slice(0, 2), // Show first 2 equipment tags
+      duration: `${workout.totalDuration || 0} min`,
+      tags: equipmentTags.slice(0, 2),
       content: contentLines.slice(0, 3).map((line: string) => line.length > 50 ? line.substring(0, 50) + '...' : line)
     }
   })
@@ -151,7 +151,7 @@ export default function LibraryPage() {
     },
     {
       icon: Clock, 
-      value: workouts.reduce((total, w) => total + (w.parsedData?.exercises?.length || 0), 0).toString(),
+      value: workouts.reduce((total, w) => total + ((w.exercises?.length) || (w.parsedData?.exercises?.length) || 0), 0).toString(),
       label: "Total Exercises",
       color: "text-secondary"
     },

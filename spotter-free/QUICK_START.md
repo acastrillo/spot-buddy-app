@@ -4,7 +4,6 @@
 1. **AWS Account** - Sign up at aws.amazon.com
 2. **Install AWS CLI** - `winget install Amazon.AWSCLI`
 3. **Install Docker Desktop** - Download from docker.com
-4. **OpenAI API Key** - Get from platform.openai.com
 
 ## Configure AWS CLI (2 minutes)
 ```bash
@@ -18,7 +17,7 @@ aws configure
 ## Deploy with One Command (5-10 minutes)
 ```powershell
 # Open PowerShell in your project folder and run:
-.\deploy-to-aws.ps1 -OpenAIKey "sk-your-openai-key-here"
+.\deploy-to-aws.ps1
 ```
 
 ## That's it! 🎉

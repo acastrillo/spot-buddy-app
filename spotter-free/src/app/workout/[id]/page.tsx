@@ -8,12 +8,11 @@ import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   Clock,
   Target,
   User,
-  Brain,
   ExternalLink,
   Edit,
   Play,
@@ -36,7 +35,6 @@ interface Workout {
   description: string
   exercises: Exercise[]
   content: string
-  llmData?: any
   author?: any
   createdAt: string
   updatedAt?: string
@@ -176,40 +174,8 @@ export default function WorkoutViewPage() {
                 </div>
               )}
               
-              {workout.llmData?.usedLLM && (
-                <div className="flex items-center space-x-1 text-primary">
-                  <Brain className="h-4 w-4" />
-                  <span className="text-sm">AI Enhanced</span>
-                </div>
-              )}
             </div>
 
-            {/* AI Processing Info */}
-            {workout.llmData && (
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    <Brain className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-sm">AI Analysis</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {workout.llmData.summary && (
-                    <p className="text-sm text-text-secondary mb-3">
-                      {workout.llmData.summary}
-                    </p>
-                  )}
-                  
-                  {workout.llmData.breakdown && (
-                    <div className="text-xs text-text-secondary space-y-1">
-                      {workout.llmData.breakdown.map((item: string, idx: number) => (
-                        <div key={idx}>• {item}</div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Exercises */}

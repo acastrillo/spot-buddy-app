@@ -9,7 +9,7 @@ A modern, responsive fitness tracking application built with Next.js 15 and Reac
 - **Dashboard**: View workout statistics and quick access to main features
 - **Workout Library**: Browse and manage your saved workouts
 - **Calendar View**: Track workout schedules and planning
-- **Add Workouts**: Create and import new workout routines
+- **Add Workouts**: Import Instagram captions or enter workouts manually
 - **User Authentication**: Secure login system (currently in demo mode)
 - **Responsive Design**: Optimized for mobile and desktop
 - **Dark Theme**: Professional dark UI with custom color scheme

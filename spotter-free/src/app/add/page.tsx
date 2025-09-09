@@ -11,16 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { 
-  Link2, 
-  FileText, 
-  Upload, 
-  CheckCircle,
-  Brain,
-  Sparkles
+import {
+  Link2,
+  FileText,
+  Upload,
+  CheckCircle
 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { LLMProcessing } from "@/components/ui/llm-processing"
 
 export default function ImportWorkoutPage() {
   const { isAuthenticated } = useAuthStore()
@@ -30,9 +27,8 @@ export default function ImportWorkoutPage() {
   const [workoutTitle, setWorkoutTitle] = useState("")
   const [workoutContent, setWorkoutContent] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isProcessingLLM, setIsProcessingLLM] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [fetchedData, setFetchedData] = useState<any>(null)
-  const [workoutData, setWorkoutData] = useState<any>(null)
 
   if (!isAuthenticated) {
     return <Login />
@@ -42,7 +38,7 @@ export default function ImportWorkoutPage() {
     if (!url.trim()) return
 
     setIsLoading(true)
-    setIsProcessingLLM(false)
+    setIsProcessing(false)
     
     try {
       // Step 1: Fetch from Instagram
@@ -63,82 +59,39 @@ export default function ImportWorkoutPage() {
       const fetchData = await fetchResponse.json()
       setFetchedData(fetchData)
       setWorkoutContent(fetchData.content)
-      setIsLoading(false)
-      
-      // Step 2: Process with LLM
-      setIsProcessingLLM(true)
-      
-      const llmResponse = await fetch('/api/ingest', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          caption: fetchData.content,
-          url: url.trim()
-        }),
-      })
-
-      if (!llmResponse.ok) {
-        let errorMessage = `Failed to process workout with AI (${llmResponse.status})`
-        try {
-          const error = await llmResponse.json()
-          errorMessage = error.error || errorMessage
-        } catch {
-          errorMessage = `HTTP ${llmResponse.status}: ${llmResponse.statusText}`
-        }
-        console.error('LLM API Error:', errorMessage)
-        throw new Error(errorMessage)
-      }
-
-      const workoutResult = await llmResponse.json()
-      setWorkoutData(workoutResult)
-      setWorkoutTitle(workoutResult.workoutV1?.name || fetchData.title || 'Imported Workout')
+      setWorkoutTitle(fetchData.title || 'Imported Workout')
       
     } catch (error) {
       console.error('Process error:', error)
       alert(error instanceof Error ? error.message : 'Failed to process workout')
     } finally {
       setIsLoading(false)
-      setIsProcessingLLM(false)
+      setIsProcessing(false)
     }
   }
 
   const handleParseWorkout = async () => {
     if (!workoutTitle || !workoutContent) return
 
+    setIsProcessing(true)
+
     try {
-      let workoutToEdit = workoutData
+      const lines = workoutContent.split('\n').filter(line => line.trim())
+      const exercises = lines.map((line, index) => ({
+        id: `ex-${Date.now()}-${index}`,
+        name: line.trim(),
+        sets: 1,
+        reps: '',
+        weight: '',
+        restSeconds: 60,
+        notes: ''
+      }))
 
-      // If we don't have LLM processed data, process it now
-      if (!workoutData && workoutContent) {
-        setIsProcessingLLM(true)
-        
-        const llmResponse = await fetch('/api/ingest', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            caption: workoutContent,
-            url: activeTab === 'url' ? url : undefined
-          }),
-        })
-
-        if (llmResponse.ok) {
-          workoutToEdit = await llmResponse.json()
-          setWorkoutData(workoutToEdit)
-        }
-        
-        setIsProcessingLLM(false)
-      }
-
-      // Store workout data in sessionStorage for the edit page
       const workoutForEdit = {
         id: Date.now().toString(),
         title: workoutTitle,
         content: workoutContent,
-        llmData: workoutToEdit,
+        exercises,
         author: fetchedData?.author || null,
         createdAt: new Date().toISOString(),
         source: activeTab === 'url' ? url : 'manual',
@@ -146,21 +99,19 @@ export default function ImportWorkoutPage() {
       }
 
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-      
-      // Navigate to edit page
+
       router.push('/add/edit')
-      
     } catch (error) {
       console.error('Processing error:', error)
-      alert('Failed to process workout')
-      setIsProcessingLLM(false)
+      alert('Failed to parse workout')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   return (
     <>
       <Header />
-      <LLMProcessing isVisible={isProcessingLLM} />
       <main className="min-h-screen pb-20 md:pb-8 flex justify-center">
         <div className="w-full max-w-4xl mx-auto px-4 py-8">
           {/* Header */}
@@ -210,15 +161,13 @@ export default function ImportWorkoutPage() {
                           onChange={(e) => setUrl(e.target.value)}
                           className="flex-1"
                         />
-                        <Button 
+                        <Button
                           onClick={handleFetch}
-                          disabled={isLoading || isProcessingLLM || !url.trim()}
+                          disabled={isLoading || !url.trim()}
                           className="min-w-[80px]"
                         >
                           {isLoading ? (
                             <LoadingSpinner size="sm" text="Fetching" />
-                          ) : isProcessingLLM ? (
-                            <LoadingSpinner size="sm" text="AI Processing" />
                           ) : (
                             "Fetch"
                           )}
@@ -237,35 +186,7 @@ export default function ImportWorkoutPage() {
                               <span className="text-text-secondary"> From @{fetchedData.author?.username}</span>
                             </div>
                           </div>
-                          
-                          {workoutData && (
-                            <div className="mb-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Brain className="h-4 w-4 text-green-500" />
-                                <span className="text-sm text-green-500 font-medium">
-                                  AI Processing Complete
-                                  {workoutData.usedLLM && (
-                                    <span className="text-xs ml-1">({workoutData.usedLLM})</span>
-                                  )}
-                                </span>
-                              </div>
-                              
-                              {workoutData.summary && (
-                                <p className="text-sm text-text-secondary mb-2">
-                                  {workoutData.summary}
-                                </p>
-                              )}
-                              
-                              {workoutData.breakdown && workoutData.breakdown.length > 0 && (
-                                <div className="text-xs text-text-secondary space-y-1">
-                                  {workoutData.breakdown.map((item: string, idx: number) => (
-                                    <div key={idx}>• {item}</div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
+
                           <div className="mt-3 p-3 bg-surface rounded-lg">
                             <h4 className="text-sm font-medium text-text-primary mb-2">
                               Full Caption Content:
@@ -273,29 +194,6 @@ export default function ImportWorkoutPage() {
                             <div className="text-xs text-text-secondary whitespace-pre-wrap max-h-32 overflow-y-auto">
                               {fetchedData.content}
                             </div>
-                            
-                            {workoutData && workoutData.rows && workoutData.rows.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-border">
-                                <h4 className="text-sm font-medium text-text-primary mb-2">
-                                  Detected {workoutData.rows.length} exercises:
-                                </h4>
-                                <div className="space-y-1 max-h-24 overflow-y-auto">
-                                  {workoutData.rows.slice(0, 6).map((exercise: any, idx: number) => (
-                                    <div key={idx} className="text-xs text-text-secondary">
-                                      {exercise.movement}
-                                      {exercise.reps && ` - ${exercise.reps} reps`}
-                                      {exercise.sets > 1 && ` × ${exercise.sets} sets`}
-                                      {exercise.weight && ` @ ${exercise.weight}`}
-                                    </div>
-                                  ))}
-                                  {workoutData.rows.length > 6 && (
-                                    <div className="text-xs text-text-secondary/70">
-                                      +{workoutData.rows.length - 6} more exercises...
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         </div>
                       ) : (
@@ -346,19 +244,14 @@ export default function ImportWorkoutPage() {
               </Tabs>
 
               <div className="flex justify-center mt-8">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="px-8"
                   onClick={handleParseWorkout}
-                  disabled={!workoutTitle || !workoutContent || isProcessingLLM}
+                  disabled={!workoutTitle || !workoutContent || isProcessing}
                 >
-                  {isProcessingLLM ? (
+                  {isProcessing ? (
                     <LoadingSpinner size="sm" text="Processing" />
-                  ) : workoutData ? (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Save Workout
-                    </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />

@@ -23,12 +23,6 @@
           "value": "production"
         }
       ],
-      "secrets": [
-        {
-          "name": "OPENAI_API_KEY",
-          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/openai-api-key"
-        }
-      ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

@@ -7,7 +7,6 @@
 - [x] Image processing tab hidden (MVP focus)
 - [x] ESLint warnings resolved (non-blocking)
 - [x] "Start Workout" button disabled with "Coming Soon"
-- [x] AI workout processing fully functional
 - [x] Instagram URL import working
 - [x] Manual workout entry working
 - [x] Docker configuration created
@@ -24,7 +23,6 @@
    ```
 
 2. **Environment Variables Required:**
-   - `OPENAI_API_KEY`: Your OpenAI API key
    - `NODE_ENV`: production
 
 3. **Port**: Application runs on port 3000
@@ -32,7 +30,6 @@
 ### Option 2: Vercel (Easiest)
 1. Connect GitHub repository to Vercel
 2. Set environment variables:
-   - `OPENAI_API_KEY`
 3. Deploy automatically on push
 
 ### Option 3: AWS EC2 with Docker
@@ -59,7 +56,7 @@ Add to `next.config.ts` for PWA support:
 - Current web app is mobile-responsive
 
 ## 🌟 Current Features (MVP Ready)
-- AI-powered Instagram workout extraction
+- Instagram caption import
 - Manual workout entry
 - Exercise editing and management
 - Local workout storage
@@ -74,6 +71,6 @@ Add to `next.config.ts` for PWA support:
 - Exercise database
 
 ## 🚦 Ready for Launch
-The application is production-ready for MVP release with core Instagram import and AI processing functionality.
+The application is production-ready for MVP release with core Instagram import functionality.
 
 **Recommended first deployment**: Vercel for quick launch, then AWS for scaling.
