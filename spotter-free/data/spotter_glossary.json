@@ -1,0 +1,46 @@
+{
+  "movements": {
+    "squat": ["squats", "back squat", "front squat", "air squat", "offset squat"],
+    "deadlift": ["deadlifts", "dl", "conventional deadlift", "sumo deadlift"],
+    "bench press": ["bench", "bp", "chest press"],
+    "pull-up": ["pullups", "pull ups", "chin ups", "chin-ups"],
+    "push-up": ["pushups", "push ups", "press ups"],
+    "burpee": ["burpees", "burpee clean"],
+    "row": ["rows", "bent over row", "barbell row"],
+    "overhead press": ["ohp", "press", "shoulder press", "military press"],
+    "clean": ["cleans", "power clean"],
+    "snatch": ["snatches", "power snatch"],
+    "thruster": ["thrusters"],
+    "wall ball": ["wall balls", "wb"],
+    "kettlebell swing": ["kb swing", "kb swings", "kettlebell swings"],
+    "box jump": ["box jumps", "bj"],
+    "double under": ["double unders", "du", "dus"],
+    "toes to bar": ["ttb", "t2b"],
+    "handstand push-up": ["hspu", "handstand pushups"],
+    "muscle up": ["muscle ups", "mu"],
+    "lunge": ["lunges", "single arm oh lunge", "lateral lunge", "lateral lunge to pull"],
+    "hop": ["hops", "dumbbell hops"],
+    "drag": ["drags"]
+  },
+  "equipment": {
+    "barbell": ["bb", "olympic bar"],
+    "dumbbell": ["db", "dumbbells"],
+    "kettlebell": ["kb", "kettlebells"],
+    "resistance band": ["bands", "elastic bands"],
+    "pull-up bar": ["pullup bar"],
+    "box": ["plyo box", "jump box"],
+    "medicine ball": ["med ball"],
+    "rope": ["jump rope", "speed rope"]
+  },
+  "modifiers": {
+    "EMOM": ["every minute on the minute"],
+    "AMRAP": ["as many rounds as possible"],
+    "For Time": ["for time", "ft"],
+    "Tabata": ["20on/10off"],
+    "E2MOM": ["every 2 minutes on the minute"],
+    "E3MOM": ["every 3 minutes on the minute"],
+    "E4MOM": ["every 4 minutes on the minute"],
+    "E5MOM": ["every 5 minutes on the minute"],
+    "Interval": ["work/rest", "seconds work", "seconds rest"]
+  }
+}
