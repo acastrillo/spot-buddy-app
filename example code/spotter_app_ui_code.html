@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotter - Fitness Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #1a1f2e;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background-color: #252b3d;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3a4051;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background-color: #00d4aa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .nav-section {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #9ca3af;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background-color: #3a4051;
+            color: #ffffff;
+        }
+
+        .nav-item.active {
+            color: #00d4aa;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-name {
+            color: #9ca3af;
+        }
+
+        .sign-out {
+            color: #9ca3af;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Main Content */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 69px);
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 32px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .page-subtitle {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        /* Dashboard Styles */
+        .welcome-message {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background-color: #252b3d;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #3a4051;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .quick-actions {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .action-card {
+            background-color: #252b3d;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #3a4051;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-card:hover {
+            border-color: #00d4aa;
+            background-color: #2a3042;
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            background-color: #00d4aa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .action-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .action-subtitle {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .recent-activity {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .btn-primary {
+            background-color: #00d4aa;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #00c199;
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+            display: flex;
+            gap: 32px;
+        }
+
+        .calendar-main {
+            flex: 1;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .calendar-title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .nav-btn:hover {
+            background-color: #3a4051;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: #3a4051;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .calendar-day-header {
+            background-color: #252b3d;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .calendar-day {
+            background-color: #252b3d;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .calendar-day:hover {
+            background-color: #2a3042;
+        }
+
+        .calendar-day.active {
+            background-color: #00d4aa;
+            color: white;
+            font-weight: 600;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: #252b3d;
+            border-radius: 12px;
+            padding: 24px;
+            height: fit-content;
+        }
+
+        .sidebar-section {
+            margin-bottom: 32px;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .stat-item-label {
+            color: #9ca3af;
+        }
+
+        .stat-item-value {
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            background-color: #3a4051;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background-color: #00d4aa;
+            height: 100%;
+            width: 0%;
+        }
+
+        /* Library Styles */
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+        }
+
+        .search-filter-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .search-input {
+            flex: 1;
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .search-input::placeholder {
+            color: #6b7280;
+        }
+
+        .filter-btn {
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .category-tags {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .category-tag {
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            color: #9ca3af;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-tag.active,
+        .category-tag:hover {
+            background-color: #00d4aa;
+            color: white;
+            border-color: #00d4aa;
+        }
+
+        .workouts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .workout-card {
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .workout-card-content {
+            padding: 20px;
+        }
+
+        .workout-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .workout-meta {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .workout-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .workout-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid #3a4051;
+            color: #9ca3af;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover {
+            border-color: #00d4aa;
+            color: #00d4aa;
+        }
+
+        .library-stats {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            padding: 40px;
+            background-color: #252b3d;
+            border-radius: 12px;
+        }
+
+        .library-stat {
+            text-align: center;
+        }
+
+        .library-stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .library-stat-label {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        /* Settings Styles */
+        .settings-container {
+            max-width: 800px;
+        }
+
+        .settings-section {
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .settings-section-subtitle {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: #1a1f2e;
+            border: 1px solid #3a4051;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #3a4051;
+            cursor: pointer;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .settings-item-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-item-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .settings-item-subtitle {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .settings-arrow {
+            color: #6b7280;
+        }
+
+        .app-footer {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            border-top: 1px solid #3a4051;
+        }
+
+        /* Import Styles */
+        .import-container {
+            max-width: 600px;
+        }
+
+        .import-tabs {
+            display: flex;
+            gap: 2px;
+            background-color: #3a4051;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 32px;
+        }
+
+        .import-tab {
+            flex: 1;
+            background-color: transparent;
+            border: none;
+            color: #9ca3af;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .import-tab.active {
+            background-color: #00d4aa;
+            color: white;
+        }
+
+        .url-input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .url-input {
+            flex: 1;
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: white;
+        }
+
+        .fetch-btn {
+            background-color: #00d4aa;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .form-section {
+            margin-bottom: 32px;
+        }
+
+        .textarea {
+            width: 100%;
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: white;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .parse-info {
+            background-color: #252b3d;
+            border: 1px solid #3a4051;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .parse-categories {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        .parse-category h4 {
+            color: #00d4aa;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .parse-category ul {
+            list-style: none;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .parse-category li {
+            margin-bottom: 4px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid,
+            .actions-grid,
+            .workouts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .calendar-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-section">
+            <div class="logo">🏃</div>
+            <div class="brand-name">Spotter</div>
+        </div>
+        <div class="nav-section">
+            <a href="#" class="nav-item" onclick="showPage('dashboard')">+ Add Workout</a>
+            <a href="#" class="nav-item" onclick="showPage('library')">📚 Library</a>
+            <a href="#" class="nav-item" onclick="showPage('calendar')">📅 Calendar</a>
+            <a href="#" class="nav-item" onclick="showPage('settings')">⚙️ Settings</a>
+        </div>
+        <div class="user-section">
+            <span class="user-name">👤 test</span>
+            <a href="#" class="sign-out">↗️ Sign Out</a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="content-area">
+            <div class="page-header">
+                <h1 class="welcome-message">Welcome back, test!</h1>
+                <p class="page-subtitle">Ready to crush your fitness goals today?</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Workouts This Week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Total Workouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">0h</div>
+                    <div class="stat-label">Hours Trained</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">0 days</div>
+                    <div class="stat-label">Streak</div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h2 class="section-title">Quick Actions</h2>
+                <div class="actions-grid">
+                    <div class="action-card" onclick="showPage('import')">
+                        <div class="action-icon">+</div>
+                        <div class="action-title">Add Workout</div>
+                        <div class="action-subtitle">Import or create a new workout</div>
+                    </div>
+                    <div class="action-card" onclick="showPage('library')">
+                        <div class="action-icon">📚</div>
+                        <div class="action-title">Browse Library</div>
+                        <div class="action-subtitle">View your saved workouts</div>
+                    </div>
+                    <div class="action-card" onclick="showPage('calendar')">
+                        <div class="action-icon">📅</div>
+                        <div class="action-title">View Calendar</div>
+                        <div class="action-subtitle">See your workout schedule</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <h2 class="section-title">Recent Activity</h2>
+                <div class="empty-state">
+                    📊<br><br>
+                    No recent activity<br>
+                    Start by adding your first workout to see your progress here.
+                </div>
+                <button class="btn-primary">+ Add Your First Workout</button>
+            </div>
+        </div>
+
+        <!-- Calendar Page -->
+        <div id="calendar" class="content-area hidden">
+            <div class="page-header">
+                <h1 class="page-title">Workout Calendar</h1>
+                <p class="page-subtitle">Track your fitness journey</p>
+            </div>
+
+            <div class="calendar-container">
+                <div class="calendar-main">
+                    <div class="calendar-header">
+                        <h2 class="calendar-title">August 2025</h2>
+                        <div class="calendar-nav">
+                            <button class="nav-btn">‹</button>
+                            <button class="nav-btn">›</button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid">
+                        <div class="calendar-day-header">Sun</div>
+                        <div class="calendar-day-header">Mon</div>
+                        <div class="calendar-day-header">Tue</div>
+                        <div class="calendar-day-header">Wed</div>
+                        <div class="calendar-day-header">Thu</div>
+                        <div class="calendar-day-header">Fri</div>
+                        <div class="calendar-day-header">Sat</div>
+                        
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day">1</div>
+                        <div class="calendar-day">2</div>
+                        <div class="calendar-day"></div>
+                        
+                        <div class="calendar-day">3</div>
+                        <div class="calendar-day">4</div>
+                        <div class="calendar-day">5</div>
+                        <div class="calendar-day">6</div>
+                        <div class="calendar-day">7</div>
+                        <div class="calendar-day">8</div>
+                        <div class="calendar-day">9</div>
+                        
+                        <div class="calendar-day">10</div>
+                        <div class="calendar-day">11</div>
+                        <div class="calendar-day">12</div>
+                        <div class="calendar-day">13</div>
+                        <div class="calendar-day">14</div>
+                        <div class="calendar-day">15</div>
+                        <div class="calendar-day">16</div>
+                        
+                        <div class="calendar-day">17</div>
+                        <div class="calendar-day">18</div>
+                        <div class="calendar-day">19</div>
+                        <div class="calendar-day">20</div>
+                        <div class="calendar-day">21</div>
+                        <div class="calendar-day">22</div>
+                        <div class="calendar-day active">23</div>
+                        
+                        <div class="calendar-day">24</div>
+                        <div class="calendar-day">25</div>
+                        <div class="calendar-day">26</div>
+                        <div class="calendar-day">27</div>
+                        <div class="calendar-day">28</div>
+                        <div class="calendar-day">29</div>
+                        <div class="calendar-day">30</div>
+                        
+                        <div class="calendar-day">31</div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                        <div class="calendar-day"></div>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="sidebar-section">
+                        <h3 class="sidebar-title">This Month</h3>
+                        <div class="stat-item">
+                            <span class="stat-item-label">🏃 Workouts</span>
+                            <span class="stat-item-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-item-label">⏱️ Hours</span>
+                            <span class="stat-item-value">0h</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-item-label">⚡ Streak</span>
+                            <span class="stat-item-value">0 days</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h3 class="sidebar-title">Upcoming</h3>
+                        <p style="color: #9ca3af; margin-bottom: 16px;">Your scheduled workouts</p>
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+                            <div style="color: #9ca3af; margin-bottom: 16px;">No workouts scheduled</div>
+                            <button class="btn-primary" style="font-size: 12px;">Schedule One</button>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h3 class="sidebar-title">Weekly Goal</h3>
+                        <p style="color: #9ca3af; margin-bottom: 16px; font-size: 14px;">Stay consistent with your training</p>
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-size: 14px; font-weight: 600;">Progress</span>
+                            <span style="float: right; color: #9ca3af; font-size: 14px;">0/3 workouts</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <p style="color: #9ca3af; font-size: 12px;">Keep going! You're on track to reach your weekly goal.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Page -->
+        <div id="library" class="content-area hidden">
+            <div class="library-header">
+                <div class="page-header">
+                    <h1 class="page-title">Workout Library</h1>
+                    <p class="page-subtitle">Your saved workouts and routines</p>
+                </div>
+                <button class="btn-primary">+ Add Workout</button>
+            </div>
+
+            <div class="search-filter-row">
+                <input type="text" class="search-input" placeholder="Search workouts...">
+                <button class="filter-btn">📊 Filter</button>
+            </div>
+
+            <div class="category-tags">
+                <div class="category-tag active">All</div>
+                <div class="category-tag">Upper Body</div>
+                <div class="category-tag">Lower Body</div>
+                <div class="category-tag">Cardio</div>
+                <div class="category-tag">Strength</div>
+                <div class="category-tag">HIIT</div>
+            </div>
+
+            <div class="workouts-grid">
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 9 steps</div>
+                        <div class="workout-stats">
+                            <span>6 exercises · 0 min</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            <span style="color: #f59e0b;">🔥 PUSH DAY WORKOUT 🔥</span><br>
+                            2. Upper Body Blast<br>
+                            +7 more steps...
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 7 steps</div>
+                        <div class="workout-stats">
+                            <span>6 exercises · 0 min</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            <span style="color: #f59e0b;">🔥 PUSH DAY WORKOUT 🔥</span><br>
+                            2. Push-ups: 3 sets x 15 reps<br>
+                            +3 more steps...
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 9 steps</div>
+                        <div class="workout-stats">
+                            <span>8 exercises · 0 min</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            <span style="color: #f59e0b;">🔥 PUSH DAY WORKOUT 🔥</span><br>
+                            2. Upper Body Blast<br>
+                            +7 more steps...
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 9 steps</div>
+                        <div class="workout-stats">
+                            <span>8 exercises · 0 min</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            <span style="color: #f59e0b;">🔥 PUSH DAY WORKOUT 🔥</span><br>
+                            2. Upper Body Blast<br>
+                            +7 more steps...
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 1 steps</div>
+                        <div class="workout-stats">
+                            <span>1 exercises</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            1. test 3
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 1 steps</div>
+                        <div class="workout-stats">
+                            <span>1 exercises</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            1. test 2
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-card">
+                    <div class="workout-card-content">
+                        <h3 class="workout-title">Instagram Workout - 8/22/2025</h3>
+                        <div class="workout-meta">8/22/2025 · 1 steps</div>
+                        <div class="workout-stats">
+                            <span>1 exercises</span>
+                        </div>
+                        <div style="margin-bottom: 12px; color: #9ca3af; font-size: 14px;">
+                            1. test
+                        </div>
+                        <div class="workout-actions">
+                            <button class="btn-secondary">View Details</button>
+                            <button class="btn-primary">Start Workout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="library-stats">
+                <div class="library-stat">
+                    <div style="color: #00d4aa; font-size: 32px; margin-bottom: 8px;">🏃</div>
+                    <div class="library-stat-value">7</div>
+                    <div class="library-stat-label">Total Workouts</div>
+                </div>
+                <div class="library-stat">
+                    <div style="color: #6366f1; font-size: 32px; margin-bottom: 8px;">💪</div>
+                    <div class="library-stat-value">0</div>
+                    <div class="library-stat-label">Body Parts</div>
+                </div>
+                <div class="library-stat">
+                    <div style="color: #f59e0b; font-size: 32px; margin-bottom: 8px;">⏱️</div>
+                    <div class="library-stat-value">3 min</div>
+                    <div class="library-stat-label">Total Time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Page -->
+        <div id="import" class="content-area hidden">
+            <div class="import-container">
+                <div class="page-header">
+                    <h1 class="page-title">Import Workout</h1>
+                    <p class="page-subtitle">Import from social media, upload images, or enter text manually</p>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">📥 Import Workout</div>
+                    <div class="settings-section-subtitle">Choose how you'd like to import your workout</div>
+
+                    <div class="import-tabs">
+                        <button class="import-tab active">🔗 URL/Social</button>
+                        <button class="import-tab">📷 Image</button>
+                        <button class="import-tab">📝 Manual</button>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Source URL</label>
+                        <div class="url-input-row">
+                            <input type="text" class="url-input" placeholder="https://www.instagram.com/">
+                            <button class="fetch-btn">+ Fetch</button>
+                        </div>
+                        <div style="color: #6b7280; font-size: 12px;">
+                            Social media URL format: Paste URL from Instagram, TikTok, or other platforms
+                        </div>
+                        <div style="background-color: #065f46; border: 1px solid #047857; border-radius: 6px; padding: 12px; margin-top: 12px; font-size: 13px; color: #10b981;">
+                            ✓ Instagram import ready: Click "Fetch" after entering an Instagram URL to automatically extract the workout caption.
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Workout Title</label>
+                        <input type="text" class="form-input" placeholder="e.g., Upper Body Strength, AMRAP 20">
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Workout Content</label>
+                        <textarea class="textarea" placeholder="Your workout content will appear here..."></textarea>
+                        <div style="color: #6b7280; font-size: 12px; text-align: right;">0/5000 characters</div>
+                    </div>
+
+                    <button class="btn-primary" style="width: 100%;">📊 Parse Workout</button>
+                </div>
+
+                <div class="parse-info">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <div style="color: #00d4aa; font-size: 20px;">✅</div>
+                        <h3 style="font-size: 18px; font-weight: 600;">What We Can Parse</h3>
+                    </div>
+
+                    <div class="parse-categories">
+                        <div class="parse-category">
+                            <h4>Exercise Formats</h4>
+                            <ul>
+                                <li>• Sets x Reps (3x10, 4 sets of 8)</li>
+                                <li>• Time-based (30 sec, 1:30)</li>
+                                <li>• Distances (400m, 1 mile)</li>
+                                <li>• Rest periods (Rest 60s)</li>
+                            </ul>
+                        </div>
+                        <div class="parse-category">
+                            <h4>Workout Types</h4>
+                            <ul>
+                                <li>• AMRAP, EMOM, Tabata</li>
+                                <li>• For Time, Ladders</li>
+                                <li>• Supersets, Circuits</li>
+                                <li>• Equipment detection</li>
+                            </ul>
+                        </div>
+                        <div class="parse-category">
+                            <h4>Import Sources</h4>
+                            <ul>
+                                <li>• Instagram posts & captions</li>
+                                <li>• Image text (OCR)</li>
+                                <li>• Manual text entry</li>
+                                <li>• Social media URLs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings" class="content-area hidden">
+            <div class="settings-container">
+                <div class="page-header">
+                    <h1 class="page-title">Settings</h1>
+                    <p class="page-subtitle">Manage your account and app preferences</p>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Profile</div>
+                    <div class="settings-section-subtitle">Your personal information</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-input" value="test">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-input" value="test">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" value="test@test.com">
+                    </div>
+
+                    <div style="margin-top: 16px; color: #9ca3af; font-size: 14px;">
+                        Contact support to change your email address
+                    </div>
+                    <button class="btn-primary" style="margin-top: 12px;">Save Changes</button>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Account</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">👤 Profile Information</div>
+                            <div class="settings-item-subtitle">Update your personal details</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">🔒 Password & Security</div>
+                            <div class="settings-item-subtitle">Change password and security settings</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Preferences</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">🔔 Notifications</div>
+                            <div class="settings-item-subtitle">Manage workout reminders and updates</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">📱 App Settings</div>
+                            <div class="settings-item-subtitle">Customize your app experience</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Data</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">💾 Export Data</div>
+                            <div class="settings-item-subtitle">Download your workout data</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title" style="color: #ef4444;">🗑️ Delete Account</div>
+                            <div class="settings-item-subtitle">Permanently remove your account</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Support</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <div class="settings-item-title">❓ Help & FAQ</div>
+                            <div class="settings-item-subtitle">Get help and find answers</div>
+                        </div>
+                        <div class="settings-arrow">›</div>
+                    </div>
+                </div>
+
+                <div class="app-footer">
+                    <div style="color: #00d4aa; font-size: 16px; margin-bottom: 8px;">🏃 Spotter</div>
+                    <div style="margin-bottom: 4px;">Version 1.0.0 [Beta]</div>
+                    <div style="font-size: 12px;">Made with ❤️ for fitness enthusiasts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPage(pageId) {
+            // Hide all pages
+            const pages = ['dashboard', 'calendar', 'library', 'import', 'settings'];
+            pages.forEach(page => {
+                document.getElementById(page).classList.add('hidden');
+            });
+
+            // Show selected page
+            document.getElementById(pageId).classList.remove('hidden');
+
+            // Update active nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Set active based on page
+            const pageMap = {
+                'dashboard': 0,
+                'library': 1,
+                'calendar': 2,
+                'settings': 3
+            };
+            if (pageMap[pageId] !== undefined) {
+                navItems[pageMap[pageId]].classList.add('active');
+            }
+        }
+
+        // Initialize with dashboard
+        showPage('dashboard');
+
+        // Category tag functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('category-tag')) {
+                document.querySelectorAll('.category-tag').forEach(tag => {
+                    tag.classList.remove('active');
+                });
+                e.target.classList.add('active');
+            }
+        });
+
+        // Import tab functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('import-tab')) {
+                document.querySelectorAll('.import-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                e.target.classList.add('active');
+            }
+        });
+
+        // Calendar day click functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('calendar-day') && e.target.textContent.trim()) {
+                document.querySelectorAll('.calendar-day').forEach(day => {
+                    day.classList.remove('active');
+                });
+                e.target.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>
