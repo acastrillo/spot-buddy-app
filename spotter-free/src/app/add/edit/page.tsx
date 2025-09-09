@@ -11,10 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { EditableWorkoutTable } from "@/lib/editable-workout-table"
-import { 
-  Save, 
-  ArrowLeft, 
-  Brain,
+import {
+  Save,
+  ArrowLeft,
   AlertCircle
 } from "lucide-react"
 
@@ -22,11 +21,12 @@ interface WorkoutData {
   id: string
   title: string
   content: string
-  llmData?: any
   author?: any
   createdAt: string
   source: string
   type: string
+  exercises?: any[]
+  tags?: string[]
 }
 
 export default function EditWorkoutPage() {
@@ -45,30 +45,9 @@ export default function EditWorkoutPage() {
       const data = JSON.parse(stored)
       setWorkoutData(data)
       setWorkoutTitle(data.title || '')
-      setWorkoutDescription(data.llmData?.summary || '')
-      
-      // Convert LLM exercises to editable format
-      if (data.llmData?.exercises && data.llmData.exercises.length > 0) {
-        setExercises(data.llmData.exercises.map((exercise: any) => ({
-          id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
-          name: exercise.movement || '',
-          sets: exercise.sets || 1,
-          reps: exercise.reps || '',
-          weight: exercise.weight || '',
-          restSeconds: exercise.restSeconds || 60,
-          notes: exercise.notes || ''
-        })))
-      } else if (data.llmData?.rows) {
-        // Fallback to old rows format
-        setExercises(data.llmData.rows.map((row: any) => ({
-          id: row.id || `ex-${Date.now()}-${Math.random()}`,
-          name: row.movement || '',
-          sets: row.sets || 1,
-          reps: row.reps || '',
-          weight: row.weight || '',
-          restSeconds: 60,
-          notes: row.notes || ''
-        })))
+      setWorkoutDescription(data.description || '')
+      if (data.exercises && data.exercises.length > 0) {
+        setExercises(data.exercises)
       }
     } else {
       // No data found, redirect back
@@ -113,15 +92,14 @@ export default function EditWorkoutPage() {
         description: workoutDescription,
         exercises: exercises,
         content: workoutData.content,
-        llmData: workoutData.llmData,
         author: workoutData.author,
         createdAt: workoutData.createdAt,
         updatedAt: new Date().toISOString(),
         source: workoutData.source,
         type: workoutData.type,
-        totalDuration: workoutData.llmData?.workoutV1?.totalDuration || estimateDuration(exercises),
-        difficulty: workoutData.llmData?.workoutV1?.difficulty || 'moderate',
-        tags: workoutData.llmData?.workoutV1?.tags || []
+        totalDuration: estimateDuration(exercises),
+        difficulty: 'moderate',
+        tags: workoutData.tags || []
       }
 
       // Save to localStorage
@@ -168,33 +146,10 @@ export default function EditWorkoutPage() {
                   Edit Workout
                 </h1>
                 <p className="text-sm text-text-secondary">
-                  Review and customize your AI-processed workout
+                  Review and customize your workout
                 </p>
               </div>
             </div>
-
-            {/* AI Processing Info */}
-            {workoutData.llmData && (
-              <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Brain className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-primary font-medium">
-                    AI Enhanced Workout
-                    {workoutData.llmData.usedLLM && (
-                      <span className="text-xs ml-1">({workoutData.llmData.usedLLM})</span>
-                    )}
-                  </span>
-                </div>
-                
-                {workoutData.llmData.breakdown && (
-                  <div className="text-xs text-text-secondary space-y-1">
-                    {workoutData.llmData.breakdown.map((item: string, idx: number) => (
-                      <div key={idx}>• {item}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">

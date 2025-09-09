@@ -2,9 +2,6 @@
 # Run this script from PowerShell in your project directory
 
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$OpenAIKey,
-    
     [Parameter(Mandatory=$false)]
     [string]$Region = "us-east-1",
     
@@ -60,15 +57,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✅ Image pushed to ECR successfully" -ForegroundColor Green
 
-Write-Host "🔐 Step 5: Storing OpenAI API key in AWS Systems Manager..." -ForegroundColor Yellow
-aws ssm put-parameter --name "/spotter-app/openai-api-key" --value $OpenAIKey --type "SecureString" --overwrite --region $Region
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "❌ Failed to store OpenAI API key"
     exit 1
 }
-Write-Host "✅ OpenAI API key stored securely" -ForegroundColor Green
 
-Write-Host "📋 Step 6: Creating ECS task execution role..." -ForegroundColor Yellow
+Write-Host "📋 Step 5: Creating ECS task execution role..." -ForegroundColor Yellow
 $TrustPolicy = @"
 {
   "Version": "2012-10-17",
@@ -108,21 +101,21 @@ aws iam put-role-policy --role-name ecsTaskExecutionRole --policy-name SsmParame
 
 Write-Host "✅ ECS execution role configured" -ForegroundColor Green
 
-Write-Host "📝 Step 7: Updating task definition with account details..." -ForegroundColor Yellow
+Write-Host "📝 Step 6: Updating task definition with account details..." -ForegroundColor Yellow
 $TaskDefContent = Get-Content "aws-task-definition.json" -Raw
 $TaskDefContent = $TaskDefContent -replace "YOUR_ACCOUNT_ID", $AccountId
 $TaskDefContent = $TaskDefContent -replace "us-east-1", $Region
 $TaskDefContent | Set-Content "aws-task-definition-updated.json"
 
-Write-Host "🎯 Step 8: Creating ECS cluster..." -ForegroundColor Yellow
+Write-Host "🎯 Step 7: Creating ECS cluster..." -ForegroundColor Yellow
 aws ecs create-cluster --cluster-name $ClusterName --region $Region 2>$null
 Write-Host "✅ ECS cluster ready" -ForegroundColor Green
 
-Write-Host "📋 Step 9: Creating CloudWatch log group..." -ForegroundColor Yellow
+Write-Host "📋 Step 8: Creating CloudWatch log group..." -ForegroundColor Yellow
 aws logs create-log-group --log-group-name "/ecs/spotter-app" --region $Region 2>$null
 Write-Host "✅ CloudWatch log group created" -ForegroundColor Green
 
-Write-Host "📋 Step 10: Registering task definition..." -ForegroundColor Yellow
+Write-Host "📋 Step 9: Registering task definition..." -ForegroundColor Yellow
 aws ecs register-task-definition --cli-input-json file://aws-task-definition-updated.json --region $Region
 if ($LASTEXITCODE -ne 0) {
     Write-Error "❌ Failed to register task definition"
@@ -130,7 +123,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✅ Task definition registered" -ForegroundColor Green
 
-Write-Host "🌐 Step 11: Creating Application Load Balancer..." -ForegroundColor Yellow
+Write-Host "🌐 Step 10: Creating Application Load Balancer..." -ForegroundColor Yellow
 
 # Get default VPC and subnets
 $VpcId = (aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text --region $Region)
@@ -162,7 +155,7 @@ aws elbv2 create-listener --load-balancer-arn $AlbArn --protocol HTTP --port 80 
 
 Write-Host "✅ Load balancer created" -ForegroundColor Green
 
-Write-Host "🚀 Step 12: Creating ECS service..." -ForegroundColor Yellow
+Write-Host "🚀 Step 11: Creating ECS service..." -ForegroundColor Yellow
 $ServiceConfig = @"
 {
     "serviceName": "$ServiceName",

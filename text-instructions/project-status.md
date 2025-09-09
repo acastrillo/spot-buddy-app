@@ -10,15 +10,15 @@ Transitioning from AI-powered workout processing to a simpler, user-controlled w
 - **Clean Caption Parsing**: Basic workout pattern recognition for initial structure
 - **Error Handling**: Graceful fallbacks and user-friendly error messages
 
-### 2. **Current User Workflow (Needs Update)**
+### 2. **Current User Workflow (Complete)**
 - **Import Flow**: Instagram URL → Fetch content → Manual workout building → Save → Display
 - **Loading States**: Loading animations for Instagram fetching
 - **Error Handling**: Basic error handling for failed Instagram fetches
 
-### 3. **UI Components (Partially Complete)**
-- **Import Page**: Multi-tab interface (URL/Image/Manual) - needs AI removal
+### 3. **UI Components (Complete)**
+- **Import Page**: Multi-tab interface (URL/Image/Manual)
 - **Edit Page**: Structured exercise table with inline editing capabilities
-- **View Page**: Complete workout display - needs AI badge removal
+- **View Page**: Complete workout display
 - **Dark Theme**: All components match platform design language
 
 ### 4. **Data Structure (Complete)**
@@ -31,21 +31,15 @@ Transitioning from AI-powered workout processing to a simpler, user-controlled w
 ### **File Structure**
 ```
 spotter-free/
-├── src/
-│   ├── app/
-│   │   ├── add/page.tsx (Import page - needs AI removal)
-│   │   ├── add/edit/page.tsx (Exercise editing interface)
-│   │   ├── workout/[id]/page.tsx (Workout display)
-│   │   ├── api/instagram-fetch/route.ts (Instagram fetching)
-│   │   └── api/ingest/route.ts (TO BE REMOVED - AI processing)
-│   ├── lib/llm/ (TO BE REMOVED)
-│   │   ├── repair.ts (OpenAI function calling)
-│   │   ├── router.ts (Layered model routing)
-│   │   └── tools.ts (Structured output schema)
-│   ├── components/ui/
-│   │   ├── llm-processing.tsx (TO BE REMOVED - AI processing overlay)
-│   │   └── loading-spinner.tsx (Loading animations)
-│   └── lib/editable-workout-table.tsx (Exercise table component)
+  ├── src/
+  │   ├── app/
+  │   │   ├── add/page.tsx (Import page)
+  │   │   ├── add/edit/page.tsx (Exercise editing interface)
+  │   │   ├── workout/[id]/page.tsx (Workout display)
+  │   │   ├── api/instagram-fetch/route.ts (Instagram fetching)
+  │   ├── components/ui/
+  │   │   └── loading-spinner.tsx (Loading animations)
+  │   └── lib/editable-workout-table.tsx (Exercise table component)
 ```
 
 ### **Current Server Status**
