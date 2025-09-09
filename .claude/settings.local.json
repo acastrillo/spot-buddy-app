@@ -59,7 +59,8 @@
       "Bash(npm run test:*)",
       "Bash(find:*)",
       "Bash(del \"src\\app\\api\\parse-workout\\route.ts.bak\")",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": [],
