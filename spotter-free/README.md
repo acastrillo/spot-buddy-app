@@ -41,13 +41,19 @@ cd spotter-fresh
 ```bash
 npm install
 ```
+3. Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
 
-3. Run the development server:
+   Set any required values in `.env.local` (see file for details).
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Available Scripts
 

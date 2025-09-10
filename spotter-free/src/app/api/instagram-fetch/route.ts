@@ -45,7 +45,10 @@ export async function POST(request: NextRequest) {
     if (!apifyApiToken) {
       console.error('APIFY_API_TOKEN is not configured')
       return NextResponse.json(
-        { error: 'API configuration error' },
+        {
+          error:
+            'Missing APIFY_API_TOKEN environment variable. See .env.example for setup.',
+        },
         { status: 500 }
       )
     }
