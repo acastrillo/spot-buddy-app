@@ -1,0 +1,12 @@
+﻿# Node
+node_modules/
+.next/
+.vscode/
+.DS_Store
+.env
+.env.local
+.env.*.local
+package-lock.json
+.claude/
+.mcp.json
+
