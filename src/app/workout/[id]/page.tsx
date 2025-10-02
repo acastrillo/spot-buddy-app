@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import StreakPopup from "@/components/ui/streak-popup"
+import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import {
   ArrowLeft,
   Clock,
@@ -17,7 +18,8 @@ import {
   ExternalLink,
   Edit,
   Play,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react"
 
 interface Exercise {
@@ -47,7 +49,7 @@ interface Workout {
 }
 
 export default function WorkoutViewPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
   const params = useParams()
   const [workout, setWorkout] = useState<Workout | null>(null)
@@ -58,19 +60,54 @@ export default function WorkoutViewPage() {
 
   useEffect(() => {
     const workoutId = params?.id as string
-    if (workoutId) {
+    if (workoutId && user?.id) {
       loadWorkout(workoutId)
     }
-  }, [params?.id])
+  }, [params?.id, user?.id])
 
-  const loadWorkout = (workoutId: string) => {
+  const loadWorkout = async (workoutId: string) => {
+    setLoading(true)
     try {
+      if (user?.id) {
+        // Load from DynamoDB
+        const dbWorkout = await dynamoDBWorkouts.get(user.id, workoutId)
+
+        if (dbWorkout) {
+          // Transform DynamoDB workout to display format
+          const transformedWorkout: Workout = {
+            id: dbWorkout.workoutId,
+            title: dbWorkout.title,
+            description: dbWorkout.description || '',
+            exercises: dbWorkout.exercises,
+            content: dbWorkout.content,
+            author: dbWorkout.author,
+            createdAt: dbWorkout.createdAt,
+            updatedAt: dbWorkout.updatedAt,
+            source: dbWorkout.source,
+            type: dbWorkout.type,
+            totalDuration: dbWorkout.totalDuration,
+            difficulty: dbWorkout.difficulty,
+            tags: dbWorkout.tags,
+          }
+          setWorkout(transformedWorkout)
+        } else {
+          // Fallback to localStorage
+          const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+          const found = workouts.find((w: Workout) => w.id === workoutId)
+          setWorkout(found || null)
+        }
+      } else {
+        // Fallback to localStorage if user not available
+        const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+        const found = workouts.find((w: Workout) => w.id === workoutId)
+        setWorkout(found || null)
+      }
+    } catch (error) {
+      console.error('Error loading workout:', error)
+      // Fallback to localStorage on error
       const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
       const found = workouts.find((w: Workout) => w.id === workoutId)
       setWorkout(found || null)
-    } catch (error) {
-      console.error('Error loading workout:', error)
-      setWorkout(null)
     } finally {
       setLoading(false)
     }
@@ -85,7 +122,10 @@ export default function WorkoutViewPage() {
       <>
         <Header />
         <main className="min-h-screen flex items-center justify-center">
-          <div className="animate-pulse text-text-secondary">Loading workout...</div>
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
+            <p className="text-text-secondary">Loading workout...</p>
+          </div>
         </main>
       </>
     )

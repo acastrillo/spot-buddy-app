@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { EditableWorkoutTable } from "@/lib/editable-workout-table"
-import { 
-  Save, 
-  ArrowLeft, 
+import { dynamoDBWorkouts } from "@/lib/dynamodb"
+import {
+  Save,
+  ArrowLeft,
   CheckCircle,
   AlertCircle
 } from "lucide-react"
@@ -30,7 +31,7 @@ interface WorkoutData {
 }
 
 export default function EditWorkoutPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
   const [workoutData, setWorkoutData] = useState<WorkoutData | null>(null)
   const [workoutTitle, setWorkoutTitle] = useState("")
@@ -104,28 +105,40 @@ export default function EditWorkoutPage() {
   }
 
   const handleSave = async () => {
+    if (!user?.id) {
+      alert('You must be logged in to save workouts')
+      return
+    }
+
     setIsSaving(true)
     try {
-      // Create final workout object
-      const finalWorkout = {
-        id: workoutData.id,
+      // Prepare workout data for DynamoDB
+      const workoutToSave = {
+        workoutId: workoutData.id,
         title: workoutTitle,
         description: workoutDescription,
         exercises: exercises,
         content: workoutData.content,
-        llmData: workoutData.llmData,
         author: workoutData.author,
         createdAt: workoutData.createdAt,
-        updatedAt: new Date().toISOString(),
         source: workoutData.source,
         type: workoutData.type,
         totalDuration: workoutData.llmData?.workoutV1?.totalDuration || estimateDuration(exercises),
         difficulty: workoutData.llmData?.workoutV1?.difficulty || 'moderate',
-        tags: workoutData.llmData?.workoutV1?.tags || []
+        tags: workoutData.llmData?.workoutV1?.tags || [],
+        llmData: workoutData.llmData,
       }
 
-      // Save to localStorage
+      // Save to DynamoDB
+      await dynamoDBWorkouts.upsert(user.id, workoutToSave)
+
+      // Also save to localStorage as fallback/cache
       const existingWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+      const finalWorkout = {
+        id: workoutData.id,
+        ...workoutToSave,
+        updatedAt: new Date().toISOString(),
+      }
       existingWorkouts.push(finalWorkout)
       localStorage.setItem('workouts', JSON.stringify(existingWorkouts))
 
@@ -133,11 +146,11 @@ export default function EditWorkoutPage() {
       sessionStorage.removeItem('workoutToEdit')
 
       // Navigate to workout view
-      router.push(`/workout/${finalWorkout.id}`)
-      
+      router.push(`/workout/${workoutData.id}`)
+
     } catch (error) {
       console.error('Save error:', error)
-      alert('Failed to save workout')
+      alert('Failed to save workout. Please try again.')
     } finally {
       setIsSaving(false)
     }

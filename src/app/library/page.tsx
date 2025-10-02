@@ -10,13 +10,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StreakPopup from "@/components/ui/streak-popup"
+import { dynamoDBWorkouts } from "@/lib/dynamodb"
 // import { extractWorkoutFromImage, ParsedWorkout } from "@/lib/extractWorkoutFromImage" // Temporarily disabled
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Dumbbell, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Dumbbell,
+  Clock,
   Calendar,
   MoreHorizontal,
   Play,
@@ -28,10 +29,11 @@ import {
 } from "lucide-react"
 
 export default function LibraryPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState("All")
   const [workouts, setWorkouts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [isProcessingImage, setIsProcessingImage] = useState(false)
@@ -41,10 +43,52 @@ export default function LibraryPage() {
   const [popupDateLabel, setPopupDateLabel] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    // Load workouts from localStorage
-    const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-    setWorkouts(savedWorkouts)
-  }, [])
+    loadWorkouts()
+  }, [user?.id])
+
+  const loadWorkouts = async () => {
+    setLoading(true)
+    try {
+      if (user?.id) {
+        // Load from DynamoDB
+        const dbWorkouts = await dynamoDBWorkouts.list(user.id)
+
+        // Transform DynamoDB workouts to display format
+        const transformedWorkouts = dbWorkouts.map((w) => ({
+          id: w.workoutId,
+          title: w.title,
+          description: w.description,
+          exercises: w.exercises,
+          content: w.content,
+          author: w.author,
+          createdAt: w.createdAt,
+          updatedAt: w.updatedAt,
+          source: w.source,
+          type: w.type,
+          totalDuration: w.totalDuration,
+          difficulty: w.difficulty,
+          tags: w.tags,
+          llmData: w.llmData,
+        }))
+
+        setWorkouts(transformedWorkouts)
+
+        // Update localStorage cache
+        localStorage.setItem('workouts', JSON.stringify(transformedWorkouts))
+      } else {
+        // Fallback to localStorage if user not available
+        const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+        setWorkouts(savedWorkouts)
+      }
+    } catch (error) {
+      console.error('Error loading workouts:', error)
+      // Fallback to localStorage on error
+      const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+      setWorkouts(savedWorkouts)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const computeStreak = (allDates: string[], anchorIso: string) => {
     const unique = Array.from(new Set(allDates)).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
@@ -421,7 +465,12 @@ export default function LibraryPage() {
 
           {/* Workout Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {displayWorkouts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full text-center py-12">
+                <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
+                <h3 className="text-lg font-semibold text-text-primary mb-2">Loading workouts...</h3>
+              </div>
+            ) : displayWorkouts.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <Dumbbell className="h-12 w-12 text-text-secondary mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-text-primary mb-2">No workouts yet</h3>
