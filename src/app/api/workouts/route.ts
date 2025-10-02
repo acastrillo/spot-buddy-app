@@ -6,15 +6,17 @@ import { dynamoDBWorkouts } from "@/lib/dynamodb";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user?.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(session?.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get("limit");
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workouts = await dynamoDBWorkouts.list(
-      session.user.id,
+      (session.user as any).id,
       limit ? parseInt(limit) : undefined
     );
 
@@ -32,7 +34,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user?.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(session?.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -59,7 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const workout = await dynamoDBWorkouts.upsert(session.user.id, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const workout = await dynamoDBWorkouts.upsert((session.user as any).id, {
       workoutId,
       title,
       description,
