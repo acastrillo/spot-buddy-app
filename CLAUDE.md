@@ -2,15 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working with This Project
+
+**IMPORTANT**: This project has MCP (Model Context Protocol) servers configured. Always check for and use available MCP tools when working on tasks:
+- **AWS Operations**: Use `mcp__aws-api__*` tools for AWS CLI operations, infrastructure management, and cloud resources
+- **n8n Workflows**: Use `mcp__n8n-mcp__*` tools for workflow automation and integration
+- **Docker Hub**: Use `mcp__MCP_DOCKER__*` tools for Docker image management and container operations
+- **GitHub**: Use `mcp__MCP_DOCKER__*` tools for GitHub operations (issues, PRs, repositories)
+- **shadcn/ui**: Use `mcp__shadcn-ui-server__*` tools for UI component documentation and examples
+
+Before using bash commands for AWS, GitHub, Docker, or n8n operations, check if an MCP tool is available first.
+
 ## Project Overview
 
-Spotter is a fitness tracking application built with Next.js 15.5.1, React 19, and TypeScript. It's currently a development prototype that uses NextAuth.js authentication and SQLite/Prisma for data persistence.
+Spotter is a fitness tracking application built with Next.js 15.5.1, React 19, and TypeScript. It's designed to let users save Instagram workouts, upload workout screenshots, and track progress with OCR and AI features.
 
-**Important**: The working codebase is consolidated in the root `spotter-free/` directory.
+**Current Status**: v1.0 - Production deployment on AWS with:
+- **Authentication**: AWS Cognito with Google OAuth federated sign-in
+- **Database**: DynamoDB for workouts and users (production), SQLite/Prisma for development
+- **Infrastructure**: ECS Fargate, ALB with HTTPS, Route53 DNS
+- **Domain**: https://spotter.cannashieldct.com
+- **Phase 1 Complete**: Full workout CRUD with cross-device sync
+
+**Latest Updates** (January 2025):
+- ✅ Deployed Phase 1: DynamoDB workout persistence
+- ✅ API routes for workout management (`/api/workouts`, `/api/workouts/[id]`)
+- ✅ Cross-device synchronization with userId partition key
+- ✅ Offline support with localStorage cache
+- 🚧 Next: Phase 2 (Calendar & Scheduling)
 
 ## Development Commands
-
-Navigate to `spotter-free/` before running commands:
 
 ```bash
 # Start development server
@@ -40,10 +61,19 @@ npx shadcn@latest add [component-name]   # Add new UI components
 
 ## Architecture Overview
 
+### Key Technologies
+- **Framework**: Next.js 15.5.1 with App Router
+- **UI**: React 19 with TypeScript, Tailwind CSS
+- **Database**: DynamoDB (production), SQLite with Prisma ORM (development)
+- **Authentication**: NextAuth.js with AWS Cognito provider + Google OAuth
+- **State**: Zustand wrapping NextAuth session
+- **Build**: Standalone output mode configured for containerization
+- **Deployment**: Docker on AWS ECS Fargate
+
 ### Directory Structure
-- `spotter-free/src/app/` - Next.js App Router pages and API routes
+- `src/app/` - Next.js App Router pages and API routes
   - `add/` - Add workout functionality
-  - `api/` - API routes (health, instagram-fetch, ocr)
+  - `api/` - API routes (health, instagram-fetch, ocr, ingest, auth)
   - `auth/` - Authentication pages
   - `calendar/` - Calendar view page
   - `library/` - Workout library page
@@ -55,58 +85,74 @@ npx shadcn@latest add [component-name]   # Add new UI components
   - `providers/` - Context providers (session-provider)
   - `ui/` - Base UI components (shadcn/ui style)
 - `src/store/` - Zustand state management
-  - `index.ts` - Auth store using NextAuth.js session
+  - `index.ts` - Auth store wrapping NextAuth.js session
 - `src/lib/` - Utility functions and shared logic
-  - `db.ts` - Database utilities
+  - `dynamodb.ts` - DynamoDB client with workout CRUD operations
+  - `db.ts` - Prisma client (dev mode)
   - `workout/` - Workout data transformation utilities
   - `igParser.ts` & `igParser_toV1.ts` - Instagram parsing logic
   - `smartWorkoutParser.ts` - Enhanced workout parsing logic
   - `editable-workout-table.tsx` - Complex table component
   - `utils.ts` - Common utilities (cn function for className merging)
 
-### Key Technologies
-- **Framework**: Next.js 15 with App Router
-- **UI**: React 19 with TypeScript, Tailwind CSS
-- **Database**: SQLite with Prisma ORM
-- **Authentication**: NextAuth.js with credentials provider
-- **State**: Zustand for client state management
-- **Build**: Standalone output mode configured for containerization
+### Database Architecture
 
-### Database Schema
-Uses Prisma with SQLite for local development:
-- `User` model with NextAuth.js fields (email, firstName, lastName, password)
-- `Account`, `Session`, `VerificationToken` models for NextAuth.js
-- Database URL configured via `DATABASE_URL` environment variable (defaults to SQLite file)
-- Password hashing with bcryptjs for secure authentication
-- User seeding script at `scripts/seed-user.mjs` with default credentials
+**Production (DynamoDB)**:
+- `src/lib/dynamodb.ts` - DynamoDB client with CRUD operations
+- **spotter-users** table: User data with subscription and quota tracking
+  - Partition Key: `userId`
+  - Attributes: email, firstName, lastName, subscriptionTier, ocrQuotaUsed, etc.
+- **spotter-workouts** table: Workout data with cross-device sync
+  - Partition Key: `userId` (enables per-user queries)
+  - Sort Key: `workoutId` (unique workout identifier)
+  - Attributes: title, description, exercises[], content, source, type, difficulty, tags[], timestamps
+- All dates stored as ISO strings (not Date objects)
+- Auto-sync to DynamoDB on user login via NextAuth callbacks
+
+**Development (SQLite/Prisma)**:
+- **User** model with fields:
+  - Standard: id, email, firstName, lastName, password, emailVerified, image
+  - Subscription: subscriptionTier (free/starter/pro/elite), subscriptionStatus, Stripe IDs
+  - Usage tracking: ocrQuotaUsed, ocrQuotaLimit (2 per week for free tier), workoutsSaved
+- **Account**, **Session**, **VerificationToken** - NextAuth.js models
+- Database URL configured via `DATABASE_URL` environment variable
+- User seeding script at `scripts/seed-user.mjs`
 
 ### Authentication System
-Uses NextAuth.js with credentials provider:
-- `useAuthStore` in `src/store/index.ts` wraps NextAuth session
-- Authentication routes configured in `src/app/api/auth/[...nextauth]/route.ts`
-- Session management handled by NextAuth.js
-- User seeding available via `npm run db:seed:user` script
+Uses NextAuth.js with AWS Cognito provider + Google OAuth:
+- Configuration in `src/app/api/auth/[...nextauth]/route.ts`
+- **Federated Identity Providers**: Google sign-in enabled alongside Cognito
+- JWT session strategy with 30-day session expiration
+- Cookie configuration: httpOnly, sameSite: "lax", secure in production
+- OAuth checks: state validation only (no PKCE/nonce for federated providers)
+- Custom callbacks:
+  - **jwt callback**: Syncs user to DynamoDB on login, fetches subscription data on refresh
+  - **session callback**: Shapes user object with subscription tier and quota info
+- Environment variables required:
+  - `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, `COGNITO_USER_POOL_ID`
+  - `AWS_REGION`, `AUTH_SECRET`, `COGNITO_ISSUER_URL`
+  - `DYNAMODB_USERS_TABLE`, `DYNAMODB_WORKOUTS_TABLE`
+- `useAuthStore` in `src/store/index.ts` wraps NextAuth session for client state
+- Custom dark-themed sign-in page at `/auth/login`
 
 ### Styling System
-- **Framework**: Tailwind CSS with custom dark theme and CSS custom properties
-- **Configuration**: `components.json` configures shadcn/ui with "new-york" style, no RSC
-- **Colors**: Custom color palette defined via CSS variables for fitness app
+- **Tailwind CSS** with custom dark theme using CSS custom properties
+- **shadcn/ui** configured with "new-york" style, no RSC (`components.json`)
+- **Custom color palette** for fitness app:
   - Background: Dark navy (via `--background`)
   - Primary: Cyan accent (via `--primary`)
   - Secondary: Purple accent (via `--secondary`)
   - Rest: Amber accent (via `--rest-color`)
   - Surface levels with elevation support
-- **Components**: shadcn/ui style component library in `src/components/ui/`
-- **Path Aliases**: Component imports use `@/components`, utils use `@/lib/utils`
-- **Fonts**: Inter with system font fallbacks
+- **Path aliases**: `@/components`, `@/lib/utils`, `@/ui`, `@/hooks`
 - **Animations**: Custom keyframes for fade-in, slide-up, and bounce effects
 
 ## Development Guidelines
 
 ### Code Quality
-- **TypeScript**: Strict mode enabled with target ES2017 - all type errors fail builds
-- **ESLint**: Configured with Next.js and TypeScript rules in `eslint.config.mjs`
-- **Custom ESLint rules** (all set to "warn"):
+- **TypeScript**: Strict mode enabled with target ES2017
+- **Build enforcement**: Currently `ignoreDuringBuilds: true` and `ignoreBuildErrors: true` for production deployment (to be tightened)
+- **ESLint rules** (all set to "warn"):
   - `@typescript-eslint/no-explicit-any`
   - `@typescript-eslint/no-unused-vars`
   - `@typescript-eslint/no-empty-object-type`
@@ -114,20 +160,23 @@ Uses NextAuth.js with credentials provider:
   - `react-hooks/exhaustive-deps`
   - `prefer-const`
 - **Path aliases**: `@/*` maps to `./src/*` for clean imports
-- **Build enforcement**: Next.js config enforces both TypeScript and ESLint during builds
-- **No ignore flags**: Both `ignoreDuringBuilds` and `ignoreBuildErrors` set to false
+- **Next.js 15 Requirements**:
+  - Dynamic route params are async (must await `params` in route handlers)
+  - Route handlers only export GET, POST, etc. (no custom exports like `authOptions`)
 
 ### API Routes
-Located in `src/app/api/` with endpoints:
+Located in `src/app/api/`:
 - `/api/health` - Health check endpoint
-- `/api/ocr` - OCR processing capabilities (Tesseract.js integration)
+- `/api/workouts` - GET (list workouts), POST (create workout)
+- `/api/workouts/[id]` - GET (get workout), PATCH (update), DELETE (delete)
+- `/api/ocr` - OCR processing (Tesseract.js integration)
 - `/api/instagram-fetch` - Instagram content extraction
 - `/api/ingest` - Data ingestion endpoint
 - `/api/auth/[...nextauth]` - NextAuth.js authentication endpoints
 
 ### Page Structure
 Next.js App Router pages in `src/app/`:
-- `/` - Home page (`page.tsx`)
+- `/` - Home page
 - `/auth/login` - Authentication login page
 - `/add` - Add workout functionality with edit mode
 - `/library` - Workout library page
@@ -135,63 +184,95 @@ Next.js App Router pages in `src/app/`:
 - `/settings` - User settings page
 - `/workout/[id]` - Dynamic workout detail pages with edit mode
 
-### Component Patterns
-- Uses React 19 features and patterns
-- Functional components with hooks
-- Custom UI components follow consistent patterns
-- Authentication components handle routing and state via NextAuth.js
-
 ### External Integrations
 - **Tesseract.js**: Client-side OCR capabilities via `/api/ocr`
 - **AWS SDK**: Textract integration (`@aws-sdk/client-textract`) for document processing
 - **Instagram**: Custom parser (`igParser.ts`) for workout content extraction
-- **NextAuth.js**: Session management with Prisma adapter
+- **NextAuth.js**: Session management with AWS Cognito
 - **Form Handling**: React Hook Form with Zod validation and Hookform resolvers
 - **Icons**: Lucide React for consistent iconography
-
-## Production Considerations
-
-### Current Status (Development Prototype)
-- NextAuth.js authentication with credentials provider
-- SQLite database with Prisma ORM
-- Session management via NextAuth.js
-- See `PRODUCTION-READINESS.md` for detailed production deployment requirements
-
-### Deployment Configuration
-- **Next.js**: Standalone output mode configured for containerization
-- **Images**: Currently configured for localhost domain (update for production)
-- **Docker**: Dockerfile and docker-compose.yml included for containerization
-- **AWS**: Deployment scripts available (`deploy-to-aws.ps1`)
-- **Environment**: Uses `DATABASE_URL` environment variable for database configuration
-
-### Testing
-No test framework currently configured. When adding tests:
-- Consider Jest + React Testing Library for unit tests
-- Add E2E tests with Playwright or Cypress
-- Set up CI/CD pipeline with test automation
+- **Apify**: Instagram scraping (requires `APIFY_API_TOKEN`)
 
 ## Key Features & Data Flow
 
-### Authentication System
-- NextAuth.js with credentials provider in `src/store/index.ts`
-- User data persists to SQLite database via Prisma
-- Session management handled by NextAuth.js
-- Default demo credentials configured in auth provider
+### Authentication Flow
+1. User clicks login → redirected to AWS Cognito hosted UI
+2. Cognito validates credentials and returns to callback
+3. NextAuth.js JWT callback extracts Cognito profile (sub, email, given_name, family_name)
+4. Session callback shapes user object for client
+5. `useAuthStore` provides auth state via `useSession` hook
 
 ### Workout Data Processing
 - Instagram content parsing via custom `igParser.ts` and `igParser_toV1.ts`
 - AST (Abstract Syntax Tree) to workout data transformation
 - Editable workout table component for data manipulation
-- OCR processing for workout images via Tesseract.js
+- OCR processing for workout images via Tesseract.js and AWS Textract
 
-### UI/UX Architecture
-- Dark theme with custom fitness app color palette
-- Mobile-responsive design with dedicated mobile navigation
-- Tailwind CSS with shadcn/ui component patterns
-- Geist font family for modern typography
+### Workout Persistence & Sync (Phase 1 - Complete)
+- Full CRUD operations via `dynamoDBWorkouts` service layer:
+  - `list(userId)` - Get all user workouts
+  - `get(userId, workoutId)` - Get specific workout
+  - `upsert(userId, workout)` - Create or update workout
+  - `update(userId, workoutId, updates)` - Partial update
+  - `delete(userId, workoutId)` - Delete workout
+- Cross-device synchronization with userId as partition key
+- Offline support with localStorage cache as fallback
+- API routes at `/api/workouts` and `/api/workouts/[id]`
+- Frontend pages updated to use DynamoDB:
+  - `src/app/add/edit/page.tsx` - Save to DynamoDB
+  - `src/app/library/page.tsx` - Load from DynamoDB
+  - `src/app/workout/[id]/page.tsx` - Fetch from DynamoDB
 
-### Database Operations
-- Prisma client for type-safe database operations
-- SQLite for local development (can be switched to PostgreSQL for production)
-- Database utilities in `src/lib/db.ts`
-- User seeding script available at `scripts/seed-user.mjs`
+### Subscription & Usage Tracking
+- Tiered subscription model: free, starter, pro, elite
+- Free tier: 2 OCR requests per week with quota tracking
+- Stripe integration via `stripeCustomerId` and `stripeSubscriptionId` fields
+- Usage tracking: `ocrQuotaUsed`, `workoutsSaved`
+
+## Production Considerations
+
+### Deployment Configuration
+- **Next.js**: Standalone output mode configured for containerization
+- **Images**: Currently configured for localhost domain (update `next.config.ts` for production)
+- **Docker**: Dockerfile and docker-compose.yml available for containerization
+- **AWS**: Deployment scripts available (`deploy-to-aws.ps1`)
+- **Environment**: See `.env.example` for required variables
+
+### Testing
+No test framework currently configured. When adding tests, consider:
+- Jest + React Testing Library for unit tests
+- Playwright or Cypress for E2E tests
+- CI/CD pipeline with test automation
+
+## Documentation
+
+Comprehensive documentation available:
+- **README.md** - Project overview, getting started, tech stack, deployment
+- **ARCHITECTURE.md** - System architecture, design decisions, technical deep-dive
+- **USAGE-GUIDE.md** - End-user guide for using Spotter
+- **PROJECT-STATE.md** - Current state, MVP roadmap, north star goals
+- **ROADMAP.md** - Detailed phase-by-phase development roadmap
+- **PHASE-1-IMPLEMENTATION.md** - Technical details of Phase 1 (DynamoDB persistence)
+- **DEPLOYMENT-SUMMARY.md** - AWS deployment procedures and troubleshooting
+
+## Common Issues & Solutions
+
+### Next.js 15 Breaking Changes
+- **Async Params**: Dynamic route params must be awaited in route handlers
+  ```typescript
+  export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params; // Must await
+  }
+  ```
+- **Route Exports**: Only export GET, POST, etc. from route handlers (no custom exports)
+
+### DynamoDB Best Practices
+- Always include `userId` in queries for row-level security
+- Use composite keys (userId + workoutId) for efficient queries
+- Store dates as ISO strings, not Date objects
+- Implement optimistic UI updates with localStorage cache
+
+### Authentication
+- Session is stored as JWT with 30-day expiration
+- User data synced to DynamoDB on login via `jwt` callback
+- Access `session.user.id` with type casting: `(session?.user as any)?.id`
