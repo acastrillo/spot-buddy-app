@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
+import Link from "next/link"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -243,10 +244,12 @@ export default function WorkoutViewPage() {
                   <Timer className="h-4 w-4 mr-2" />
                   Rest Timer
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                <Link href={`/workout/${workout.id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </Link>
               </div>
             </div>
 

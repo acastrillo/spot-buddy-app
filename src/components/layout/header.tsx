@@ -31,7 +31,7 @@ export function Header() {
     { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
     { name: "Add Workout", href: "/add", icon: Plus },
     { name: "Library", href: "/library", icon: Library },
-    { name: "Body Weight", href: "/body-weight", icon: Scale },
+    { name: "Stats", href: "/stats", icon: BarChart3 },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { name: "Settings", href: "/settings", icon: Settings },
   ]

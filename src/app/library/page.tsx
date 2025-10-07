@@ -10,6 +10,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StreakPopup from "@/components/ui/streak-popup"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { dynamoDBWorkouts } from "@/lib/dynamodb"
 // import { extractWorkoutFromImage, ParsedWorkout } from "@/lib/extractWorkoutFromImage" // Temporarily disabled
 import {
@@ -25,7 +31,9 @@ import {
   CalendarDays,
   Camera,
   Upload,
-  Loader2
+  Loader2,
+  Pencil,
+  Trash2
 } from "lucide-react"
 
 export default function LibraryPage() {
@@ -175,13 +183,36 @@ export default function LibraryPage() {
     }
   }
 
+  const handleDeleteWorkout = async (workoutId: string) => {
+    if (!confirm('Are you sure you want to delete this workout?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/workouts/${workoutId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete workout')
+      }
+
+      // Reload workouts to reflect changes
+      await loadWorkouts()
+      alert('Workout deleted successfully')
+    } catch (error) {
+      console.error('Error deleting workout:', error)
+      alert('Failed to delete workout. Please try again.')
+    }
+  }
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
     setIsProcessingImage(true)
     try {
-      // const result = await extractWorkoutFromImage(file, { 
+      // const result = await extractWorkoutFromImage(file, {
       //   preferServer: false, // Use client-side Tesseract.js by default
       //   lang: 'eng'
       // })
@@ -228,31 +259,54 @@ export default function LibraryPage() {
   }
 
   const filters = [
-    { label: "All", active: true },
+    { label: "All" },
     { label: "Upper Body" },
     { label: "Lower Body" },
     { label: "Cardio" },
     { label: "Strength" },
-    { label: "HIT" }
+    { label: "HIIT" }
   ]
 
-  // Transform saved workouts to display format
-  const displayWorkouts = workouts.map(workout => {
-    const contentLines = workout.content.split('\n').filter((line: string) => line.trim())
-    const exercises = workout.exercises || workout.parsedData?.exercises || []
-    const equipmentTags = workout.tags || workout.parsedData?.equipment || []
+  // Transform saved workouts to display format and apply filters
+  const displayWorkouts = workouts
+    .filter(workout => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesTitle = workout.title?.toLowerCase().includes(query)
+        const matchesContent = workout.content?.toLowerCase().includes(query)
+        const matchesTags = workout.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+        if (!matchesTitle && !matchesContent && !matchesTags) return false
+      }
 
-    return {
-      id: workout.id,
-      title: workout.title,
-      date: new Date(workout.createdAt).toLocaleDateString(),
-      steps: `${contentLines.length} steps`,
-      exercises: `${exercises.length} exercises`,
-      duration: `${workout.totalDuration || 0} min`,
-      tags: equipmentTags.slice(0, 2),
-      content: contentLines.slice(0, 3).map((line: string) => line.length > 50 ? line.substring(0, 50) + '...' : line)
-    }
-  })
+      // Category filter
+      if (activeFilter !== "All") {
+        const workoutTags = workout.tags || []
+        // Normalize tag comparison (case-insensitive)
+        const hasTag = workoutTags.some((tag: string) =>
+          tag.toLowerCase() === activeFilter.toLowerCase()
+        )
+        if (!hasTag) return false
+      }
+
+      return true
+    })
+    .map(workout => {
+      const contentLines = workout.content.split('\n').filter((line: string) => line.trim())
+      const exercises = workout.exercises || workout.parsedData?.exercises || []
+      const equipmentTags = workout.tags || workout.parsedData?.equipment || []
+
+      return {
+        id: workout.id,
+        title: workout.title,
+        date: new Date(workout.createdAt).toLocaleDateString(),
+        steps: `${contentLines.length} steps`,
+        exercises: `${exercises.length} exercises`,
+        duration: `${workout.totalDuration || 0} min`,
+        tags: equipmentTags.slice(0, 2),
+        content: contentLines.slice(0, 3).map((line: string) => line.length > 50 ? line.substring(0, 50) + '...' : line)
+      }
+    })
 
   const summaryStats = [
     {
@@ -509,9 +563,28 @@ export default function LibraryPage() {
                         {workout.date} · {workout.steps}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/workout/${workout.id}/edit`} className="flex items-center cursor-pointer">
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteWorkout(workout.id)}
+                          className="text-red-600 focus:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
                   {/* Workout Stats */}
