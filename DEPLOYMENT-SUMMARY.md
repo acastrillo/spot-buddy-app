@@ -1,12 +1,71 @@
 # AWS Production Deployments - Summary
 
-**Latest Deployment**: Phase 4 - January 6, 2025
+**Latest Deployment**: Phase 2 & 3 - January 7, 2025
 **Status**: ✅ **DEPLOYED SUCCESSFULLY**
 **Production URL**: https://spotter.cannashieldct.com
 
 ---
 
-## Latest Deployment - Phase 4: Enhanced Stats & PRs
+## Latest Deployment - Phase 2 & 3: Calendar Scheduling & Smart Timers
+
+**Date**: January 7, 2025
+**Task Definition**: `spotter-app:11`
+**Docker Image**: `920013187591.dkr.ecr.us-east-1.amazonaws.com/spotter-app:latest` (digest: `sha256:eadaec6411f0aaffcfec678308dd7fa7b88f8ef7eaee9fde7638ecd881eaafad`)
+**Commit**: `9c0f485`
+
+### What Was Deployed ✅
+
+#### Phase 2: Calendar & Scheduling
+- Extended DynamoDB schema with `scheduledDate`, `status`, `completedDate` fields
+- Added 5 new DynamoDB methods for scheduling operations:
+  - `getScheduledForDate()` - Get workouts scheduled for specific date
+  - `getScheduled()` - Get all scheduled workouts
+  - `scheduleWorkout()` - Schedule workout for future date
+  - `completeWorkout()` - Mark workout as completed
+  - `unscheduleWorkout()` - Remove workout from schedule
+- Created 3 new API routes:
+  - `POST /api/workouts/[id]/schedule` - Schedule workout
+  - `DELETE /api/workouts/[id]/schedule` - Unschedule workout
+  - `POST /api/workouts/[id]/complete` - Mark workout complete
+  - `GET /api/workouts/scheduled` - Get scheduled workouts (with optional `?date` query)
+- Enhanced calendar page with scheduled vs completed visualization:
+  - Completed workouts: Filled cyan dots
+  - Scheduled workouts: Hollow rings
+  - Status badges in workout list
+- Updated library page to use scheduling APIs with smart date handling
+
+#### Phase 3: Smart Workout Timers
+- Created comprehensive timer utilities (`src/lib/timer-utils.ts`):
+  - Web Audio API beep generation (no audio files needed!)
+  - LocalStorage persistence for all timer states
+  - Web Notifications API integration
+  - Time formatting and progress calculation helpers
+  - REST_PRESETS (30s, 1m, 1m 30s, 2m, 3m, 5m)
+  - HIIT_PRESETS (Tabata, EMOM, Long Intervals, Sprint Intervals)
+- Built 3 timer components:
+  - **Interval Timer** (`interval-timer.tsx`) - General countdown with circular SVG progress
+  - **Rest Timer** (`rest-timer.tsx`) - Floating widget with quick-start presets
+  - **HIIT Timer** (`hiit-timer.tsx`) - Work/rest phase alternation with rounds
+- Created `/timer` page with tab selector for Interval vs HIIT
+- Integrated Rest Timer into workout detail pages
+- Updated mobile navigation: Replaced "Settings" with "Timer" link
+
+#### Technical Highlights
+- Web Audio API generates 800Hz beep sounds programmatically
+- Circular SVG progress visualization with smooth transitions
+- Phase-based state machine for HIIT timer (prep → work → rest)
+- LocalStorage persistence ensures timers survive page refreshes
+- Floating widget pattern for non-intrusive rest timer access
+- DynamoDB reserved keyword handling with ExpressionAttributeNames
+
+#### Documentation
+- Created `PHASE-2-CALENDAR-IMPLEMENTATION.md`
+- Created `PHASE-3-TIMERS-IMPLEMENTATION.md`
+- Updated `CLAUDE.md` to v1.3
+
+---
+
+## Previous Deployment - Phase 4: Enhanced Stats & PRs
 
 **Date**: January 6, 2025
 **Task Definition**: `spotter-app:10`
