@@ -113,59 +113,66 @@ export default function LibraryPage() {
     return streak
   }
 
-  const handleMarkCompleted = (workoutId: string) => {
+  const handleMarkCompleted = async (workoutId: string) => {
     const todayIso = new Date().toISOString().split('T')[0]
     const selected = selectedDate
 
-    // Future date -> schedule
-    if (selected > todayIso) {
-      const existing = JSON.parse(localStorage.getItem('scheduledWorkouts') || '[]')
-      const newItem = {
-        id: Date.now().toString(),
-        workoutId,
-        scheduledDate: selected,
-        createdAt: new Date().toISOString(),
+    try {
+      // Future date -> schedule
+      if (selected > todayIso) {
+        const response = await fetch(`/api/workouts/${workoutId}/schedule`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scheduledDate: selected,
+            status: 'scheduled',
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to schedule workout')
+        }
+
+        setShowDatePicker(null)
+        alert(`Workout scheduled for ${new Date(selected).toLocaleDateString()}`)
+        return
       }
-      const updated = [...existing, newItem]
-      localStorage.setItem('scheduledWorkouts', JSON.stringify(updated))
-      window.dispatchEvent(new Event('scheduledWorkoutsUpdated'))
+
+      // Today or past -> complete
+      const response = await fetch(`/api/workouts/${workoutId}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completedDate: selected,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to complete workout')
+      }
+
+      // Compute streak for popup
+      const workoutsResponse = await fetch('/api/workouts')
+      if (workoutsResponse.ok) {
+        const { workouts: allWorkouts } = await workoutsResponse.json()
+        const completedDates = allWorkouts
+          .filter((w: any) => w.status === 'completed')
+          .map((w: any) => w.completedDate || w.createdAt.split('T')[0])
+
+        const streak = computeStreak(completedDates, selected)
+        setStreakCount(streak)
+        setPopupDateLabel(new Date(selected).toLocaleDateString())
+        setShowStreakPopup(true)
+      }
+
       setShowDatePicker(null)
-      alert(`Workout scheduled for ${selected}`)
-      return
+
+      // Reload workouts to reflect changes
+      await loadWorkouts()
+    } catch (error) {
+      console.error('Error updating workout status:', error)
+      alert('Failed to update workout. Please try again.')
     }
-
-    // Today or past -> complete
-    const completionDate = new Date(selected).toISOString()
-    const existingCompletions = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
-    const newCompletion = {
-      id: Date.now().toString(),
-      workoutId,
-      completedAt: completionDate,
-      completedDate: selected,
-    }
-    const updatedCompletions = [...existingCompletions, newCompletion]
-    localStorage.setItem('completedWorkouts', JSON.stringify(updatedCompletions))
-
-    // If there was a scheduled item for this workout/date, remove it
-    const existingScheduled = JSON.parse(localStorage.getItem('scheduledWorkouts') || '[]')
-    const filteredScheduled = existingScheduled.filter((s: any) => !(s.workoutId === workoutId && s.scheduledDate === selected))
-    if (filteredScheduled.length !== existingScheduled.length) {
-      localStorage.setItem('scheduledWorkouts', JSON.stringify(filteredScheduled))
-      window.dispatchEvent(new Event('scheduledWorkoutsUpdated'))
-    }
-
-    // Notify other pages (home, calendar)
-    window.dispatchEvent(new Event('completedWorkoutsUpdated'))
-
-    // Compute streak relative to selected date (or today if same)
-    const anchor = selected
-    const allDates = updatedCompletions.map((c: any) => c.completedDate)
-    const streak = computeStreak(allDates, anchor)
-    setStreakCount(streak)
-    setPopupDateLabel(new Date(anchor).toLocaleDateString())
-    setShowStreakPopup(true)
-
-    setShowDatePicker(null)
   }
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

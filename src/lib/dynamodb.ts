@@ -272,6 +272,11 @@ export interface DynamoDBWorkout {
   llmData?: any | null; // AI-parsed data
   imageUrls?: string[]; // S3 image URLs
   thumbnailUrl?: string | null; // Primary thumbnail
+
+  // Phase 2: Scheduling & Status
+  scheduledDate?: string | null; // ISO date (YYYY-MM-DD) when workout is scheduled
+  status?: 'scheduled' | 'completed' | 'skipped' | null; // Workout completion status
+  completedDate?: string | null; // ISO date when workout was completed (may differ from scheduledDate)
 }
 
 // Workout operations
@@ -345,6 +350,12 @@ export const dynamoDBWorkouts = {
       difficulty: workout.difficulty,
       tags: workout.tags || [],
       llmData: workout.llmData || null,
+      imageUrls: workout.imageUrls,
+      thumbnailUrl: workout.thumbnailUrl,
+      // Preserve scheduling fields if provided
+      scheduledDate: workout.scheduledDate ?? null,
+      status: workout.status ?? null,
+      completedDate: workout.completedDate ?? null,
     };
 
     try {
@@ -375,6 +386,9 @@ export const dynamoDBWorkouts = {
       totalDuration?: number;
       difficulty?: string;
       tags?: string[];
+      scheduledDate?: string | null;
+      status?: 'scheduled' | 'completed' | 'skipped' | null;
+      completedDate?: string | null;
     }
   ): Promise<void> {
     try {
@@ -408,6 +422,19 @@ export const dynamoDBWorkouts = {
         updateExpressions.push("#tags = :tags");
         attributeValues[":tags"] = updates.tags;
         attributeNames["#tags"] = "tags"; // Reserved keyword
+      }
+      if (updates.scheduledDate !== undefined) {
+        updateExpressions.push("scheduledDate = :scheduledDate");
+        attributeValues[":scheduledDate"] = updates.scheduledDate;
+      }
+      if (updates.status !== undefined) {
+        updateExpressions.push("#status = :status");
+        attributeValues[":status"] = updates.status;
+        attributeNames["#status"] = "status"; // Reserved keyword
+      }
+      if (updates.completedDate !== undefined) {
+        updateExpressions.push("completedDate = :completedDate");
+        attributeValues[":completedDate"] = updates.completedDate;
       }
 
       await dynamoDb.send(
@@ -500,6 +527,144 @@ export const dynamoDBWorkouts = {
     } catch (error) {
       console.error("Error searching workouts:", error);
       return [];
+    }
+  },
+
+  /**
+   * Get scheduled workouts for a specific date
+   */
+  async getScheduledForDate(
+    userId: string,
+    date: string
+  ): Promise<DynamoDBWorkout[]> {
+    try {
+      const result = await dynamoDb.send(
+        new QueryCommand({
+          TableName: WORKOUTS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          FilterExpression: "scheduledDate = :date",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+            ":date": date,
+          },
+        })
+      );
+
+      return (result.Items as DynamoDBWorkout[]) || [];
+    } catch (error) {
+      console.error("Error getting scheduled workouts:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get all scheduled workouts (future and past)
+   */
+  async getScheduled(userId: string): Promise<DynamoDBWorkout[]> {
+    try {
+      const result = await dynamoDb.send(
+        new QueryCommand({
+          TableName: WORKOUTS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          FilterExpression: "attribute_exists(scheduledDate)",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+          },
+        })
+      );
+
+      return (result.Items as DynamoDBWorkout[]) || [];
+    } catch (error) {
+      console.error("Error getting scheduled workouts:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Schedule a workout for a specific date
+   */
+  async scheduleWorkout(
+    userId: string,
+    workoutId: string,
+    scheduledDate: string,
+    status: 'scheduled' | 'completed' | 'skipped' = 'scheduled'
+  ): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: WORKOUTS_TABLE,
+          Key: { userId, workoutId },
+          UpdateExpression:
+            "SET scheduledDate = :scheduledDate, #status = :status, updatedAt = :updatedAt",
+          ExpressionAttributeNames: {
+            "#status": "status",
+          },
+          ExpressionAttributeValues: {
+            ":scheduledDate": scheduledDate,
+            ":status": status,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error scheduling workout:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark workout as completed on a specific date
+   */
+  async completeWorkout(
+    userId: string,
+    workoutId: string,
+    completedDate?: string
+  ): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: WORKOUTS_TABLE,
+          Key: { userId, workoutId },
+          UpdateExpression:
+            "SET #status = :status, completedDate = :completedDate, updatedAt = :updatedAt",
+          ExpressionAttributeNames: {
+            "#status": "status",
+          },
+          ExpressionAttributeValues: {
+            ":status": "completed",
+            ":completedDate": completedDate || new Date().toISOString().split("T")[0],
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error completing workout:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Unschedule a workout (remove scheduling info)
+   */
+  async unscheduleWorkout(userId: string, workoutId: string): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: WORKOUTS_TABLE,
+          Key: { userId, workoutId },
+          UpdateExpression:
+            "REMOVE scheduledDate, #status, completedDate SET updatedAt = :updatedAt",
+          ExpressionAttributeNames: {
+            "#status": "status",
+          },
+          ExpressionAttributeValues: {
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error unscheduling workout:", error);
+      throw error;
     }
   },
 };

@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import StreakPopup from "@/components/ui/streak-popup"
+import { RestTimer } from "@/components/timer/rest-timer"
 import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import {
   ArrowLeft,
@@ -19,7 +20,8 @@ import {
   Edit,
   Play,
   AlertCircle,
-  Loader2
+  Loader2,
+  Timer
 } from "lucide-react"
 
 interface Exercise {
@@ -57,6 +59,7 @@ export default function WorkoutViewPage() {
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [streakCount, setStreakCount] = useState(0)
   const [popupDateLabel, setPopupDateLabel] = useState<string | undefined>(undefined)
+  const [showRestTimer, setShowRestTimer] = useState(false)
 
   useEffect(() => {
     const workoutId = params?.id as string
@@ -232,13 +235,17 @@ export default function WorkoutViewPage() {
               </div>
               
               <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRestTimer(!showRestTimer)}
+                >
+                  <Timer className="h-4 w-4 mr-2" />
+                  Rest Timer
+                </Button>
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
-                </Button>
-                <Button size="sm" disabled className="opacity-50 cursor-not-allowed">
-                  <Play className="h-4 w-4 mr-2" />
-                  Coming Soon
                 </Button>
               </div>
             </div>
@@ -379,6 +386,10 @@ export default function WorkoutViewPage() {
         </div>
       </main>
       <MobileNav />
+      {/* Rest Timer Widget */}
+      {showRestTimer && (
+        <RestTimer onClose={() => setShowRestTimer(false)} />
+      )}
     </>
   )
 }

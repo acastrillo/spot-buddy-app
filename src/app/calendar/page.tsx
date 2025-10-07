@@ -25,6 +25,7 @@ export default function CalendarPage() {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [workouts, setWorkouts] = useState<DynamoDBWorkout[]>([])
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<DynamoDBWorkout[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Load workouts from DynamoDB
@@ -36,6 +37,10 @@ export default function CalendarPage() {
       try {
         const data = await dynamoDBWorkouts.list(user.id)
         setWorkouts(data)
+
+        // Also fetch scheduled workouts
+        const scheduled = await dynamoDBWorkouts.getScheduled(user.id)
+        setScheduledWorkouts(scheduled)
       } catch (error) {
         console.error("Error loading workouts:", error)
         // Fallback to localStorage
@@ -49,11 +54,17 @@ export default function CalendarPage() {
     loadWorkouts()
   }, [user?.id])
 
-  // Calculate workout dates for calendar marking
+  // Calculate workout dates for calendar marking (completed workouts)
   const markedDates = useMemo(() => {
     return Array.from(
       new Set(
-        workouts.map((w) => new Date(w.createdAt).toISOString().split("T")[0])
+        workouts
+          .filter(w => w.status === 'completed' || !w.status) // Include workouts without status (legacy)
+          .map((w) => {
+            // Use completedDate if available, otherwise createdAt
+            const date = w.completedDate || w.createdAt;
+            return new Date(date).toISOString().split("T")[0];
+          })
       )
     )
   }, [workouts])
@@ -61,20 +72,56 @@ export default function CalendarPage() {
   const dateCounts = useMemo(() => {
     const map: Record<string, number> = {}
     for (const w of workouts) {
-      const d = new Date(w.createdAt).toISOString().split("T")[0]
-      map[d] = (map[d] || 0) + 1
+      if (w.status === 'completed' || !w.status) {
+        const d = (w.completedDate || w.createdAt);
+        const dateStr = new Date(d).toISOString().split("T")[0];
+        map[dateStr] = (map[dateStr] || 0) + 1;
+      }
     }
     return map
   }, [workouts])
 
-  // Get workouts for selected date
+  // Calculate scheduled workout dates for calendar marking
+  const scheduledDates = useMemo(() => {
+    return Array.from(
+      new Set(
+        scheduledWorkouts
+          .filter(w => w.scheduledDate && w.status === 'scheduled')
+          .map((w) => w.scheduledDate!)
+      )
+    )
+  }, [scheduledWorkouts])
+
+  const scheduledCounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const w of scheduledWorkouts) {
+      if (w.scheduledDate && w.status === 'scheduled') {
+        map[w.scheduledDate] = (map[w.scheduledDate] || 0) + 1
+      }
+    }
+    return map
+  }, [scheduledWorkouts])
+
+  // Get workouts for selected date (both completed and scheduled)
   const selectedDateWorkouts = useMemo(() => {
     if (!selectedDate) return []
     const dateStr = selectedDate.toISOString().split("T")[0]
-    return workouts.filter(
-      (w) => new Date(w.createdAt).toISOString().split("T")[0] === dateStr
+
+    // Get completed workouts for this date
+    const completed = workouts.filter((w) => {
+      const completedDateStr = w.completedDate
+        ? w.completedDate
+        : new Date(w.createdAt).toISOString().split("T")[0];
+      return completedDateStr === dateStr && (w.status === 'completed' || !w.status);
+    })
+
+    // Get scheduled workouts for this date
+    const scheduled = scheduledWorkouts.filter(
+      (w) => w.scheduledDate === dateStr && w.status === 'scheduled'
     )
-  }, [selectedDate, workouts])
+
+    return [...completed, ...scheduled]
+  }, [selectedDate, workouts, scheduledWorkouts])
 
   // Calculate stats for selected month
   const stats = useMemo(() => {
@@ -159,8 +206,8 @@ export default function CalendarPage() {
                   onSelect={setSelectedDate}
                   markedDates={markedDates}
                   dateCounts={dateCounts}
-                  scheduledDates={[]}
-                  scheduledCounts={{}}
+                  scheduledDates={scheduledDates}
+                  scheduledCounts={scheduledCounts}
                 />
               </Card>
 
@@ -180,9 +227,21 @@ export default function CalendarPage() {
                         className="p-3 bg-surface hover:bg-surface-elevated rounded-lg cursor-pointer transition-colors flex items-center justify-between"
                       >
                         <div className="flex-1">
-                          <h4 className="font-medium text-text-primary mb-1">
-                            {workout.title}
-                          </h4>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-text-primary">
+                              {workout.title}
+                            </h4>
+                            {workout.status === 'scheduled' && (
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-secondary/20 text-secondary border border-secondary/30">
+                                Scheduled
+                              </span>
+                            )}
+                            {workout.status === 'completed' && (
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-primary/20 text-primary border border-primary/30">
+                                Completed
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-text-secondary">
                             {workout.exercises.length} exercises • {workout.totalDuration} min
                           </p>
