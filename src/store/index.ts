@@ -1,46 +1,49 @@
 "use client"
 
-import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react'
+import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession } from "next-auth/react";
 
 interface User {
-  id: string
-  email: string
-  firstName?: string | null
-  lastName?: string | null
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
+  ocrQuotaUsed?: number;
+  ocrQuotaLimit?: number;
 }
 
 interface AuthState {
-  isAuthenticated: boolean
-  user: User | null
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => Promise<void>
+  isAuthenticated: boolean;
+  user: User | null;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = (): AuthState => {
-  const { data: session, status } = useSession()
+  const { data: session, status } = useSession();
 
   const user: User | null = session?.user?.email
     ? {
-        id: (session.user as any).id || '',
+        id: ((session.user as unknown as { id?: string }).id ?? "") as string,
         email: session.user.email as string,
-        firstName: (session.user as any).firstName ?? null,
-        lastName: (session.user as any).lastName ?? null,
+        firstName: (session.user as unknown as { firstName?: string | null }).firstName ?? null,
+        lastName: (session.user as unknown as { lastName?: string | null }).lastName ?? null,
+        subscriptionTier: (session.user as unknown as { subscriptionTier?: string }).subscriptionTier ?? "free",
+        subscriptionStatus: (session.user as unknown as { subscriptionStatus?: string }).subscriptionStatus ?? "active",
+        ocrQuotaUsed: (session.user as unknown as { ocrQuotaUsed?: number }).ocrQuotaUsed ?? 0,
+        ocrQuotaLimit: (session.user as unknown as { ocrQuotaLimit?: number }).ocrQuotaLimit ?? 2,
       }
-    : null
+    : null;
 
   return {
-    isAuthenticated: status === 'authenticated',
+    isAuthenticated: status === "authenticated",
     user,
-    login: async (email: string, password: string) => {
-      const res = await nextAuthSignIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
-      return !res?.error
+    login: async () => {
+      await nextAuthSignIn("cognito", { callbackUrl: "/" });
     },
     logout: async () => {
-      await nextAuthSignOut({ redirect: false })
+      await nextAuthSignOut({ callbackUrl: "/" });
     },
-  }
-}
+  };
+};

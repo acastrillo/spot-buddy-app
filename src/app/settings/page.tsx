@@ -8,17 +8,20 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { 
-  User, 
-  Shield, 
-  Bell, 
-  Smartphone, 
-  Download, 
+import {
+  User,
+  Shield,
+  Bell,
+  Smartphone,
+  Download,
   Trash2,
   ChevronRight,
   HelpCircle,
-  Heart
+  Heart,
+  TrendingUp,
+  Activity
 } from "lucide-react"
+import Link from "next/link"
 
 export default function SettingsPage() {
   const { isAuthenticated, user } = useAuthStore()
@@ -31,6 +34,25 @@ export default function SettingsPage() {
   }
 
   const settingsSections = [
+    {
+      title: "Stats & Progress",
+      items: [
+        {
+          icon: TrendingUp,
+          title: "Personal Records",
+          subtitle: "View your PRs and strength progression",
+          action: "chevron",
+          href: "/stats/prs"
+        },
+        {
+          icon: Activity,
+          title: "Body Metrics",
+          subtitle: "Track weight, measurements, and body composition",
+          action: "chevron",
+          href: "/stats/metrics"
+        }
+      ]
+    },
     {
       title: "Account",
       items: [
@@ -49,7 +71,7 @@ export default function SettingsPage() {
       ]
     },
     {
-      title: "Preferences", 
+      title: "Preferences",
       items: [
         {
           icon: Bell,
@@ -172,15 +194,14 @@ export default function SettingsPage() {
                   <CardContent className="p-0">
                     {section.items.map((item, itemIndex) => {
                       const Icon = item.icon
-                      return (
-                        <button
-                          key={itemIndex}
-                          className={`w-full flex items-center justify-between p-4 text-left hover:bg-surface/50 transition-colors duration-200 ${
-                            itemIndex !== section.items.length - 1 ? 'border-b border-border' : ''
-                          } ${itemIndex === 0 ? 'rounded-t-xl' : ''} ${
-                            itemIndex === section.items.length - 1 ? 'rounded-b-xl' : ''
-                          }`}
-                        >
+                      const buttonClasses = `w-full flex items-center justify-between p-4 text-left hover:bg-surface/50 transition-colors duration-200 ${
+                        itemIndex !== section.items.length - 1 ? 'border-b border-border' : ''
+                      } ${itemIndex === 0 ? 'rounded-t-xl' : ''} ${
+                        itemIndex === section.items.length - 1 ? 'rounded-b-xl' : ''
+                      }`
+
+                      const content = (
+                        <>
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
                               item.destructive ? 'bg-destructive/10' : 'bg-surface'
@@ -203,6 +224,16 @@ export default function SettingsPage() {
                           {item.action === "chevron" && (
                             <ChevronRight className="h-4 w-4 text-text-secondary" />
                           )}
+                        </>
+                      )
+
+                      return (item as any).href ? (
+                        <Link key={itemIndex} href={(item as any).href} className={buttonClasses}>
+                          {content}
+                        </Link>
+                      ) : (
+                        <button key={itemIndex} className={buttonClasses}>
+                          {content}
                         </button>
                       )
                     })}

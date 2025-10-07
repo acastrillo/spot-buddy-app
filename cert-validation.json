@@ -1,0 +1,36 @@
+{
+    "Certificate": {
+        "CertificateArn": "arn:aws:acm:us-east-1:920013187591:certificate/de6434bf-b036-45b4-be63-55a6d202b39c",
+        "DomainName": "spotter.cannashieldct.com",
+        "SubjectAlternativeNames": [
+            "spotter.cannashieldct.com"
+        ],
+        "DomainValidationOptions": [
+            {
+                "DomainName": "spotter.cannashieldct.com",
+                "ValidationDomain": "spotter.cannashieldct.com",
+                "ValidationStatus": "PENDING_VALIDATION",
+                "ResourceRecord": {
+                    "Name": "_fd4a8766584d271a03dcfb2dcb13d83b.spotter.cannashieldct.com.",
+                    "Type": "CNAME",
+                    "Value": "_0d0336b008f0572f09b07cec2a4fd12a.xlfgrmvvlj.acm-validations.aws."
+                },
+                "ValidationMethod": "DNS"
+            }
+        ],
+        "Subject": "CN=spotter.cannashieldct.com",
+        "Issuer": "Amazon",
+        "CreatedAt": "2025-10-01T08:51:10.347000-04:00",
+        "Status": "PENDING_VALIDATION",
+        "KeyAlgorithm": "RSA-2048",
+        "SignatureAlgorithm": "SHA256WITHRSA",
+        "InUseBy": [],
+        "Type": "AMAZON_ISSUED",
+        "KeyUsages": [],
+        "ExtendedKeyUsages": [],
+        "RenewalEligibility": "INELIGIBLE",
+        "Options": {
+            "CertificateTransparencyLoggingPreference": "ENABLED"
+        }
+    }
+}

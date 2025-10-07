@@ -4,16 +4,19 @@ import { useState } from "react"
 import Link from "next/link"
 import { useAuthStore } from "@/store"
 import { Button } from "@/components/ui/button"
-import { 
-  Dumbbell, 
-  Menu, 
-  X, 
-  Plus, 
-  Library, 
-  Calendar, 
+import {
+  Dumbbell,
+  Menu,
+  X,
+  Plus,
+  Library,
+  Calendar,
   Settings,
   LogOut,
-  User
+  User,
+  Zap,
+  BarChart3,
+  Scale
 } from "lucide-react"
 
 export function Header() {
@@ -25,8 +28,10 @@ export function Header() {
   }
 
   const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
     { name: "Add Workout", href: "/add", icon: Plus },
     { name: "Library", href: "/library", icon: Library },
+    { name: "Body Weight", href: "/body-weight", icon: Scale },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { name: "Settings", href: "/settings", icon: Settings },
   ]
@@ -41,7 +46,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <Dumbbell className="h-8 w-8 text-primary" />
-          <span className="font-bold text-xl text-text-primary">Spotter</span>
+          <span className="font-bold text-xl text-text-primary">Spot Buddy</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -61,11 +66,28 @@ export function Header() {
 
         {/* User Menu */}
         <div className="flex items-center space-x-2">
+          {/* OCR Quota Display */}
+          {user?.ocrQuotaLimit !== undefined && (
+            <Link href="/settings">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center space-x-2 text-xs"
+                title={`OCR Credits: ${user.ocrQuotaLimit - (user.ocrQuotaUsed || 0)} remaining`}
+              >
+                <Zap className="h-4 w-4 text-primary" />
+                <span className="hidden lg:inline text-text-secondary">
+                  {user.ocrQuotaLimit - (user.ocrQuotaUsed || 0)}/{user.ocrQuotaLimit}
+                </span>
+              </Button>
+            </Link>
+          )}
+
           <div className="hidden sm:flex items-center space-x-2 text-sm text-text-secondary">
             <User className="h-4 w-4" />
             <span>{user?.firstName || user?.email}</span>
           </div>
-          
+
           <Button
             variant="ghost"
             size="sm"

@@ -3,6 +3,7 @@ export const runtime = 'nodejs'; // ensure Node runtime (AWS SDK needs Node)
 import { NextResponse } from 'next/server';
 import { TextractClient, DetectDocumentTextCommand } from '@aws-sdk/client-textract';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 import { dynamoDBUsers } from '@/lib/dynamodb';
 
 // Helper function to create Textract client lazily
@@ -22,10 +23,14 @@ function getTextractClient() {
 export async function POST(req: Request) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('OCR Auth failed:', { session, user: session?.user });
+      return NextResponse.json({
+        error: 'Unauthorized',
+        message: 'Please log in again to use OCR features'
+      }, { status: 401 });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

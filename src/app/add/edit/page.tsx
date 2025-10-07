@@ -129,14 +129,27 @@ export default function EditWorkoutPage() {
         llmData: workoutData.llmData,
       }
 
-      // Save to DynamoDB
-      await dynamoDBWorkouts.upsert(user.id, workoutToSave)
+      // Save to DynamoDB via API route
+      const response = await fetch('/api/workouts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workoutToSave),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save workout')
+      }
+
+      const { workout } = await response.json()
 
       // Also save to localStorage as fallback/cache
       const existingWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
       const finalWorkout = {
-        id: workoutData.id,
-        ...workoutToSave,
+        id: workout.workoutId,
+        ...workout,
         updatedAt: new Date().toISOString(),
       }
       existingWorkouts.push(finalWorkout)
@@ -146,7 +159,7 @@ export default function EditWorkoutPage() {
       sessionStorage.removeItem('workoutToEdit')
 
       // Navigate to workout view
-      router.push(`/workout/${workoutData.id}`)
+      router.push(`/workout/${workout.workoutId}`)
 
     } catch (error) {
       console.error('Save error:', error)

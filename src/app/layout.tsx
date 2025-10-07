@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthSessionProvider from "@/components/providers/session-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// TEMPORARILY DISABLED - TESTING IF GOOGLE FONTS CAUSING HANG
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 export const metadata: Metadata = {
-  title: "Spotter - Fitness Tracking App",
-  description: "Track your workouts, manage your exercise library, and monitor your fitness progress with Spotter - the modern fitness tracking application.",
+  title: "Spot Buddy - Your Fitness Accountability Partner",
+  description: "Track workouts with your crew, celebrate PRs, and stay accountable. Spot Buddy is the fitness app that keeps you motivated with your gym squad.",
 };
 
 export default function RootLayout({
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         <AuthSessionProvider>
           {children}

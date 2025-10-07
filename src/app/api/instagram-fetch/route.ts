@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-options'
 
 interface ApifyInstagramResult {
   url?: string
@@ -23,6 +25,16 @@ interface InstagramFetchRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!(session?.user as any)?.id) {
+      console.error('Instagram-fetch Auth failed:', { session, user: session?.user });
+      return NextResponse.json({
+        error: 'Unauthorized',
+        message: 'Please log in to fetch Instagram workouts'
+      }, { status: 401 });
+    }
+
     const { url }: InstagramFetchRequest = await request.json()
 
     if (!url) {
@@ -54,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetching Instagram URL
-    
+
     try {
       // Call Apify Instagram scraper - start the run
       const apifyResponse = await fetch('https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/runs', {
@@ -80,16 +92,16 @@ export async function POST(request: NextRequest) {
         const errorText = await apifyResponse.text()
         console.error('Apify API error:', apifyResponse.status, errorText)
         return NextResponse.json(
-          { 
+          {
             error: `Failed to start Instagram scraper: ${apifyResponse.status}`,
-            details: errorText 
+            details: errorText
           },
           { status: apifyResponse.status }
         )
       }
 
       const runResponse = await apifyResponse.json()
-      
+
       if (!runResponse || !runResponse.data || !runResponse.data.id) {
         console.error('No run ID in response:', runResponse)
         return NextResponse.json(
@@ -97,16 +109,16 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
-      
+
       const runData = runResponse.data
 
       // Wait for the run to complete (poll the status)
       let attempts = 0
       const maxAttempts = 60 // 60 seconds max wait for Instagram scraping
-      
+
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-        
+
         const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runData.id}`, {
           headers: {
             'Authorization': `Bearer ${apifyApiToken}`,
@@ -121,15 +133,15 @@ export async function POST(request: NextRequest) {
 
         const statusResponse_ = await statusResponse.json()
         const statusData = statusResponse_.data || statusResponse_
-        
+
         if (!statusData || !statusData.status) {
           console.error('Invalid status response:', statusResponse_)
           attempts++
           continue
         }
-        
+
         if (statusData.status === 'SUCCEEDED') {
-          
+
           // Get the dataset results
           const datasetResponse = await fetch(
             `https://api.apify.com/v2/datasets/${statusData.defaultDatasetId}/items`,
@@ -150,7 +162,7 @@ export async function POST(request: NextRequest) {
           }
 
           const results: ApifyInstagramResult[] = await datasetResponse.json()
-          
+
           if (!results || results.length === 0) {
             return NextResponse.json(
               { error: 'No Instagram post found' },
@@ -160,11 +172,11 @@ export async function POST(request: NextRequest) {
 
           // Process the results
           const post = results[0]
-          
+
           const caption = post.caption || post.text || ''
           const postUrl = post.url || url
           const timestamp = post.timestamp || new Date().toISOString()
-          
+
           const workoutData = {
             url: postUrl,
             title: `Instagram Workout - ${new Date(timestamp).toLocaleDateString()}`,
@@ -183,7 +195,7 @@ export async function POST(request: NextRequest) {
           }
 
           return NextResponse.json(workoutData)
-          
+
         } else if (statusData.status === 'FAILED') {
           console.error('Run failed:', statusData.statusMessage)
           return NextResponse.json(
@@ -196,7 +208,7 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           )
         }
-        
+
         attempts++
       }
 
@@ -205,7 +217,7 @@ export async function POST(request: NextRequest) {
         { error: 'Instagram scraper timed out. Try again in a moment.' },
         { status: 408 }
       )
-      
+
     } catch (parseError) {
       console.error('JSON Parse error:', parseError)
       return NextResponse.json(
@@ -229,11 +241,11 @@ function parseWorkoutFromCaption(caption: string) {
   const lines = caption.split('\n').filter(line => line.trim())
   const exercises: Array<{ name: string; sets?: string; reps?: string; weight?: string; time?: string }> = []
   let workoutInstructions = ''
-  
+
   // Look for common workout patterns
   lines.forEach(line => {
     const trimmedLine = line.trim()
-    
+
     // Pattern: Emoji numbered exercises like "1️⃣ DUMBBELL HOPS" or "2️⃣ SINGLE ARM OH LUNGE"
     const emojiNumberMatch = trimmedLine.match(/^[0-9]️⃣\s+(.+)$/i)
     if (emojiNumberMatch) {
@@ -283,7 +295,7 @@ function parseWorkoutFromCaption(caption: string) {
     }
 
     // Simple exercise name (if it looks like an exercise)
-    if (trimmedLine.match(/^\d+\.\s*/) || 
+    if (trimmedLine.match(/^\d+\.\s*/) ||
         trimmedLine.toLowerCase().includes('squat') ||
         trimmedLine.toLowerCase().includes('push') ||
         trimmedLine.toLowerCase().includes('pull') ||

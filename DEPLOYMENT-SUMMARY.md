@@ -1,29 +1,75 @@
-# Phase 1: AWS Production Deployment - Summary
+# AWS Production Deployments - Summary
 
-**Date**: October 2, 2025
+**Latest Deployment**: Phase 4 - January 6, 2025
 **Status**: ✅ **DEPLOYED SUCCESSFULLY**
 **Production URL**: https://spotter.cannashieldct.com
 
 ---
 
-## Deployment Overview
+## Latest Deployment - Phase 4: Enhanced Stats & PRs
 
-Successfully deployed **Phase 1: DynamoDB Workout Persistence** to AWS production environment. The application now uses cloud-based data storage with cross-device sync capabilities.
+**Date**: January 6, 2025
+**Task Definition**: `spotter-app:10`
+**Docker Image**: `920013187591.dkr.ecr.us-east-1.amazonaws.com/spotter-app:20251006-194814`
+
+### What Was Deployed ✅
+
+#### Personal Records Tracking
+- Automatic PR detection from workout data
+- 7 different 1RM calculation formulas
+- PR progression charts per exercise
+- All PRs view with current bests
+- Recent PRs (last 30 days) view
+- Exercise-specific progression tracking
+
+#### Body Metrics Tracking
+- DynamoDB table: `spotter-body-metrics` (Partition: `userId`, Sort: `date`)
+- Weight logging with progression charts
+- Body fat percentage tracking
+- 8 body measurements (chest, waist, hips, thighs, arms, calves, shoulders, neck)
+- Metric/Imperial unit support
+- Measurement history timeline
+
+#### New API Routes
+- `GET /api/body-metrics` - List all metrics with date range filter
+- `POST /api/body-metrics` - Create new metric entry
+- `GET /api/body-metrics/[date]` - Get specific date metric
+- `PATCH /api/body-metrics/[date]` - Update metric entry
+- `DELETE /api/body-metrics/[date]` - Delete metric entry
+- `GET /api/body-metrics/latest` - Get most recent metric
+
+#### New Frontend Pages
+- `/stats/prs` - Personal records page with progression charts
+- `/stats/metrics` - Body metrics tracking page with charts
+- Updated `/settings` with "Stats & Progress" section
+
+#### Infrastructure Updates
+- Updated IAM role permissions for `spotter-body-metrics` table
+- Created DynamoDB table with composite key (`userId` + `date`)
+- All features verified and operational
 
 ---
 
-## What Was Deployed
+## Previous Deployments
 
-### 1. Core Features ✅
+### Phase 1: DynamoDB Workout Persistence
+
+**Date**: October 2, 2025
+**Task Definition**: `spotter-app:6`
+**Status**: ✅ Complete
+
+Successfully deployed **Phase 1: DynamoDB Workout Persistence** to AWS production environment. The application now uses cloud-based data storage with cross-device sync capabilities.
+
+#### Phase 1 Core Features ✅
 - **DynamoDB Workout CRUD**: Full create, read, update, delete operations
 - **Cross-Device Sync**: Workouts accessible from any device via `userId` partition key
 - **API Routes**: REST API for workout operations (`/api/workouts`, `/api/workouts/[id]`)
 - **Offline Support**: localStorage cache for resilience
 - **User Authentication**: AWS Cognito integration maintained
 
-### 2. Infrastructure ✅
+#### Phase 1 Infrastructure ✅
 - **Docker Image**: `920013187591.dkr.ecr.us-east-1.amazonaws.com/spotter-app:latest`
-- **ECS Service**: `spotter-app` on `SpotterCluster`
+- **ECS Service**: `spotter-app` on `Spot BuddyCluster`
 - **DynamoDB Tables**:
   - `spotter-users` (existing)
   - `spotter-workouts` (new)
@@ -116,14 +162,14 @@ docker push 920013187591.dkr.ecr.us-east-1.amazonaws.com/spotter-app:latest
 
 ### 6. ✅ ECS Deployment
 ```bash
-aws ecs update-service --cluster SpotterCluster --service spotter-app --force-new-deployment
+aws ecs update-service --cluster Spot BuddyCluster --service spotter-app --force-new-deployment
 # Deployment: IN_PROGRESS → COMPLETED
 ```
 
 ### 7. ✅ Production Test
 ```bash
 curl -s https://spotter.cannashieldct.com | grep "<title>"
-# <title>Spotter - Fitness Tracking App</title>
+# <title>Spot Buddy - Fitness Tracking App</title>
 # HTTP Status: 200 OK
 ```
 
@@ -288,7 +334,7 @@ aws ecr describe-images --repository-name spotter-app --region us-east-1
 aws ecs register-task-definition --cli-input-json file://task-def-previous.json
 
 # Force new deployment with previous task def
-aws ecs update-service --cluster SpotterCluster --service spotter-app \
+aws ecs update-service --cluster Spot BuddyCluster --service spotter-app \
   --task-definition spotter-app:5 --force-new-deployment
 ```
 
@@ -300,7 +346,7 @@ git revert 7e57002 2229307
 # Rebuild and redeploy
 docker build -t spotter-app:rollback .
 docker push 920013187591.dkr.ecr.us-east-1.amazonaws.com/spotter-app:rollback
-aws ecs update-service --cluster SpotterCluster --service spotter-app --force-new-deployment
+aws ecs update-service --cluster Spot BuddyCluster --service spotter-app --force-new-deployment
 ```
 
 ---
@@ -366,13 +412,13 @@ The application is now accessible at **https://spotter.cannashieldct.com** with 
 
 ### Check ECS Service Status
 ```bash
-aws ecs describe-services --cluster SpotterCluster --services spotter-app --region us-east-1
+aws ecs describe-services --cluster Spot BuddyCluster --services spotter-app --region us-east-1
 ```
 
 ### View ECS Task Logs
 ```bash
 # Get task ID
-aws ecs list-tasks --cluster SpotterCluster --service-name spotter-app --region us-east-1
+aws ecs list-tasks --cluster Spot BuddyCluster --service-name spotter-app --region us-east-1
 
 # View logs (requires CloudWatch Logs configured)
 aws logs tail /ecs/spotter-app --follow

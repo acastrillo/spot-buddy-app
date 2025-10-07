@@ -10,3 +10,5 @@ package-lock.json
 .claude/
 .mcp.json
 
+task-def*.json
+.env.production

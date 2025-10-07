@@ -1,98 +1,89 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useAuthStore } from "@/store"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Dumbbell } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react";
+import { useAuthStore } from "@/store";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dumbbell } from "lucide-react";
 
 export function Login() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const { login } = useAuthStore()
-  const router = useRouter()
-  const pathname = usePathname()
+  const { login } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    try {
-      const success = await login(email, password)
-      if (!success) {
-        setError("Invalid credentials")
-        return
-      }
-      // If we're on the dedicated auth page, send to home on success
-      if (pathname?.startsWith("/auth/login")) {
-        router.push("/")
-      }
-    } catch (error) {
-      setError("Something went wrong")
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
     }
-  }
+
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+
+    if (!error) {
+      setAuthError(null);
+      return;
+    }
+
+    switch (error) {
+      case "AccessDenied":
+        setAuthError("Access was denied. Please try again or contact support.");
+        break;
+      case "Configuration":
+        setAuthError("Sign-in is not configured correctly. Please notify the team.");
+        break;
+      default:
+        setAuthError("We couldn't complete the sign-in. Please try again.");
+        break;
+    }
+  }, []);
+
+  const handleSignIn = useCallback(async () => {
+    try {
+      setLoading(true);
+      await login();
+    } finally {
+      setLoading(false);
+    }
+  }, [login]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
+      <Card className="w-full max-w-md bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <Dumbbell className="h-12 w-12 text-primary" />
+            <div className="p-4 rounded-full bg-[var(--primary)]/10">
+              <Dumbbell className="h-12 w-12 text-[var(--primary)]" />
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to Spotter</CardTitle>
-          <CardDescription>
-            Sign in to your account to start tracking your workouts
+          <CardTitle className="text-3xl font-bold text-[var(--text-primary)]">
+            Welcome to Spotter
+          </CardTitle>
+          <CardDescription className="text-[var(--text-secondary)] text-base">
+            Track your fitness journey with precision
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-text-primary">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <CardContent className="space-y-6 pt-2">
+          {authError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive text-center">
+              {authError}
             </div>
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-text-primary">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <div className="text-sm text-destructive text-center">
-                {error}
-              </div>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-            <div className="text-center text-sm text-text-secondary">
-              Enter your email and password to sign in.
-            </div>
-          </form>
+          )}
+          <div className="space-y-3 text-sm text-[var(--text-secondary)] text-center px-2">
+            <p>Sign in to access your workouts, track progress, and sync across all your devices.</p>
+          </div>
+          <Button
+            onClick={handleSignIn}
+            className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-black font-semibold h-12 text-base transition-all"
+            disabled={loading}
+            size="lg"
+          >
+            {loading ? "Redirecting..." : "Continue with Spotter"}
+          </Button>
+          <p className="text-xs text-center text-[var(--text-tertiary)] pt-2">
+            Secured by Amazon Cognito
+          </p>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

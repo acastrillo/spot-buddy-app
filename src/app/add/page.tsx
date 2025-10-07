@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
@@ -11,17 +11,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { 
-  Link2, 
-  FileText, 
-  Upload, 
+import {
+  Link2,
+  FileText,
+  Upload,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon,
+  X
 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 export default function ImportWorkoutPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("url")
   const [url, setUrl] = useState("")
@@ -30,9 +32,108 @@ export default function ImportWorkoutPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [fetchedData, setFetchedData] = useState<any>(null)
   const [workoutData, setWorkoutData] = useState<any>(null)
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false)
+  const [ocrError, setOcrError] = useState<string | null>(null)
 
   if (!isAuthenticated) {
     return <Login />
+  }
+
+  const handleImageUpload = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    setUploadedImage(file)
+    setOcrError(null)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }, [handleImageUpload])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }, [])
+
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }, [handleImageUpload])
+
+  const removeImage = () => {
+    setUploadedImage(null)
+    setImagePreview(null)
+    setOcrError(null)
+  }
+
+  const processImageWithOCR = async () => {
+    if (!uploadedImage) return
+
+    setIsProcessingOCR(true)
+    setOcrError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', uploadedImage)
+
+      const response = await fetch('/api/ocr', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          setOcrError(`OCR quota exceeded. You've used ${data.quotaUsed}/${data.quotaLimit} credits. ${data.subscriptionTier === 'free' ? 'Upgrade to get more!' : ''}`)
+          return
+        }
+        throw new Error(data.error || 'OCR processing failed')
+      }
+
+      // Set the extracted text as workout content
+      setWorkoutContent(data.text)
+      setWorkoutTitle('OCR Extracted Workout')
+      setActiveTab('manual')
+
+      // Update user quota in store (refresh session)
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (user as any).ocrQuotaUsed = data.quotaUsed
+      }
+
+    } catch (error) {
+      console.error('OCR processing error:', error)
+      setOcrError(error instanceof Error ? error.message : 'Failed to process image')
+    } finally {
+      setIsProcessingOCR(false)
+    }
   }
 
   const handleFetch = async () => {
@@ -172,10 +273,14 @@ export default function ImportWorkoutPage() {
             </CardHeader>
             <CardContent className="pt-0">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
                   <TabsTrigger value="url" className="flex items-center space-x-2">
                     <Link2 className="h-4 w-4" />
                     <span>URL/Social</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="image" className="flex items-center space-x-2">
+                    <ImageIcon className="h-4 w-4" />
+                    <span>Image/OCR</span>
                   </TabsTrigger>
                   <TabsTrigger value="manual" className="flex items-center space-x-2">
                     <FileText className="h-4 w-4" />
@@ -294,6 +399,103 @@ export default function ImportWorkoutPage() {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="image">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-2">
+                        Upload Workout Screenshot
+                      </label>
+
+                      {/* Drag and Drop Zone */}
+                      <div
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${
+                          isDragOver
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-surface hover:border-primary/50'
+                        }`}
+                      >
+                        {imagePreview ? (
+                          <div className="space-y-4">
+                            <div className="relative">
+                              <img
+                                src={imagePreview}
+                                alt="Workout preview"
+                                className="max-h-64 mx-auto rounded-lg"
+                              />
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2"
+                                onClick={removeImage}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {ocrError && (
+                              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-500">
+                                {ocrError}
+                              </div>
+                            )}
+
+                            {user && (
+                              <div className="text-sm text-text-secondary text-center">
+                                OCR Credits: {(user as any).ocrQuotaLimit - ((user as any).ocrQuotaUsed || 0)}/{(user as any).ocrQuotaLimit} remaining
+                              </div>
+                            )}
+
+                            <Button
+                              className="w-full"
+                              onClick={processImageWithOCR}
+                              disabled={isProcessingOCR}
+                            >
+                              {isProcessingOCR ? (
+                                <LoadingSpinner size="sm" text="Processing OCR" />
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Extract Text with OCR
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <ImageIcon className="h-12 w-12 text-text-secondary mx-auto mb-4" />
+                            <p className="text-text-primary font-medium mb-2">
+                              Drag and drop your workout screenshot here
+                            </p>
+                            <p className="text-sm text-text-secondary mb-4">
+                              or click to browse files
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileInput}
+                              className="hidden"
+                              id="image-upload"
+                            />
+                            <label htmlFor="image-upload">
+                              <Button variant="outline" asChild>
+                                <span>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Choose File
+                                </span>
+                              </Button>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-text-secondary mt-2">
+                        Upload a screenshot of your workout and we'll extract the text using OCR
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
 
                 <TabsContent value="manual">
                   <div className="space-y-4">

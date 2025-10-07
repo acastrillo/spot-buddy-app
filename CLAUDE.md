@@ -15,7 +15,7 @@ Before using bash commands for AWS, GitHub, Docker, or n8n operations, check if 
 
 ## Project Overview
 
-Spotter is a fitness tracking application built with Next.js 15.5.1, React 19, and TypeScript. It's designed to let users save Instagram workouts, upload workout screenshots, and track progress with OCR and AI features.
+Spot Buddy is a fitness tracking application built with Next.js 15.5.1, React 19, and TypeScript. It's designed to let users save Instagram workouts, upload workout screenshots, and track progress with OCR and AI features.
 
 **Current Status**: v1.0 - Production deployment on AWS with:
 - **Authentication**: AWS Cognito with Google OAuth federated sign-in
@@ -249,7 +249,7 @@ No test framework currently configured. When adding tests, consider:
 Comprehensive documentation available:
 - **README.md** - Project overview, getting started, tech stack, deployment
 - **ARCHITECTURE.md** - System architecture, design decisions, technical deep-dive
-- **USAGE-GUIDE.md** - End-user guide for using Spotter
+- **USAGE-GUIDE.md** - End-user guide for using Spot Buddy
 - **PROJECT-STATE.md** - Current state, MVP roadmap, north star goals
 - **ROADMAP.md** - Detailed phase-by-phase development roadmap
 - **PHASE-1-IMPLEMENTATION.md** - Technical details of Phase 1 (DynamoDB persistence)

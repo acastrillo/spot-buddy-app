@@ -50,11 +50,17 @@ export default function LibraryPage() {
     setLoading(true)
     try {
       if (user?.id) {
-        // Load from DynamoDB
-        const dbWorkouts = await dynamoDBWorkouts.list(user.id)
+        // Load from DynamoDB via API route
+        const response = await fetch('/api/workouts')
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch workouts')
+        }
+
+        const { workouts: dbWorkouts } = await response.json()
 
         // Transform DynamoDB workouts to display format
-        const transformedWorkouts = dbWorkouts.map((w) => ({
+        const transformedWorkouts = dbWorkouts.map((w: any) => ({
           id: w.workoutId,
           title: w.title,
           description: w.description,

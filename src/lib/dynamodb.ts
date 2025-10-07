@@ -270,6 +270,8 @@ export interface DynamoDBWorkout {
   difficulty: string; // 'easy', 'moderate', 'hard'
   tags: string[];
   llmData?: any | null; // AI-parsed data
+  imageUrls?: string[]; // S3 image URLs
+  thumbnailUrl?: string | null; // Primary thumbnail
 }
 
 // Workout operations
@@ -502,5 +504,199 @@ export const dynamoDBWorkouts = {
   },
 };
 
+// Body Metrics table
+const BODY_METRICS_TABLE = process.env.DYNAMODB_BODY_METRICS_TABLE || "spotter-body-metrics";
+
+// Body Metrics types
+export interface DynamoDBBodyMetric {
+  userId: string; // Partition key
+  date: string; // Sort key (ISO date: YYYY-MM-DD)
+  weight?: number | null; // kg or lbs
+  bodyFatPercentage?: number | null;
+  muscleMass?: number | null; // kg or lbs
+
+  // Measurements (cm or inches)
+  chest?: number | null;
+  waist?: number | null;
+  hips?: number | null;
+  thighs?: number | null;
+  arms?: number | null;
+  calves?: number | null;
+  shoulders?: number | null;
+  neck?: number | null;
+
+  // Metadata
+  unit: "metric" | "imperial"; // kg/cm or lbs/inches
+  notes?: string | null;
+  photoUrls?: string[]; // Progress photos
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+// Body Metrics operations
+export const dynamoDBBodyMetrics = {
+  /**
+   * Get all body metrics for a user
+   */
+  async list(userId: string, limit?: number): Promise<DynamoDBBodyMetric[]> {
+    try {
+      const result = await dynamoDb.send(
+        new QueryCommand({
+          TableName: BODY_METRICS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+          },
+          ScanIndexForward: false, // Most recent first
+          Limit: limit,
+        })
+      );
+
+      return (result.Items as DynamoDBBodyMetric[]) || [];
+    } catch (error) {
+      console.error("Error listing body metrics from DynamoDB:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get body metrics for a specific date
+   */
+  async get(userId: string, date: string): Promise<DynamoDBBodyMetric | null> {
+    try {
+      const result = await dynamoDb.send(
+        new GetCommand({
+          TableName: BODY_METRICS_TABLE,
+          Key: { userId, date },
+        })
+      );
+
+      return result.Item as DynamoDBBodyMetric | null;
+    } catch (error) {
+      console.error("Error getting body metric from DynamoDB:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get body metrics by date range
+   */
+  async getByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<DynamoDBBodyMetric[]> {
+    try {
+      const result = await dynamoDb.send(
+        new QueryCommand({
+          TableName: BODY_METRICS_TABLE,
+          KeyConditionExpression: "userId = :userId AND #date BETWEEN :startDate AND :endDate",
+          ExpressionAttributeNames: {
+            "#date": "date", // Reserved keyword
+          },
+          ExpressionAttributeValues: {
+            ":userId": userId,
+            ":startDate": startDate,
+            ":endDate": endDate,
+          },
+          ScanIndexForward: false,
+        })
+      );
+
+      return (result.Items as DynamoDBBodyMetric[]) || [];
+    } catch (error) {
+      console.error("Error querying body metrics by date range:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Create or update body metric (upsert)
+   */
+  async upsert(
+    userId: string,
+    metric: Omit<DynamoDBBodyMetric, "userId" | "createdAt" | "updatedAt"> & {
+      createdAt?: string;
+    }
+  ): Promise<DynamoDBBodyMetric> {
+    const now = new Date().toISOString();
+    const metricData: DynamoDBBodyMetric = {
+      userId,
+      date: metric.date,
+      weight: metric.weight ?? null,
+      bodyFatPercentage: metric.bodyFatPercentage ?? null,
+      muscleMass: metric.muscleMass ?? null,
+      chest: metric.chest ?? null,
+      waist: metric.waist ?? null,
+      hips: metric.hips ?? null,
+      thighs: metric.thighs ?? null,
+      arms: metric.arms ?? null,
+      calves: metric.calves ?? null,
+      shoulders: metric.shoulders ?? null,
+      neck: metric.neck ?? null,
+      unit: metric.unit || "metric",
+      notes: metric.notes ?? null,
+      photoUrls: metric.photoUrls || [],
+      createdAt: metric.createdAt || now,
+      updatedAt: now,
+    };
+
+    try {
+      await dynamoDb.send(
+        new PutCommand({
+          TableName: BODY_METRICS_TABLE,
+          Item: metricData,
+        })
+      );
+
+      return metricData;
+    } catch (error) {
+      console.error("Error upserting body metric to DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete body metric
+   */
+  async delete(userId: string, date: string): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new DeleteCommand({
+          TableName: BODY_METRICS_TABLE,
+          Key: { userId, date },
+        })
+      );
+    } catch (error) {
+      console.error("Error deleting body metric from DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get latest body metrics (most recent entry)
+   */
+  async getLatest(userId: string): Promise<DynamoDBBodyMetric | null> {
+    try {
+      const result = await dynamoDb.send(
+        new QueryCommand({
+          TableName: BODY_METRICS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+          },
+          ScanIndexForward: false,
+          Limit: 1,
+        })
+      );
+
+      return (result.Items?.[0] as DynamoDBBodyMetric) || null;
+    } catch (error) {
+      console.error("Error getting latest body metric:", error);
+      return null;
+    }
+  },
+};
+
 // Export DynamoDB client for custom queries
-export { dynamoDb, USERS_TABLE, WORKOUTS_TABLE };
+export { dynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE };

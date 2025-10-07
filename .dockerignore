@@ -6,3 +6,12 @@ npm-debug.log
 README.md
 Dockerfile
 .dockerignore
+infrastructure
+infrastructure_backup
+cdk.out
+*.md
+*.json.backup
+test-*.ps1
+deploy-*.ps1
+prisma/prisma
+tsconfig.tsbuildinfo

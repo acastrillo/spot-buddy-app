@@ -1,12 +1,12 @@
-# Spotter Project State
+# Spot Buddy Project State
 
-This document outlines the current state of the Spotter project, what's been completed, what remains for MVP, and our north star vision.
+This document outlines the current state of the Spot Buddy project, what's been completed, what remains for MVP, and our north star vision.
 
-## Current Status: v1.0 (Production)
+## Current Status: v1.1 (Production)
 
 **Production URL**: [https://spotter.cannashieldct.com](https://spotter.cannashieldct.com)
 **Status**: Live and operational
-**Last Deployment**: January 2025
+**Last Deployment**: January 6, 2025 (Phase 4 Complete)
 
 ---
 
@@ -80,6 +80,43 @@ This document outlines the current state of the Spotter project, what's been com
 - ✅ Git repository setup
 - ✅ Comprehensive documentation
 
+### Phase 4: Enhanced Stats & PRs Tracking (✅ Complete - January 6, 2025)
+
+#### Personal Records Tracking
+- ✅ Automatic PR detection from workout data
+- ✅ 7 different 1RM calculation formulas (Brzycki, Epley, Lander, Lombardi, Mayhew, O'Conner, Wathan)
+- ✅ PR progression charts per exercise
+- ✅ All PRs view with current bests
+- ✅ Recent PRs (last 30 days) view
+- ✅ Exercise-specific progression tracking
+
+#### Body Metrics Tracking
+- ✅ DynamoDB table created: `spotter-body-metrics`
+- ✅ Weight logging with progression charts
+- ✅ Body fat percentage tracking
+- ✅ 8 body measurements (chest, waist, hips, thighs, arms, calves, shoulders, neck)
+- ✅ Metric/Imperial unit support
+- ✅ Measurement history timeline
+- ✅ Progress photos support (schema ready)
+
+#### API Routes (Body Metrics)
+- ✅ `GET /api/body-metrics` - List all metrics with date range filter
+- ✅ `POST /api/body-metrics` - Create new metric entry
+- ✅ `GET /api/body-metrics/[date]` - Get specific date metric
+- ✅ `PATCH /api/body-metrics/[date]` - Update metric entry
+- ✅ `DELETE /api/body-metrics/[date]` - Delete metric entry
+- ✅ `GET /api/body-metrics/latest` - Get most recent metric
+
+#### Frontend Pages (Stats)
+- ✅ `/stats/prs` - Personal records page with progression charts
+- ✅ `/stats/metrics` - Body metrics tracking page with charts
+- ✅ Settings page updated with "Stats & Progress" section
+
+#### Infrastructure Updates
+- ✅ Updated IAM permissions for body metrics table
+- ✅ Task definition #10 deployed to production
+- ✅ All features verified and operational
+
 ---
 
 ## 🚧 MVP Requirements (Remaining)
@@ -106,29 +143,7 @@ This document outlines the current state of the Spotter project, what's been com
 
 **Estimated Timeline**: 2-3 weeks
 
-### Phase 3: Progress Tracking (High Priority)
-
-#### Exercise Logging
-- ⬜ Log weights and reps for each exercise
-- ⬜ Exercise history per workout
-- ⬜ Personal records (PR) tracking
-- ⬜ Weight progression over time
-
-#### Analytics & Visualization
-- ⬜ Progress charts (line, bar graphs)
-- ⬜ Volume tracking (sets × reps × weight)
-- ⬜ Frequency analytics (workouts per week)
-- ⬜ Muscle group heatmap
-- ⬜ Workout completion rate
-
-#### Database Updates
-- ⬜ `workout-logs` DynamoDB table
-- ⬜ Exercise performance history schema
-- ⬜ Aggregated statistics calculations
-
-**Estimated Timeline**: 3-4 weeks
-
-### Phase 4: Enhanced Workouts (Medium Priority)
+### Phase 3: Enhanced Workouts (Medium Priority)
 
 #### Smart Timers
 - ⬜ Basic interval timer UI
@@ -183,9 +198,9 @@ This document outlines the current state of the Spotter project, what's been com
 1. ✅ Authentication (Cognito + Google OAuth)
 2. ✅ Workout CRUD operations
 3. ✅ Cross-device sync (DynamoDB)
-4. ⬜ Calendar scheduling
-5. ⬜ Progress tracking with exercise logs
-6. ⬜ Basic analytics and charts
+4. ✅ Personal records tracking with progression charts
+5. ✅ Body metrics tracking (weight, measurements, body fat)
+6. ⬜ Calendar scheduling
 7. ⬜ Subscription plans with Stripe
 8. ⬜ Smart workout timers
 
@@ -286,12 +301,13 @@ This document outlines the current state of the Spotter project, what's been com
 ```
 Q1 2025 (Current)
 ├─ ✅ Phase 1: Core Persistence (Complete)
-├─ 🚧 Phase 2: Calendar & Scheduling (In Progress)
-└─ 🚧 Phase 3: Progress Tracking (Starting)
+├─ ✅ Phase 4: Enhanced Stats & PRs Tracking (Complete - Jan 6)
+├─ 🚧 Phase 2: Calendar & Scheduling (Next)
+└─ 🚧 Phase 3: Enhanced Workouts (Planned)
 
 Q2 2025
-├─ Phase 4: Enhanced Workouts
 ├─ Phase 5: Subscription & Monetization
+├─ Phase 6: Social Features
 └─ MVP Launch
 
 Q3 2025

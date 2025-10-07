@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
 
 // GET /api/workouts/[id] - Get a specific workout
@@ -8,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(session?.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,7 +39,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(session?.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -75,7 +76,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(session?.user as any)?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

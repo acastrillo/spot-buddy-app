@@ -27,65 +27,97 @@ export default function HomePage() {
     hoursTrained: 0,
     streak: 0
   })
-  const [recentCompletions, setRecentCompletions] = useState<any[]>([])
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([])
 
   useEffect(() => {
-    const recompute = () => {
-      const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-      const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+    const loadWorkouts = async () => {
+      if (!user?.id) return
 
-      // Stats
-      const now = new Date()
-      const sow = new Date(now)
-      sow.setDate(now.getDate() - now.getDay())
-      sow.setHours(0, 0, 0, 0)
+      try {
+        // Try to load from API first
+        const response = await fetch('/api/workouts')
+        if (response.ok) {
+          const { workouts } = await response.json()
 
-      const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
+          // Sort by creation date and take most recent
+          const sorted = workouts
+            .sort((a: any, b: any) => {
+              const aDate = new Date(a.createdAt || a.date || 0).getTime()
+              const bDate = new Date(b.createdAt || b.date || 0).getTime()
+              return bDate - aDate
+            })
+            .slice(0, 5)
 
-      // Streak
-      const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
-        .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
-      let streak = 0
-      const today = new Date().toISOString().split('T')[0]
-      let checkDate = today
-      for (const date of sortedDates) {
-        if (date === checkDate) {
-          streak++
-          const prevDate = new Date(checkDate)
-          prevDate.setDate(prevDate.getDate() - 1)
-          checkDate = prevDate.toISOString().split('T')[0]
+          setRecentWorkouts(sorted)
+
+          // Update stats based on saved workouts
+          const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+          const now = new Date()
+          const sow = new Date(now)
+          sow.setDate(now.getDate() - now.getDay())
+          sow.setHours(0, 0, 0, 0)
+          const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
+
+          // Streak calculation
+          const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
+            .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
+          let streak = 0
+          const today = new Date().toISOString().split('T')[0]
+          let checkDate = today
+          for (const date of sortedDates) {
+            if (date === checkDate) {
+              streak++
+              const prevDate = new Date(checkDate)
+              prevDate.setDate(prevDate.getDate() - 1)
+              checkDate = prevDate.toISOString().split('T')[0]
+            } else {
+              break
+            }
+          }
+
+          const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
+          setWorkoutStats({
+            thisWeek: thisWeekCompletions.length,
+            total: workouts.length,
+            hoursTrained,
+            streak,
+          })
         } else {
-          break
+          // Fallback to localStorage
+          const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+          const sorted = savedWorkouts.slice().reverse().slice(0, 5)
+          setRecentWorkouts(sorted)
+
+          setWorkoutStats({
+            thisWeek: 0,
+            total: savedWorkouts.length,
+            hoursTrained: 0,
+            streak: 0,
+          })
         }
-      }
+      } catch (error) {
+        console.error('Error loading workouts:', error)
+        // Fallback to localStorage
+        const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+        const sorted = savedWorkouts.slice().reverse().slice(0, 5)
+        setRecentWorkouts(sorted)
 
-      const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
-      setWorkoutStats({
-        thisWeek: thisWeekCompletions.length,
-        total: completedWorkouts.length,
-        hoursTrained,
-        streak,
-      })
-
-      const recentWithNames = completedWorkouts
-        .sort((a: any, b: any) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
-        .slice(0, 5)
-        .map((completion: any) => {
-          const workout = savedWorkouts.find((w: any) => w.id === completion.workoutId)
-          return { ...completion, workoutName: workout?.title || 'Unknown Workout' }
+        setWorkoutStats({
+          thisWeek: 0,
+          total: savedWorkouts.length,
+          hoursTrained: 0,
+          streak: 0,
         })
-      setRecentCompletions(recentWithNames)
+      }
     }
 
-    recompute()
-    const handle = () => recompute()
+    loadWorkouts()
+    const handle = () => loadWorkouts()
     window.addEventListener('storage', handle)
-    window.addEventListener('completedWorkoutsUpdated', handle as any)
     return () => {
       window.removeEventListener('storage', handle)
-      window.removeEventListener('completedWorkoutsUpdated', handle as any)
     }
-  }, [])
+  }, [user?.id])
 
   if (!isAuthenticated) {
     return <Login />
@@ -219,7 +251,7 @@ export default function HomePage() {
           {/* Recent Activity */}
           <div>
             <h2 className="text-xl font-semibold text-text-primary mb-4">Recent Activity</h2>
-            {recentCompletions.length === 0 ? (
+            {recentWorkouts.length === 0 ? (
               <Card className="border-0">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
@@ -239,32 +271,35 @@ export default function HomePage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {recentCompletions.map((completion, index) => (
-                  <Card key={completion.id} className="border-0">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Award className="h-5 w-5 text-primary" />
+                {recentWorkouts.map((workout, index) => (
+                  <Link key={workout.workoutId || workout.id} href={`/workout/${workout.workoutId || workout.id}`}>
+                    <Card className="border-0 hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                              <Dumbbell className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-text-primary">{workout.title}</p>
+                              <p className="text-sm text-text-secondary">
+                                {workout.exercises?.length || 0} exercises
+                                {workout.source && ` • ${workout.source}`}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-text-primary">{completion.workoutName}</p>
-                            <p className="text-sm text-text-secondary">
-                              Completed on {new Date(completion.completedDate).toLocaleDateString()}
-                            </p>
+                          <div className="text-sm text-text-secondary">
+                            {index === 0 && new Date(workout.createdAt || workout.date).toDateString() === new Date().toDateString()
+                              ? 'Today'
+                              : new Date(workout.createdAt || workout.date).toLocaleDateString()
+                            }
                           </div>
                         </div>
-                        <div className="text-sm text-text-secondary">
-                          {index === 0 && new Date(completion.completedDate).toDateString() === new Date().toDateString() 
-                            ? 'Today' 
-                            : new Date(completion.completedDate).toLocaleDateString()
-                          }
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
-                {recentCompletions.length > 0 && (
+                {recentWorkouts.length > 0 && (
                   <div className="text-center pt-4">
                     <Link href="/library">
                       <Button variant="outline">

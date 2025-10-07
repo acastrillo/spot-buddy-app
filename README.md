@@ -1,17 +1,17 @@
-# Spotter - Fitness Tracking App
+# Spot Buddy - Fitness Tracking App
 
 [![Production](https://img.shields.io/badge/production-live-green)](https://spotter.cannashieldct.com)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.1-black)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
-Spotter is a modern fitness tracking application that lets users save Instagram workouts, upload workout screenshots with OCR text extraction, and track their fitness progress across devices. Built with Next.js 15, React 19, and deployed on AWS infrastructure.
+Spot Buddy is a modern fitness tracking application that lets users save Instagram workouts, upload workout screenshots with OCR text extraction, and track their fitness progress across devices. Built with Next.js 15, React 19, and deployed on AWS infrastructure.
 
 🌐 **Live App**: [https://spotter.cannashieldct.com](https://spotter.cannashieldct.com)
 
 ## 🎯 Features
 
-### ✅ Current Features (v1.0)
+### ✅ Current Features (v1.1)
 
 - **Authentication**: Secure login with AWS Cognito (Google OAuth supported)
 - **Workout Management**: Save, edit, and delete workouts with full CRUD operations
@@ -20,19 +20,21 @@ Spotter is a modern fitness tracking application that lets users save Instagram 
 - **OCR Processing**: Extract workout text from images using Tesseract.js and AWS Textract
 - **Workout Library**: Browse and search your saved workouts
 - **Workout Details**: View individual workouts with exercise breakdowns
+- **Personal Records (PRs)**: Automatic PR detection with 7 different 1RM calculation formulas
+- **Body Metrics Tracking**: Weight, body fat %, and 8 body measurements with progression charts
+- **Stats & Progress**: Comprehensive tracking pages for PRs and body metrics
 - **Offline Support**: LocalStorage cache for offline access
 - **Dark Theme**: Fitness-focused dark UI with cyan/purple accents
 
 ### 📋 Coming Soon (Roadmap)
 
-- **Calendar View**: Schedule and track workouts by date
-- **Progress Tracking**: Log weights, reps, and track improvements over time
-- **Smart Timers**: Interval timers for workouts with audio alerts
-- **Social Features**: Connect with workout crews, share routines
-- **Apple Health Integration**: Sync with health data and wearables
-- **Subscription Plans**: Free, Starter, Pro, and Elite tiers
-- **AI Analysis**: Workout recommendations with Amazon Bedrock
-- **Mobile App**: React Native app for iOS/Android
+- **Calendar View**: Schedule and track workouts by date (Phase 2)
+- **Smart Timers**: Interval timers for workouts with audio alerts (Phase 3)
+- **Social Features**: Connect with workout crews, share routines (Phase 5)
+- **Subscription Plans**: Free, Starter, Pro, and Elite tiers with Stripe (Phase 5)
+- **AI Analysis**: Workout recommendations with Amazon Bedrock (Phase 6+)
+- **Apple Health Integration**: Sync with health data and wearables (Phase 8+)
+- **Mobile App**: React Native app for iOS/Android (Phase 7+)
 
 ## 🏗️ Tech Stack
 
@@ -197,6 +199,15 @@ spotter-webapp-free/
   - Subscription: `subscriptionTier`, `subscriptionStatus`, Stripe IDs
   - Usage: `ocrQuotaUsed`, `ocrQuotaLimit`, `workoutsSaved`
 
+**spotter-body-metrics** table:
+- **Partition Key**: `userId` (string)
+- **Sort Key**: `date` (string) - ISO date format (YYYY-MM-DD)
+- **Attributes**:
+  - Weight: `weight`, `bodyFatPercentage`, `muscleMass`
+  - Measurements: `chest`, `waist`, `hips`, `thighs`, `arms`, `calves`, `shoulders`, `neck`
+  - Metadata: `unit` (metric/imperial), `notes`, `photoUrls[]`
+  - Timestamps: `createdAt`, `updatedAt`
+
 ### Development (SQLite + Prisma)
 
 See [prisma/schema.prisma](prisma/schema.prisma) for full schema with User, Account, Session, and VerificationToken models.
@@ -292,20 +303,26 @@ Contributions are welcome! Please follow these guidelines:
 
 See [PROJECT-STATE.md](PROJECT-STATE.md) for detailed roadmap, MVP requirements, and north star goals.
 
-### Phase 1: Core Persistence ✅ (Completed)
+### Phase 1: Core Persistence ✅ (Complete - Oct 2025)
 - DynamoDB workout CRUD operations
 - Cross-device synchronization
 - API routes for workout management
+
+### Phase 4: Enhanced Stats & PRs ✅ (Complete - Jan 6, 2025)
+- Personal records tracking with automatic detection
+- 7 different 1RM calculation formulas
+- Body metrics tracking (weight, measurements, body fat)
+- Progression charts and analytics
 
 ### Phase 2: Calendar & Scheduling (Next)
 - Calendar view with workout scheduling
 - Date range queries and filtering
 - Workout reminders
 
-### Phase 3: Progress Tracking
-- Exercise weight/rep logging
-- Progress charts and analytics
-- Personal records tracking
+### Phase 3: Enhanced Workouts
+- Smart workout timers (interval, HIIT, rest)
+- AI-powered features (Bedrock integration)
+- Enhanced OCR with AWS Textract
 
 See full roadmap in [ROADMAP.md](ROADMAP.md).
 
@@ -313,13 +330,30 @@ See full roadmap in [ROADMAP.md](ROADMAP.md).
 
 This project is private and proprietary. All rights reserved.
 
-## 🔗 Additional Documentation
+## 🔗 Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design decisions
-- [USAGE-GUIDE.md](USAGE-GUIDE.md) - End-user guide for using Spotter
-- [PROJECT-STATE.md](PROJECT-STATE.md) - Current state, MVP goals, north star vision
-- [DEPLOYMENT-SUMMARY.md](DEPLOYMENT-SUMMARY.md) - AWS deployment procedures
-- [CLAUDE.md](CLAUDE.md) - Developer instructions for Claude Code AI assistant
+### Core Documentation
+- **[HOW-TO-GUIDE.md](HOW-TO-GUIDE.md)** - Complete user and developer guide
+- **[PROJECT-STATE.md](PROJECT-STATE.md)** - Current state, MVP goals, and north star vision
+- **[ROADMAP.md](ROADMAP.md)** - Detailed phase-by-phase development roadmap
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
+
+### Deployment & Operations
+- **[DEPLOYMENT-SUMMARY.md](DEPLOYMENT-SUMMARY.md)** - AWS deployment procedures and history
+- **[COST-ANALYSIS.md](COST-ANALYSIS.md)** - AWS costs and profitability analysis
+
+### Planning Documents
+- **[LAUNCH-PLAN.md](LAUNCH-PLAN.md)** - Beta launch strategy and market research
+- **[MONITORING-PLAN.md](MONITORING-PLAN.md)** - Monitoring and logging strategy
+
+### Phase Implementation Details
+- **[PHASE-1-IMPLEMENTATION.md](PHASE-1-IMPLEMENTATION.md)** - DynamoDB workout persistence
+- **[PHASE-2-IMPLEMENTATION.md](PHASE-2-IMPLEMENTATION.md)** - OCR & image upload
+- **[PHASE-3-IMPLEMENTATION.md](PHASE-3-IMPLEMENTATION.md)** - Analytics & dashboard
+- **[PHASE-4-IMPLEMENTATION.md](PHASE-4-IMPLEMENTATION.md)** - Stats & PRs tracking
+
+### Developer Resources
+- **[CLAUDE.md](CLAUDE.md)** - Instructions for Claude Code AI assistant
 
 ## 📧 Contact
 

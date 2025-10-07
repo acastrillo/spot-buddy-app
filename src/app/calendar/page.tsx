@@ -8,99 +8,114 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { 
-  Plus, 
-  Dumbbell, 
-  Clock, 
-  TrendingUp, 
+import { dynamoDBWorkouts, DynamoDBWorkout } from "@/lib/dynamodb"
+import {
+  Plus,
+  Dumbbell,
+  Clock,
+  TrendingUp,
   CalendarDays,
-  Target
+  ChevronRight
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function CalendarPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [completions, setCompletions] = useState<any[]>([])
-  const [scheduled, setScheduled] = useState<any[]>([])
+  const [workouts, setWorkouts] = useState<DynamoDBWorkout[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Load completions and react to changes
+  // Load workouts from DynamoDB
   useEffect(() => {
-    const load = () => {
-      const existing = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
-      setCompletions(existing)
-      const sched = JSON.parse(localStorage.getItem('scheduledWorkouts') || '[]')
-      setScheduled(sched)
-    }
-    load()
-    const handle = () => load()
-    window.addEventListener('storage', handle)
-    window.addEventListener('completedWorkoutsUpdated', handle as any)
-    window.addEventListener('scheduledWorkoutsUpdated', handle as any)
-    return () => {
-      window.removeEventListener('storage', handle)
-      window.removeEventListener('completedWorkoutsUpdated', handle as any)
-      window.removeEventListener('scheduledWorkoutsUpdated', handle as any)
-    }
-  }, [])
+    async function loadWorkouts() {
+      if (!user?.id) return
 
+      setIsLoading(true)
+      try {
+        const data = await dynamoDBWorkouts.list(user.id)
+        setWorkouts(data)
+      } catch (error) {
+        console.error("Error loading workouts:", error)
+        // Fallback to localStorage
+        const cached = JSON.parse(localStorage.getItem('workouts') || '[]')
+        setWorkouts(cached)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadWorkouts()
+  }, [user?.id])
+
+  // Calculate workout dates for calendar marking
   const markedDates = useMemo(() => {
-    return Array.from(new Set(completions.map((c: any) => c.completedDate)))
-  }, [completions])
+    return Array.from(
+      new Set(
+        workouts.map((w) => new Date(w.createdAt).toISOString().split("T")[0])
+      )
+    )
+  }, [workouts])
 
   const dateCounts = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const c of completions) {
-      const d = c.completedDate
+    for (const w of workouts) {
+      const d = new Date(w.createdAt).toISOString().split("T")[0]
       map[d] = (map[d] || 0) + 1
     }
     return map
-  }, [completions])
+  }, [workouts])
 
-  const scheduledDates = useMemo(() => {
-    return Array.from(new Set(scheduled.map((s: any) => s.scheduledDate)))
-  }, [scheduled])
+  // Get workouts for selected date
+  const selectedDateWorkouts = useMemo(() => {
+    if (!selectedDate) return []
+    const dateStr = selectedDate.toISOString().split("T")[0]
+    return workouts.filter(
+      (w) => new Date(w.createdAt).toISOString().split("T")[0] === dateStr
+    )
+  }, [selectedDate, workouts])
 
-  const scheduledCounts = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const s of scheduled) {
-      const d = s.scheduledDate
-      map[d] = (map[d] || 0) + 1
-    }
-    return map
-  }, [scheduled])
-
+  // Calculate stats for selected month
   const stats = useMemo(() => {
     if (!selectedDate) return { monthWorkouts: 0, hours: 0, streak: 0 }
     const month = selectedDate.getMonth()
     const year = selectedDate.getFullYear()
 
-    const inMonth = completions.filter((c: any) => {
-      const d = new Date(c.completedDate)
+    const inMonth = workouts.filter((w) => {
+      const d = new Date(w.createdAt)
       return d.getMonth() === month && d.getFullYear() === year
     })
 
-    // Streak: consecutive days up to today
-    const allDates = Array.from(new Set(completions.map((c: any) => c.completedDate)))
-      .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
+    // Calculate total hours
+    const totalMinutes = inMonth.reduce((sum, w) => sum + (w.totalDuration || 0), 0)
+    const hours = Math.round((totalMinutes / 60) * 10) / 10
+
+    // Calculate streak (consecutive days)
+    const allDates = Array.from(
+      new Set(workouts.map((w) => new Date(w.createdAt).toISOString().split("T")[0]))
+    ).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
 
     let streak = 0
-    const todayIso = new Date().toISOString().split('T')[0]
-    let cursor = todayIso
-    for (const ds of allDates) {
-      if (ds === cursor) {
-        streak++
-        const prev = new Date(cursor)
-        prev.setDate(prev.getDate() - 1)
-        cursor = prev.toISOString().split('T')[0]
-      } else if (new Date(ds) < new Date(cursor)) {
-        break
+    const todayIso = new Date().toISOString().split("T")[0]
+    const yesterdayIso = new Date(Date.now() - 86400000).toISOString().split("T")[0]
+
+    if (allDates.length > 0 && (allDates[0] === todayIso || allDates[0] === yesterdayIso)) {
+      let cursor = allDates[0]
+      for (const dateStr of allDates) {
+        if (dateStr === cursor) {
+          streak++
+          const prev = new Date(cursor)
+          prev.setDate(prev.getDate() - 1)
+          cursor = prev.toISOString().split("T")[0]
+        } else {
+          break
+        }
       }
     }
 
-    const hours = Math.round((inMonth.length * 0.75) * 10) / 10
     return { monthWorkouts: inMonth.length, hours, streak }
-  }, [completions, selectedDate])
+  }, [workouts, selectedDate])
 
   if (!isAuthenticated) {
     return <Login />
@@ -139,15 +154,45 @@ export default function CalendarPage() {
             {/* Calendar */}
             <div className="lg:col-span-2">
               <Card className="h-fit">
-                <Calendar 
-                  selected={selectedDate} 
+                <Calendar
+                  selected={selectedDate}
                   onSelect={setSelectedDate}
                   markedDates={markedDates}
                   dateCounts={dateCounts}
-                  scheduledDates={scheduledDates}
-                  scheduledCounts={scheduledCounts}
+                  scheduledDates={[]}
+                  scheduledCounts={{}}
                 />
               </Card>
+
+              {/* Selected Date Workouts */}
+              {selectedDateWorkouts.length > 0 && (
+                <Card className="mt-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">
+                      Workouts on {selectedDate?.toLocaleDateString()}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {selectedDateWorkouts.map((workout) => (
+                      <div
+                        key={workout.workoutId}
+                        onClick={() => router.push(`/workout/${workout.workoutId}`)}
+                        className="p-3 bg-surface hover:bg-surface-elevated rounded-lg cursor-pointer transition-colors flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-medium text-text-primary mb-1">
+                            {workout.title}
+                          </h4>
+                          <p className="text-sm text-text-secondary">
+                            {workout.exercises.length} exercises • {workout.totalDuration} min
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-text-secondary" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Right Sidebar */}
@@ -173,41 +218,41 @@ export default function CalendarPage() {
                 </CardContent>
               </Card>
 
-              {/* Upcoming Workouts */}
+              {/* Recent Workouts */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Upcoming</CardTitle>
-                  <p className="text-text-secondary text-sm">Your scheduled workouts</p>
+                  <CardTitle className="text-lg">Recent Activity</CardTitle>
+                  <p className="text-text-secondary text-sm">Your latest workouts</p>
                 </CardHeader>
                 <CardContent>
-                  {scheduled.length === 0 ? (
+                  {workouts.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center mx-auto mb-3">
-                        <CalendarDays className="h-6 w-6 text-text-secondary" />
+                        <Dumbbell className="h-6 w-6 text-text-secondary" />
                       </div>
-                      <p className="text-text-primary font-medium mb-2">No workouts scheduled</p>
-                      <Link href="/library">
+                      <p className="text-text-primary font-medium mb-2">No workouts yet</p>
+                      <Link href="/add">
                         <Button variant="outline" size="sm">
-                          Schedule One
+                          Add Your First
                         </Button>
                       </Link>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {scheduled
-                        .slice()
-                        .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+                      {workouts
                         .slice(0, 5)
-                        .map((item: any, idx: number) => {
-                          const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-                          const w = workouts.find((x: any) => x.id === item.workoutId)
-                          return (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <div className="text-text-primary line-clamp-1">{w?.title || 'Workout'}</div>
-                              <div className="text-text-secondary">{new Date(item.scheduledDate).toLocaleDateString()}</div>
+                        .map((workout) => (
+                          <div
+                            key={workout.workoutId}
+                            onClick={() => router.push(`/workout/${workout.workoutId}`)}
+                            className="flex items-center justify-between text-sm cursor-pointer hover:bg-surface rounded-lg p-2 -mx-2 transition-colors"
+                          >
+                            <div className="text-text-primary line-clamp-1">{workout.title}</div>
+                            <div className="text-text-secondary text-xs">
+                              {new Date(workout.createdAt).toLocaleDateString()}
                             </div>
-                          )
-                        })}
+                          </div>
+                        ))}
                     </div>
                   )}
                 </CardContent>

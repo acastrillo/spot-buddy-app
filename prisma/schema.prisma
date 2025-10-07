@@ -48,6 +48,21 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Subscription & Billing
+  subscriptionTier      String    @default("free") // free, starter, pro, elite
+  subscriptionStatus    String    @default("active") // active, inactive, trialing, canceled, past_due
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  trialEndsAt           DateTime?
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+
+  // Usage Tracking & Quotas
+  ocrQuotaUsed       Int       @default(0)
+  ocrQuotaLimit      Int       @default(2) // Free tier: 2 per week
+  ocrQuotaResetDate  DateTime? @default(now())
+  workoutsSaved      Int       @default(0)
+
   accounts Account[]
   sessions Session[]
 

@@ -1,6 +1,6 @@
-# Spotter Architecture
+# Spot Buddy Architecture
 
-This document provides a comprehensive overview of Spotter's system architecture, design decisions, and technical implementation details.
+This document provides a comprehensive overview of Spot Buddy's system architecture, design decisions, and technical implementation details.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ This document provides a comprehensive overview of Spotter's system architecture
 
 ## System Overview
 
-Spotter is a full-stack fitness tracking application built with modern web technologies and deployed on AWS infrastructure. The application follows a **serverless container architecture** using Next.js App Router with server-side rendering and API routes.
+Spot Buddy is a full-stack fitness tracking application built with modern web technologies and deployed on AWS infrastructure. The application follows a **serverless container architecture** using Next.js App Router with server-side rendering and API routes.
 
 ### Key Characteristics
 
@@ -171,7 +171,7 @@ Client Component
 
 ### Next.js API Routes
 
-Spotter uses Next.js API routes as the backend layer, co-located with the frontend application.
+Spot Buddy uses Next.js API routes as the backend layer, co-located with the frontend application.
 
 **Benefits**:
 - Single deployment unit
@@ -653,4 +653,4 @@ NEXTAUTH_URL=https://spotter.cannashieldct.com
 
 **Document Version**: 1.0
 **Last Updated**: January 2025
-**Author**: Spotter Development Team
+**Author**: Spot Buddy Development Team
