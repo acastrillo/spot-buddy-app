@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
 import { dynamoDBWorkouts, DynamoDBWorkout } from "@/lib/dynamodb"
 import {
   Plus,
@@ -15,7 +16,9 @@ import {
   Clock,
   TrendingUp,
   CalendarDays,
-  ChevronRight
+  ChevronRight,
+  X,
+  CheckCircle
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -27,6 +30,10 @@ export default function CalendarPage() {
   const [workouts, setWorkouts] = useState<DynamoDBWorkout[]>([])
   const [scheduledWorkouts, setScheduledWorkouts] = useState<DynamoDBWorkout[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [selectedWorkoutForSchedule, setSelectedWorkoutForSchedule] = useState<string | null>(null)
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0])
+  const [showAllActivity, setShowAllActivity] = useState(false)
 
   // Load workouts from DynamoDB
   useEffect(() => {
@@ -164,6 +171,66 @@ export default function CalendarPage() {
     return { monthWorkouts: inMonth.length, hours, streak }
   }, [workouts, selectedDate])
 
+  // Get workouts from last 24 hours
+  const last24hWorkouts = useMemo(() => {
+    const now = new Date()
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    return workouts
+      .filter(w => {
+        const created = new Date(w.createdAt)
+        return created >= yesterday && created <= now
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [workouts])
+
+  // Get last 3 completed workouts for recent activity
+  const recentCompletedWorkouts = useMemo(() => {
+    return workouts
+      .filter(w => w.status === 'completed' || !w.status)
+      .sort((a, b) => {
+        const dateA = new Date(a.completedDate || a.createdAt)
+        const dateB = new Date(b.completedDate || b.createdAt)
+        return dateB.getTime() - dateA.getTime()
+      })
+      .slice(0, showAllActivity ? undefined : 3)
+  }, [workouts, showAllActivity])
+
+  // Handle scheduling a workout
+  const handleScheduleWorkout = async () => {
+    if (!selectedWorkoutForSchedule) return
+
+    try {
+      const response = await fetch(`/api/workouts/${selectedWorkoutForSchedule}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduledDate: scheduleDate,
+          status: 'scheduled',
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to schedule workout')
+      }
+
+      // Reload workouts
+      if (user?.id) {
+        const data = await dynamoDBWorkouts.list(user.id)
+        setWorkouts(data)
+        const scheduled = await dynamoDBWorkouts.getScheduled(user.id)
+        setScheduledWorkouts(scheduled)
+      }
+
+      // Close modal
+      setShowScheduleModal(false)
+      setSelectedWorkoutForSchedule(null)
+    } catch (error) {
+      console.error('Error scheduling workout:', error)
+      alert('Failed to schedule workout. Please try again.')
+    }
+  }
+
   if (!isAuthenticated) {
     return <Login />
   }
@@ -189,12 +256,13 @@ export default function CalendarPage() {
                 Track your fitness journey
               </p>
             </div>
-            <Link href="/library">
-              <Button className="flex items-center space-x-2">
-                <Plus className="h-4 w-4" />
-                <span>Schedule Workout</span>
-              </Button>
-            </Link>
+            <Button
+              className="flex items-center space-x-2"
+              onClick={() => setShowScheduleModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Schedule Workout</span>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -277,19 +345,56 @@ export default function CalendarPage() {
                 </CardContent>
               </Card>
 
-              {/* Recent Workouts */}
+              {/* Last 24 Hours */}
+              {last24hWorkouts.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      Last 24 Hours
+                    </CardTitle>
+                    <p className="text-text-secondary text-sm">Recent workouts saved</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {last24hWorkouts.map((workout) => (
+                        <div
+                          key={workout.workoutId}
+                          onClick={() => {
+                            setSelectedWorkoutForSchedule(workout.workoutId)
+                            setShowScheduleModal(true)
+                          }}
+                          className="flex items-center justify-between text-sm cursor-pointer hover:bg-surface-elevated rounded-lg p-3 transition-colors border border-border/50"
+                        >
+                          <div className="flex-1">
+                            <div className="text-text-primary font-medium line-clamp-1 mb-1">
+                              {workout.title}
+                            </div>
+                            <div className="text-text-secondary text-xs">
+                              {workout.exercises.length} exercises • {workout.totalDuration} min
+                            </div>
+                          </div>
+                          <CalendarDays className="h-4 w-4 text-primary" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recent Activity */}
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg">Recent Activity</CardTitle>
-                  <p className="text-text-secondary text-sm">Your latest workouts</p>
+                  <p className="text-text-secondary text-sm">Last 3 completed workouts</p>
                 </CardHeader>
                 <CardContent>
-                  {workouts.length === 0 ? (
+                  {recentCompletedWorkouts.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center mx-auto mb-3">
                         <Dumbbell className="h-6 w-6 text-text-secondary" />
                       </div>
-                      <p className="text-text-primary font-medium mb-2">No workouts yet</p>
+                      <p className="text-text-primary font-medium mb-2">No completed workouts yet</p>
                       <Link href="/add">
                         <Button variant="outline" size="sm">
                           Add Your First
@@ -297,22 +402,48 @@ export default function CalendarPage() {
                       </Link>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {workouts
-                        .slice(0, 5)
-                        .map((workout) => (
+                    <>
+                      <div className="space-y-3">
+                        {recentCompletedWorkouts.map((workout) => (
                           <div
                             key={workout.workoutId}
                             onClick={() => router.push(`/workout/${workout.workoutId}`)}
                             className="flex items-center justify-between text-sm cursor-pointer hover:bg-surface rounded-lg p-2 -mx-2 transition-colors"
                           >
-                            <div className="text-text-primary line-clamp-1">{workout.title}</div>
-                            <div className="text-text-secondary text-xs">
-                              {new Date(workout.createdAt).toLocaleDateString()}
+                            <div className="flex-1">
+                              <div className="text-text-primary line-clamp-1">{workout.title}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <CheckCircle className="h-3 w-3 text-primary" />
+                                <span className="text-text-secondary text-xs">
+                                  {new Date(workout.completedDate || workout.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
                             </div>
+                            <ChevronRight className="h-4 w-4 text-text-secondary" />
                           </div>
                         ))}
-                    </div>
+                      </div>
+                      {!showAllActivity && workouts.filter(w => w.status === 'completed' || !w.status).length > 3 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-4"
+                          onClick={() => setShowAllActivity(true)}
+                        >
+                          Show More
+                        </Button>
+                      )}
+                      {showAllActivity && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-4"
+                          onClick={() => setShowAllActivity(false)}
+                        >
+                          Show Less
+                        </Button>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -344,6 +475,119 @@ export default function CalendarPage() {
               </Card>
             </div>
           </div>
+
+          {/* Schedule Workout Modal */}
+          {showScheduleModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xl">Schedule Workout</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setShowScheduleModal(false)
+                        setSelectedWorkoutForSchedule(null)
+                      }}
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <p className="text-text-secondary">
+                    {selectedWorkoutForSchedule
+                      ? 'Select a date to schedule this workout'
+                      : 'Select a workout to schedule'}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {selectedWorkoutForSchedule ? (
+                    // Date picker view
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-2">
+                          Select Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={scheduleDate}
+                          onChange={(e) => setScheduleDate(e.target.value)}
+                          className="w-full"
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          className="flex-1"
+                          onClick={handleScheduleWorkout}
+                        >
+                          Confirm Schedule
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setSelectedWorkoutForSchedule(null)}
+                        >
+                          Back
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Workout selection view
+                    <div className="space-y-3">
+                      {workouts.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Dumbbell className="h-12 w-12 text-text-secondary mx-auto mb-4" />
+                          <p className="text-text-primary font-medium mb-2">No workouts yet</p>
+                          <p className="text-text-secondary text-sm mb-4">
+                            Create a workout first before scheduling
+                          </p>
+                          <Link href="/add">
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Workout
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        workouts.map((workout) => (
+                          <div
+                            key={workout.workoutId}
+                            onClick={() => setSelectedWorkoutForSchedule(workout.workoutId)}
+                            className="p-4 border border-border rounded-lg cursor-pointer hover:bg-surface-elevated transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-text-primary mb-1">
+                                  {workout.title}
+                                </h4>
+                                <p className="text-sm text-text-secondary mb-2">
+                                  {workout.exercises.length} exercises • {workout.totalDuration} min
+                                </p>
+                                {workout.tags && workout.tags.length > 0 && (
+                                  <div className="flex gap-2 flex-wrap">
+                                    {workout.tags.slice(0, 3).map((tag, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </main>
       <MobileNav />
