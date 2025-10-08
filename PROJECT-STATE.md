@@ -2,11 +2,11 @@
 
 This document outlines the current state of the Spot Buddy project, what's been completed, what remains for MVP, and our north star vision.
 
-## Current Status: v1.1 (Production)
+## Current Status: v1.4 (Production)
 
 **Production URL**: [https://spotter.cannashieldct.com](https://spotter.cannashieldct.com)
 **Status**: Live and operational
-**Last Deployment**: January 6, 2025 (Phase 4 Complete)
+**Last Deployment**: January 7, 2025 (Phase 2 & 3 Complete)
 
 ---
 
@@ -117,40 +117,66 @@ This document outlines the current state of the Spot Buddy project, what's been 
 - ✅ Task definition #10 deployed to production
 - ✅ All features verified and operational
 
+### Phase 2: Calendar & Scheduling (✅ Complete - January 7, 2025)
+
+#### Schedule Workout Modal
+- ✅ Two-step workflow: select workout → pick date
+- ✅ Clickable workout cards with tags and details
+- ✅ Date picker with future date validation
+- ✅ Integration with scheduling API endpoints
+
+#### Last 24 Hours Section
+- ✅ Auto-filtered workouts by createdAt timestamp
+- ✅ Clickable cards to quickly schedule recent workouts
+- ✅ Visual indicators for scheduling action
+
+#### Recent Activity Feed
+- ✅ Last 3 completed workouts display
+- ✅ Show More/Show Less toggle for full history
+- ✅ CheckCircle icons and completed dates
+- ✅ Filtered by completion status
+
+#### Calendar Enhancements
+- ✅ Visual indicators for completed workouts (filled dots)
+- ✅ Visual indicators for scheduled workouts (hollow rings)
+- ✅ Click dates to see workouts for that day
+- ✅ Status badges (Scheduled/Completed)
+
+#### API & Backend
+- ✅ Scheduling endpoints already deployed in previous phase
+- ✅ DynamoDB schema with scheduledDate, status, completedDate
+- ✅ Cross-device sync for scheduled workouts
+
+### Phase 3: Smart Timers (✅ Complete - January 7, 2025)
+
+#### Timer Components
+- ✅ Interval Timer with circular SVG progress
+- ✅ HIIT Timer with work/rest phase management
+- ✅ Rest Timer as floating widget
+- ✅ Custom duration inputs and presets
+
+#### Technical Features
+- ✅ Web Audio API beep generation (no audio files)
+- ✅ LocalStorage state persistence
+- ✅ Web Notifications API integration
+- ✅ Background timer support
+- ✅ Phase indicators with color coding
+
+#### Integration
+- ✅ /timer page with tab selector
+- ✅ Rest timer integrated into workout detail pages
+- ✅ Mobile navigation updated
+
 ---
 
 ## 🚧 MVP Requirements (Remaining)
 
-### Phase 2: Calendar & Scheduling (Next Priority)
+### Phase 2 & 3 Future Enhancements (Optional)
 
-#### Calendar View
-- ⬜ Calendar component with month/week/day views
-- ⬜ Schedule workouts to specific dates
+#### Calendar Advanced Features
 - ⬜ Drag-and-drop workout scheduling
-- ⬜ Visual indicators for completed workouts
-- ⬜ Today's workout quick view
-
-#### Date-Based Features
-- ⬜ DynamoDB GSI for date range queries
-- ⬜ Filter workouts by date range
-- ⬜ Workout history timeline view
-- ⬜ Upcoming workouts preview
-
-#### Notifications
-- ⬜ Workout reminder system (Amazon SNS)
-- ⬜ Email notifications for scheduled workouts
-- ⬜ In-app notification UI
-
-**Estimated Timeline**: 2-3 weeks
-
-### Phase 3: Enhanced Workouts (Medium Priority)
-
-#### Smart Timers
-- ⬜ Basic interval timer UI
-- ⬜ Advanced HIIT timer with custom intervals
-- ⬜ Audio alerts for set completion
-- ⬜ Background timer (web notifications)
-- ⬜ Rest timer between sets
+- ⬜ DynamoDB GSI for optimized date range queries
+- ⬜ Workout reminder system (Amazon SNS/Email)
 
 #### AI-Powered Features
 - ⬜ Amazon Bedrock integration
@@ -163,9 +189,8 @@ This document outlines the current state of the Spot Buddy project, what's been 
 - ⬜ AWS Textract integration (production)
 - ⬜ Handwriting recognition
 - ⬜ Multi-language support
-- ⬜ Improved parsing accuracy
 
-**Estimated Timeline**: 4-5 weeks
+**Estimated Timeline**: 3-4 weeks
 
 ### Phase 5: Subscription & Monetization (Essential)
 
@@ -200,11 +225,13 @@ This document outlines the current state of the Spot Buddy project, what's been 
 3. ✅ Cross-device sync (DynamoDB)
 4. ✅ Personal records tracking with progression charts
 5. ✅ Body metrics tracking (weight, measurements, body fat)
-6. ⬜ Calendar scheduling
-7. ⬜ Subscription plans with Stripe
-8. ⬜ Smart workout timers
+6. ✅ Calendar scheduling with workout selection modal
+7. ✅ Smart workout timers (Interval, HIIT, Rest)
+8. ⬜ Subscription plans with Stripe
 
 **Target MVP Launch**: Q2 2025
+
+**Progress**: 7/8 core features complete (87.5%)
 
 ---
 
@@ -300,13 +327,14 @@ This document outlines the current state of the Spot Buddy project, what's been 
 
 ```
 Q1 2025 (Current)
-├─ ✅ Phase 1: Core Persistence (Complete)
+├─ ✅ Phase 1: Core Persistence (Complete - Jan 6)
 ├─ ✅ Phase 4: Enhanced Stats & PRs Tracking (Complete - Jan 6)
-├─ 🚧 Phase 2: Calendar & Scheduling (Next)
-└─ 🚧 Phase 3: Enhanced Workouts (Planned)
+├─ ✅ Phase 2: Calendar & Scheduling (Complete - Jan 7)
+├─ ✅ Phase 3: Smart Timers (Complete - Jan 7)
+└─ 🚧 Phase 5: Subscription & Monetization (Next - Critical)
 
 Q2 2025
-├─ Phase 5: Subscription & Monetization
+├─ Phase 5: Subscription & Monetization (if not done in Q1)
 ├─ Phase 6: Social Features
 └─ MVP Launch
 
