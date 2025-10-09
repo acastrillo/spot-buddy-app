@@ -7,16 +7,17 @@ export const SUBSCRIPTION_TIERS = {
     price: 0,
     priceId: null, // No Stripe price for free tier
     features: [
-      '2 OCR scans per week',
-      '50 workouts maximum',
+      '1 OCR scan per month',
+      '3 Instagram saves per week',
+      '31 workouts maximum',
       'Basic workout tracking',
       'Calendar view',
       'Basic timers',
     ],
     limits: {
-      ocrQuotaWeekly: 2,
-      instagramSavesWeekly: 0,
-      workoutsMax: 50,
+      ocrQuotaMonthly: 1,
+      instagramSavesWeekly: 3,
+      workoutsMax: 31,
       aiFeatures: false,
       advancedAnalytics: false,
     },
@@ -27,7 +28,7 @@ export const SUBSCRIPTION_TIERS = {
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_STARTER,
     features: [
       '3 OCR scans per week',
-      '3 Instagram saves per week',
+      '5 Instagram saves per week',
       'Unlimited workouts',
       'Basic analytics',
       'PRs tracking',
@@ -35,7 +36,7 @@ export const SUBSCRIPTION_TIERS = {
     ],
     limits: {
       ocrQuotaWeekly: 3,
-      instagramSavesWeekly: 3,
+      instagramSavesWeekly: 5,
       workoutsMax: null, // Unlimited
       aiFeatures: false,
       advancedAnalytics: false,
@@ -47,7 +48,7 @@ export const SUBSCRIPTION_TIERS = {
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.STRIPE_PRICE_PRO,
     features: [
       '5 OCR scans per week',
-      '5 Instagram saves per week',
+      '7 Instagram saves per week',
       'Unlimited workouts',
       'AI workout features',
       'Crew features',
@@ -55,7 +56,7 @@ export const SUBSCRIPTION_TIERS = {
     ],
     limits: {
       ocrQuotaWeekly: 5,
-      instagramSavesWeekly: 5,
+      instagramSavesWeekly: 7,
       workoutsMax: null,
       aiFeatures: true,
       advancedAnalytics: true,
@@ -68,7 +69,7 @@ export const SUBSCRIPTION_TIERS = {
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || process.env.STRIPE_PRICE_ELITE,
     features: [
       '10 workout image saves per week',
-      '10 Instagram saves per week',
+      '12 Instagram saves per week',
       'Unlimited workouts',
       'AI workout features',
       'Advanced analytics',
@@ -76,7 +77,7 @@ export const SUBSCRIPTION_TIERS = {
     ],
     limits: {
       ocrQuotaWeekly: 10,
-      instagramSavesWeekly: 10,
+      instagramSavesWeekly: 12,
       workoutsMax: null,
       aiFeatures: true,
       advancedAnalytics: true,
@@ -98,6 +99,6 @@ export function hasFeatureAccess(
 }
 
 // Helper to get quota limit for a tier
-export function getQuotaLimit(tier: SubscriptionTier, quota: 'ocrQuotaWeekly' | 'instagramSavesWeekly' | 'workoutsMax'): number | null {
-  return SUBSCRIPTION_TIERS[tier].limits[quota]
+export function getQuotaLimit(tier: SubscriptionTier, quota: 'ocrQuotaWeekly' | 'ocrQuotaMonthly' | 'instagramSavesWeekly' | 'workoutsMax'): number | null {
+  return SUBSCRIPTION_TIERS[tier].limits[quota] ?? null
 }
