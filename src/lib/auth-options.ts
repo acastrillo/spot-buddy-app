@@ -27,6 +27,9 @@ const {
 if (!COGNITO_CLIENT_ID || !COGNITO_CLIENT_SECRET) {
   throw new Error("COGNITO_CLIENT_ID and COGNITO_CLIENT_SECRET must be set");
 }
+if (!AUTH_SECRET) {
+  throw new Error("AUTH_SECRET environment variable is required for secure session signing");
+}
 
 const resolvedIssuer =
   COGNITO_ISSUER_URL ||

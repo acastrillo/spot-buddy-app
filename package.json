@@ -9,8 +9,7 @@
     "lint": "eslint",
     "prisma": "prisma",
     "db:push": "prisma db push",
-    "db:generate": "prisma generate",
-    "db:seed:user": "node ./scripts/seed-user.mjs"
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.899.0",
@@ -26,6 +25,7 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-navigation-menu": "^1.2.14",
     "@radix-ui/react-slot": "^1.2.3",
+    "@stripe/stripe-js": "^8.0.0",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
@@ -38,6 +38,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.63.0",
     "recharts": "^3.2.1",
+    "stripe": "^19.1.0",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "tesseract.js": "^6.0.1",
