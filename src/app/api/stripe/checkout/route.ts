@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       customerId = customer.id
 
       // Update user with Stripe customer ID
-      await dynamoDBUsers.update(userId, { stripeCustomerId: customerId })
+      await dynamoDBUsers.upsert({ id: userId, email: user.email, stripeCustomerId: customerId })
     }
 
     const tierConfig = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS]
