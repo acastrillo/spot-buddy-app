@@ -18,9 +18,13 @@ import {
   CheckCircle,
   Sparkles,
   Image as ImageIcon,
-  X
+  X,
+  Crown
 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { getQuotaLimit } from "@/lib/stripe"
+import { UpgradePrompt } from "@/components/subscription/upgrade-prompt"
+import Link from "next/link"
 
 export default function ImportWorkoutPage() {
   const { isAuthenticated, user } = useAuthStore()
@@ -436,16 +440,45 @@ export default function ImportWorkoutPage() {
                             </div>
 
                             {ocrError && (
-                              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-500">
-                                {ocrError}
+                              <div className="space-y-3">
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-500">
+                                  {ocrError}
+                                </div>
+                                {ocrError.includes('quota exceeded') && (
+                                  <UpgradePrompt
+                                    compact
+                                    reason="Upgrade to get more OCR scans per week"
+                                    feature="unlimited OCR"
+                                  />
+                                )}
                               </div>
                             )}
 
-                            {user && (
-                              <div className="text-sm text-text-secondary text-center">
-                                OCR Credits: {(user as any).ocrQuotaLimit - ((user as any).ocrQuotaUsed || 0)}/{(user as any).ocrQuotaLimit} remaining
-                              </div>
-                            )}
+                            {user && (() => {
+                              const tier = (user as any).subscriptionTier || 'free'
+                              const quotaLimit = getQuotaLimit(tier, 'ocrQuotaWeekly')
+                              const quotaUsed = (user as any).ocrQuotaUsed || 0
+                              const quotaRemaining = quotaLimit === null ? 'Unlimited' : `${quotaLimit - quotaUsed}/${quotaLimit}`
+                              const isLow = quotaLimit !== null && (quotaLimit - quotaUsed) <= 1
+
+                              return (
+                                <div className="space-y-2">
+                                  <div className={`text-sm text-center ${isLow ? 'text-amber-500 font-medium' : 'text-text-secondary'}`}>
+                                    OCR Credits: {quotaRemaining} remaining this week
+                                  </div>
+                                  {isLow && tier === 'free' && (
+                                    <div className="text-center">
+                                      <Link href="/subscription">
+                                        <Button variant="outline" size="sm" className="text-xs">
+                                          <Crown className="h-3 w-3 mr-1" />
+                                          Upgrade for More
+                                        </Button>
+                                      </Link>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
 
                             <Button
                               className="w-full"

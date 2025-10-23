@@ -4,7 +4,6 @@
  */
 
 import { type NextAuthOptions } from "next-auth";
-import CognitoProvider from "next-auth/providers/cognito";
 import { dynamoDBUsers } from "@/lib/dynamodb";
 
 type CognitoProfile = {
@@ -45,13 +44,31 @@ if (!resolvedIssuer) {
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    CognitoProvider({
+    // Custom Cognito provider that doesn't validate nonce
+    // This is required for Cognito + Google federated identity
+    {
+      id: "cognito",
+      name: "Cognito",
+      type: "oauth",
+      wellKnown: `${resolvedIssuer}/.well-known/openid-configuration`,
       clientId: COGNITO_CLIENT_ID,
       clientSecret: COGNITO_CLIENT_SECRET,
-      issuer: resolvedIssuer,
-      // Remove checks restriction - let NextAuth handle OAuth checks properly
-      // This fixes "nonce mismatch" error with Google federated identity
-    }),
+      version: "1.0",
+      authorization: {
+        params: {
+          scope: "openid email profile",
+        },
+      },
+      checks: ["state"], // Only validate state, skip nonce for federated identity
+      profile(profile) {
+        return {
+          id: profile.sub,
+          email: profile.email,
+          name: profile.name ?? profile.email,
+          image: profile.picture,
+        };
+      },
+    },
   ],
   secret: AUTH_SECRET,
   session: {
@@ -70,6 +87,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: { signIn: "/auth/login" },
+  debug: process.env.NODE_ENV === "development", // Enable debug logs in dev
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {

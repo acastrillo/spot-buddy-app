@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import StreakPopup from "@/components/ui/streak-popup"
 import { RestTimer } from "@/components/timer/rest-timer"
+import { EnhanceWithAIButton } from "@/components/ai/enhance-button"
 import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import {
   ArrowLeft,
@@ -195,7 +196,7 @@ export default function WorkoutViewPage() {
     }
     const updated = [...existing, newEntry]
     localStorage.setItem('completedWorkouts', JSON.stringify(updated))
-    window.dispatchEvent(new Event('completedWorkoutsUpdated'))
+    window.dispatchEvent(new Event('workoutsUpdated'))
 
     const streak = computeStreak(updated.map((c: any) => c.completedDate), todayIso)
     setStreakCount(streak)
@@ -236,6 +237,12 @@ export default function WorkoutViewPage() {
               </div>
               
               <div className="flex items-center space-x-2">
+                <EnhanceWithAIButton
+                  workoutId={workout.id}
+                  onEnhanced={() => loadWorkout(workout.id)}
+                  variant="outline"
+                  size="sm"
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -291,58 +298,90 @@ export default function WorkoutViewPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workout.exercises.map((exercise, idx) => (
-                  <div 
-                    key={exercise.id} 
-                    className="flex items-center justify-between p-4 bg-surface rounded-lg border border-border"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                        {idx + 1}
+                {workout.exercises.map((exercise, idx) => {
+                  const setDetails =
+                    Array.isArray(exercise.setDetails) && exercise.setDetails.length > 0
+                      ? exercise.setDetails
+                      : null;
+
+                  return (
+                    <div
+                      key={exercise.id}
+                      className="rounded-lg border border-border bg-surface p-4 md:flex md:items-start md:justify-between"
+                    >
+                      <div className="flex items-start space-x-4">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-text-primary capitalize">
+                            {exercise.name}
+                          </h3>
+                          {exercise.notes && (
+                            <p className="mt-1 text-xs text-text-secondary">{exercise.notes}</p>
+                          )}
+                          {setDetails && (
+                            <div className="mt-3 space-y-2 rounded-lg bg-background/60 p-3 text-xs text-text-secondary">
+                              {setDetails.map((detail, detailIdx) => (
+                                <div
+                                  key={detail?.id ?? `${exercise.id}-${detailIdx}`}
+                                  className="flex items-center justify-between gap-3"
+                                >
+                                  <span className="uppercase tracking-wide text-[10px] text-text-secondary/70">
+                                    Set {detailIdx + 1}
+                                  </span>
+                                  <div className="flex items-center gap-4 text-sm text-text-primary">
+                                    <span>{detail?.reps || exercise.reps || "-"} reps</span>
+                                    <span className="text-text-secondary">
+                                      {detail?.weight || exercise.weight || "Bodyweight"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {exercise.restSeconds && exercise.restSeconds > 0 && (
+                            <p className="mt-2 text-xs text-text-secondary">
+                              Rest {exercise.restSeconds}s between sets
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-text-primary capitalize">
-                          {exercise.name}
-                        </h3>
-                        {exercise.notes && (
-                          <p className="text-xs text-text-secondary mt-1">
-                            {exercise.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-6 text-sm text-text-secondary">
-                      {exercise.sets > 1 && (
-                        <div className="text-center">
-                          <div className="font-medium text-text-primary">{exercise.sets}</div>
-                          <div className="text-xs">sets</div>
-                        </div>
-                      )}
-                      
-                      {exercise.reps && (
-                        <div className="text-center">
-                          <div className="font-medium text-text-primary">{exercise.reps}</div>
-                          <div className="text-xs">reps</div>
-                        </div>
-                      )}
-                      
-                      {exercise.weight && (
-                        <div className="text-center">
-                          <div className="font-medium text-text-primary">{exercise.weight}</div>
-                          <div className="text-xs">weight</div>
-                        </div>
-                      )}
-                      
-                      {exercise.restSeconds && exercise.restSeconds > 0 && (
-                        <div className="text-center">
-                          <div className="font-medium text-text-primary">{exercise.restSeconds}s</div>
-                          <div className="text-xs">rest</div>
+
+                      {!setDetails && (
+                        <div className="mt-4 flex items-center space-x-6 text-sm text-text-secondary md:mt-0">
+                          {exercise.sets > 1 && (
+                            <div className="text-center">
+                              <div className="font-medium text-text-primary">{exercise.sets}</div>
+                              <div className="text-xs">sets</div>
+                            </div>
+                          )}
+
+                          {exercise.reps && (
+                            <div className="text-center">
+                              <div className="font-medium text-text-primary">{exercise.reps}</div>
+                              <div className="text-xs">reps</div>
+                            </div>
+                          )}
+
+                          {exercise.weight && (
+                            <div className="text-center">
+                              <div className="font-medium text-text-primary">{exercise.weight}</div>
+                              <div className="text-xs">weight</div>
+                            </div>
+                          )}
+
+                          {exercise.restSeconds && exercise.restSeconds > 0 && (
+                            <div className="text-center">
+                              <div className="font-medium text-text-primary">{exercise.restSeconds}s</div>
+                              <div className="text-xs">rest</div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -372,10 +411,16 @@ export default function WorkoutViewPage() {
                   <div className="md:col-span-2">
                     <div className="text-text-secondary mb-1">Source URL</div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-text-primary text-xs font-mono truncate">
+                      <a
+                        href={workout.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-primary text-xs font-mono truncate hover:text-primary transition-colors flex-1 min-w-0"
+                        title={workout.source}
+                      >
                         {workout.source}
-                      </span>
-                      <Button variant="outline" size="sm" asChild>
+                      </a>
+                      <Button variant="outline" size="sm" asChild className="flex-shrink-0">
                         <a href={workout.source} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3" />
                         </a>

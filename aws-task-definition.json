@@ -4,11 +4,11 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/SpotterTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/SpotterTaskRole",
   "containerDefinitions": [
     {
-      "name": "spotter-app",
+      "name": "spotter-web",
       "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/spotter-app:latest",
       "portMappings": [
         {
@@ -21,6 +21,84 @@
         {
           "name": "NODE_ENV",
           "value": "production"
+        },
+        {
+          "name": "NEXTAUTH_URL",
+          "value": "https://spotter.cannashieldct.com"
+        },
+        {
+          "name": "AUTH_TRUST_HOST",
+          "value": "true"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AUTH_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/AUTH_SECRET"
+        },
+        {
+          "name": "COGNITO_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/COGNITO_CLIENT_ID"
+        },
+        {
+          "name": "COGNITO_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/COGNITO_CLIENT_SECRET"
+        },
+        {
+          "name": "COGNITO_USER_POOL_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/COGNITO_USER_POOL_ID"
+        },
+        {
+          "name": "COGNITO_ISSUER_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/COGNITO_ISSUER_URL"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/AWS_REGION"
+        },
+        {
+          "name": "APIFY_API_TOKEN",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/APIFY_API_TOKEN"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_SECRET_KEY"
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_WEBHOOK_SECRET"
+        },
+        {
+          "name": "STRIPE_PUBLISHABLE_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PUBLISHABLE_KEY"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PUBLISHABLE_KEY"
+        },
+        {
+          "name": "STRIPE_PRICE_STARTER",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_STARTER"
+        },
+        {
+          "name": "STRIPE_PRICE_PRO",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
+        },
+        {
+          "name": "STRIPE_PRICE_ELITE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_STARTER",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_STARTER"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_PRO",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_ELITE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
         }
       ],
       "logConfiguration": {
@@ -30,13 +108,6 @@
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
-      },
-      "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
-        "interval": 30,
-        "timeout": 5,
-        "retries": 3,
-        "startPeriod": 10
       }
     }
   ]

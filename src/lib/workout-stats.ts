@@ -1,4 +1,4 @@
-import { DynamoDBWorkout, DynamoDBExercise } from "./dynamodb";
+import { DynamoDBWorkout } from "./dynamodb";
 
 export interface WorkoutStats {
   totalWorkouts: number;
@@ -94,12 +94,21 @@ function calculateTotalVolume(workouts: DynamoDBWorkout[]): number {
 
   for (const workout of workouts) {
     for (const exercise of workout.exercises) {
-      const weight = parseWeight(exercise.weight);
-      const reps = parseReps(exercise.reps);
-      const sets = exercise.sets || 1;
+      const setDetails =
+        exercise.setDetails && exercise.setDetails.length > 0
+          ? exercise.setDetails
+          : Array.from({ length: exercise.sets || 1 }).map(() => ({
+              reps: exercise.reps,
+              weight: exercise.weight,
+            }));
 
-      if (weight > 0 && reps > 0) {
-        volume += weight * reps * sets;
+      for (const detail of setDetails) {
+        const weight = parseWeight(detail?.weight ?? exercise.weight);
+        const reps = parseReps(detail?.reps ?? exercise.reps);
+
+        if (weight > 0 && reps > 0) {
+          volume += weight * reps;
+        }
       }
     }
   }
@@ -251,11 +260,20 @@ function calculateVolumeByMonth(
 
     let workoutVolume = 0;
     for (const exercise of workout.exercises) {
-      const weight = parseWeight(exercise.weight);
-      const reps = parseReps(exercise.reps);
-      const sets = exercise.sets || 1;
-      if (weight > 0 && reps > 0) {
-        workoutVolume += weight * reps * sets;
+      const setDetails =
+        exercise.setDetails && exercise.setDetails.length > 0
+          ? exercise.setDetails
+          : Array.from({ length: exercise.sets || 1 }).map(() => ({
+              reps: exercise.reps,
+              weight: exercise.weight,
+            }));
+
+      for (const detail of setDetails) {
+        const weight = parseWeight(detail?.weight ?? exercise.weight);
+        const reps = parseReps(detail?.reps ?? exercise.reps);
+        if (weight > 0 && reps > 0) {
+          workoutVolume += weight * reps;
+        }
       }
     }
 

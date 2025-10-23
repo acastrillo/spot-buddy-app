@@ -19,9 +19,13 @@ import {
   HelpCircle,
   Heart,
   TrendingUp,
-  Activity
+  Activity,
+  Crown,
+  Target
 } from "lucide-react"
 import Link from "next/link"
+import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
+import { getTierBadge } from "@/lib/feature-gating"
 
 export default function SettingsPage() {
   const { isAuthenticated, user } = useAuthStore()
@@ -33,7 +37,23 @@ export default function SettingsPage() {
     return <Login />
   }
 
+  const currentTier = user?.subscriptionTier || 'free'
+  const tierConfig = SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS]
+  const tierBadge = getTierBadge(currentTier as any)
+
   const settingsSections = [
+    {
+      title: "Subscription",
+      items: [
+        {
+          icon: Crown,
+          title: "Manage Subscription",
+          subtitle: `Current plan: ${tierConfig.name}`,
+          action: "chevron",
+          href: "/subscription"
+        }
+      ]
+    },
     {
       title: "Stats & Progress",
       items: [
@@ -50,6 +70,13 @@ export default function SettingsPage() {
           subtitle: "Track weight, measurements, and body composition",
           action: "chevron",
           href: "/stats/metrics"
+        },
+        {
+          icon: Target,
+          title: "Training Profile",
+          subtitle: "Set goals and preferences for AI-powered workouts",
+          action: "chevron",
+          href: "/settings/training-profile"
         }
       ]
     },

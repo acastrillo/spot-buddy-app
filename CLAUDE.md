@@ -4,40 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Working with This Project
 
-**IMPORTANT**: This project has MCP (Model Context Protocol) servers configured. Always check for and use available MCP tools when working on tasks:
-- **AWS Operations**: Use `mcp__aws-api__*` tools for AWS CLI operations, infrastructure management, and cloud resources
-- **n8n Workflows**: Use `mcp__n8n-mcp__*` tools for workflow automation and integration
-- **Docker Hub**: Use `mcp__MCP_DOCKER__*` tools for Docker image management and container operations
-- **GitHub**: Use `mcp__MCP_DOCKER__*` tools for GitHub operations (issues, PRs, repositories)
-- **shadcn/ui**: Use `mcp__shadcn-ui-server__*` tools for UI component documentation and examples
+**IMPORTANT**: This project has MCP (Model Context Protocol) servers configured. When working on tasks, prefer using MCP tools over bash commands when available, as they provide:
+- Better error handling and structured responses
+- Direct integration with external services (AWS, GitHub, Docker, n8n, shadcn/ui)
+- Reduced need for environment variable management
+- More reliable authentication handling
 
-Before using bash commands for AWS, GitHub, Docker, or n8n operations, check if an MCP tool is available first.
+Check available MCP tools at the start of relevant tasks (infrastructure changes, GitHub operations, UI component work, etc.) and use them when they fit the task better than standard CLI commands.
 
 ## Project Overview
 
 Spot Buddy is a fitness tracking application built with Next.js 15.5.1, React 19, and TypeScript. It's designed to let users save Instagram workouts, upload workout screenshots, and track progress with OCR and AI features.
 
-**Current Status**: v1.3 - Production deployment on AWS with:
+**Current Status**: v1.5 - Production deployment on AWS with:
 - **Authentication**: AWS Cognito with Google OAuth federated sign-in
 - **Database**: DynamoDB for workouts, users, and body metrics (production), SQLite/Prisma for development
 - **Infrastructure**: ECS Fargate, ALB with HTTPS, Route53 DNS
 - **Domain**: https://spotter.cannashieldct.com
-- **Phase 1 Complete**: Full workout CRUD with cross-device sync
-- **Phase 2 Complete**: Calendar & Scheduling with workout status tracking
-- **Phase 3 Complete**: Smart Workout Timers (Interval, HIIT, Rest Timers)
-- **Phase 4 Complete**: Enhanced Stats & PRs tracking with body metrics
+- **Phase 1-5 Complete**: Full app with monetization ready
+- **Development Strategy**: Multi-platform (Web, Android, iOS) with shared backend
 
-**Latest Updates** (January 2025):
-- ✅ Phase 1 Complete: DynamoDB workout persistence with cross-device sync
-- ✅ Phase 2 Complete: Calendar & Scheduling with workout status tracking
-- ✅ Phase 3 Complete: Smart Timers with interval, HIIT, and rest timer features
-- ✅ Phase 4 Complete: Enhanced Stats & PRs tracking with body metrics
-- ✅ Personal Records tracking with automatic PR detection and 7 different 1RM formulas
-- ✅ Body metrics tracking (weight, body fat %, 8 body measurements) with progression charts
-- ✅ Workout timers: Interval timer, HIIT timer with presets, floating rest timer widget
-- ✅ Web Audio API beeps, Web Notifications, LocalStorage persistence
-- ✅ API routes: `/api/workouts`, `/api/body-metrics`, `/api/workouts/[id]/schedule`
-- 🚧 Next: Phase 5 (Monetization - Stripe Integration)
+**Completed Phases** (January 2025):
+- ✅ **Phase 1**: DynamoDB workout persistence with cross-device sync
+- ✅ **Phase 2**: Calendar & Scheduling with workout status tracking
+- ✅ **Phase 3**: Smart Timers (Interval, HIIT, Rest Timer widget)
+- ✅ **Phase 4**: Enhanced Stats & PRs tracking with body metrics
+- ✅ **Phase 5**: Stripe integration with subscription tiers (Free, Starter $4.99, Pro $9.99, Elite $19.99)
+
+**Next Development Priorities**:
+1. 🎯 **Phase 6**: AI-Powered Features (Smart Parser, Training Profile, AI Generator, WOD)
+2. 📱 **Android App**: Native Kotlin app with Instagram share sheet integration (90-day timeline)
+3. 🍎 **iOS App**: Native Swift app (after Android launch)
 
 ## Development Commands
 
@@ -325,11 +322,105 @@ Next.js App Router pages in `src/app/`:
 - **Timer Page**: Dedicated page at `/timer` with tab selector
 - **Mobile Nav**: Timer link in mobile navigation
 
-### Subscription & Usage Tracking
-- Tiered subscription model: free, starter, pro, elite
-- Free tier: 2 OCR requests per week with quota tracking
+### Subscription & Usage Tracking (Phase 5 - Complete)
+- Tiered subscription model with Stripe integration:
+  - **Free**: 15 workouts max, 1 OCR/week, 30-day history, basic stats
+  - **Starter** ($7.99/mo or $79.99/year): Unlimited workouts, 5 OCR/week, 10 AI enhancements/month
+  - **Pro** ($14.99/mo or $149.99/year): Unlimited OCR, 30 AI enhancements/month, 30 AI generations/month
+  - **Elite** ($34.99/mo or $349.99/year): 100 AI enhancements/month, 100 AI generations/month, AI Coach (20 messages/day), Crew features
 - Stripe integration via `stripeCustomerId` and `stripeSubscriptionId` fields
-- Usage tracking: `ocrQuotaUsed`, `workoutsSaved`
+- Usage tracking: `ocrQuotaUsed`, `workoutsSaved`, `aiRequestsUsed` (Phase 6)
+- Feature gating implemented in `src/lib/feature-gating.tsx`
+
+### AI-Powered Features (Phase 6 - Planned)
+
+**Architecture**:
+- Amazon Bedrock (Claude Sonnet 4.5) for AI processing
+  - Model ID: `claude-sonnet-4-5`
+  - Pricing: $3/MTok input, $15/MTok output
+  - Cost Savings: 90% with prompt caching, 50% with batch processing
+- Cost: ~$0.01 per enhancement, ~$0.02 per generation
+- Usage quotas by tier to manage costs
+
+**Features to Implement**:
+
+1. **Smart Workout Parser** (6-8 hours)
+   - "Enhance with AI" button after OCR
+   - Clean up messy text, standardize exercise names
+   - Suggest weights based on user PRs
+   - Add form cues and safety tips
+   - API: `/api/ai/enhance-workout`
+   - Files: `src/lib/ai/bedrock-client.ts`, `src/lib/ai/workout-enhancer.ts`
+
+2. **Training Profile** (4-6 hours)
+   - Manual PR entry for exercises
+   - Training goals, preferences, equipment
+   - Experience level, constraints
+   - Page: `/settings/training-profile`
+   - API: `/api/user/profile`
+   - DynamoDB: Add `trainingProfile` to `spotter-users` table
+
+3. **AI Workout Generator** (8-10 hours)
+   - Natural language input: "Upper body, dumbbells, 45 minutes"
+   - Personalized based on training profile and PRs
+   - Complete workout with warm-up, exercises, cool-down
+   - Page: `/add/generate`
+   - API: `/api/ai/generate-workout`
+
+4. **Workout of the Day** (6-8 hours)
+   - Daily workout suggestion on dashboard
+   - Free: Generic WOD (same for everyone)
+   - Pro/Elite: Personalized WOD
+   - Generated via n8n automation or Lambda
+   - API: `/api/wod`
+   - DynamoDB: New `spotter-wod` table
+
+**AI Cost Management**:
+- Starter: $0.10/user/month (10 enhancements)
+- Pro: $0.90/user/month (30 enhancements + 30 generations)
+- Elite: $3.00/user/month (100 enhancements + 100 generations + AI Coach)
+- Profit margins remain 70-85% with AI features
+
+### Multi-Platform Development Strategy
+
+**Three Independent Projects**:
+1. **Web App** (This repo) - Add AI features (Phase 6)
+2. **Android App** (NEW) - Native Kotlin with Instagram share sheet
+3. **iOS App** (Later) - Native Swift
+
+**Shared Backend**: All platforms use the same AWS infrastructure:
+- DynamoDB (workouts, users, body metrics)
+- AWS Cognito (authentication)
+- AWS Textract (OCR)
+- Stripe (subscriptions sync across platforms)
+- API endpoints via Next.js on ECS Fargate
+
+**Development Priority** (Updated October 2025):
+1. **Web AI Features** (This workspace - Priority #1) - Phase 6 implementation
+2. **Android App** (Separate workspace) - Native Kotlin app with share sheet
+3. **iOS App** (Separate workspace) - Native Swift + SwiftUI app
+
+**Rationale**: Android and iOS development will happen in separate workspaces, so web development is the top priority for THIS repository.
+
+**Android Killer Feature**:
+- Native share intent handler intercepts Instagram shares
+- 2-tap workflow: Share from Instagram → Open Spot Buddy
+- Automatic OCR processing and workout parsing
+- Offline-first with Room database and background sync
+
+**iOS Development Recommendation**:
+- **Language**: Swift (for business logic, data, API calls)
+- **UI Framework**: SwiftUI (modern, declarative UI - 30-40% faster development)
+- **Share Extension**: UIActivityViewController (native iOS share sheet integration)
+- **API Client**: URLSession (native) or Alamofire (popular third-party)
+- **Offline Storage**: CoreData or Realm
+- **Architecture**: Similar to Android - MVVM with repositories and use cases
+- **Why Swift + SwiftUI**:
+  - Industry standard (80% of companies use Swift)
+  - SwiftUI is the future of iOS development
+  - Better performance than cross-platform solutions
+  - Native integration with iOS share sheet
+  - Declarative UI reduces code by 30-40%
 
 ## Production Considerations
 
@@ -348,17 +439,28 @@ No test framework currently configured. When adding tests, consider:
 
 ## Documentation
 
-Comprehensive documentation available:
+**Architecture & Development**:
 - **README.md** - Project overview, getting started, tech stack, deployment
 - **ARCHITECTURE.md** - System architecture, design decisions, technical deep-dive
 - **HOW-TO-GUIDE.md** - Complete user and developer guide
 - **PROJECT-STATE.md** - Current state, MVP roadmap, north star goals
 - **ROADMAP.md** - Detailed phase-by-phase development roadmap
-- **PHASE-1-IMPLEMENTATION.md** - Technical details of Phase 1 (DynamoDB persistence)
-- **PHASE-2-CALENDAR-IMPLEMENTATION.md** - Technical details of Phase 2 (Calendar & Scheduling)
-- **PHASE-3-TIMERS-IMPLEMENTATION.md** - Technical details of Phase 3 (Smart Timers)
-- **PHASE-4-IMPLEMENTATION.md** - Technical details of Phase 4 (Stats & PRs tracking)
 - **DEPLOYMENT-SUMMARY.md** - AWS deployment procedures and troubleshooting
+
+**Phase Implementation Guides**:
+- **PHASE-1-IMPLEMENTATION.md** - DynamoDB persistence with cross-device sync
+- **PHASE-2-CALENDAR-IMPLEMENTATION.md** - Calendar & Scheduling system
+- **PHASE-3-TIMERS-IMPLEMENTATION.md** - Smart Timers (Interval, HIIT, Rest)
+- **PHASE-4-IMPLEMENTATION.md** - Stats & PRs tracking with body metrics
+- **PHASE-5-MONETIZATION.md** - Stripe integration and subscription tiers
+- **PHASE-6-AI-FEATURES.md** - AI-powered features (Smart Parser, Generator, WOD)
+
+**Business & Strategy**:
+- **BUSINESS-OVERVIEW.md** - Complete feature set, monetization model, revenue projections
+- **mobile_first_plan.md** - Multi-platform development strategy (Web, Android, iOS)
+- **EFFICIENCY-OPPORTUNITIES.md** - Technical improvements and optimization opportunities
+- **SECURITY-REVIEW.md** - Security audit and AWS permissions review
+- **MASTER-FEATURE-LIST.md** - Complete feature inventory across all phases
 
 ## Common Issues & Solutions
 

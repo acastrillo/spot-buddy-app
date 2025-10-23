@@ -45,6 +45,26 @@ export interface DynamoDBUser {
   ocrQuotaLimit: number;
   ocrQuotaResetDate?: string | null;
   workoutsSaved: number;
+
+  // AI Features (Phase 6)
+  aiRequestsUsed?: number;
+  aiRequestsLimit?: number;
+  lastAiRequestReset?: string | null;
+
+  // Training Profile (Phase 6)
+  trainingProfile?: {
+    manualPRs?: { [exercise: string]: number };
+    goals?: string[];
+    favoriteExercises?: string[];
+    dislikedExercises?: string[];
+    equipment?: string[];
+    preferredDuration?: number;
+    trainingFrequency?: number;
+    experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+    trainingFocus?: string;
+    constraints?: string;
+    energyLevels?: 'morning' | 'evening' | 'flexible';
+  };
 }
 
 // User operations
@@ -120,6 +140,14 @@ export const dynamoDBUsers = {
       ocrQuotaLimit: user.ocrQuotaLimit || 2, // Free tier default: 2 per week
       ocrQuotaResetDate: user.ocrQuotaResetDate || now,
       workoutsSaved: user.workoutsSaved || 0,
+
+      // AI quota defaults (Phase 6)
+      aiRequestsUsed: user.aiRequestsUsed || 0,
+      aiRequestsLimit: user.aiRequestsLimit || 0, // Free tier: 0 AI requests
+      lastAiRequestReset: user.lastAiRequestReset || now,
+
+      // Training profile (Phase 6)
+      trainingProfile: user.trainingProfile || undefined,
     };
 
     try {
@@ -143,33 +171,79 @@ export const dynamoDBUsers = {
   async updateSubscription(
     userId: string,
     subscription: {
-      tier: "free" | "starter" | "pro" | "elite";
-      status: "active" | "inactive" | "trialing" | "canceled" | "past_due";
-      stripeCustomerId?: string;
-      stripeSubscriptionId?: string;
-      startDate?: Date;
-      endDate?: Date;
+      tier?: "free" | "starter" | "pro" | "elite";
+      status?: "active" | "inactive" | "trialing" | "canceled" | "past_due";
+      stripeCustomerId?: string | null;
+      stripeSubscriptionId?: string | null;
+      startDate?: Date | null;
+      endDate?: Date | null;
+      trialEndsAt?: Date | null;
     }
   ): Promise<void> {
+    const updateParts: string[] = [];
+    const attributeValues: Record<string, unknown> = {
+      ":updatedAt": new Date().toISOString(),
+    };
+
+    const hasProp = <K extends keyof typeof subscription>(key: K): boolean =>
+      Object.prototype.hasOwnProperty.call(subscription, key);
+
+    if (hasProp("tier")) {
+      updateParts.push("subscriptionTier = :tier");
+      attributeValues[":tier"] = subscription.tier ?? null;
+    }
+
+    if (hasProp("status")) {
+      updateParts.push("subscriptionStatus = :status");
+      attributeValues[":status"] = subscription.status ?? null;
+    }
+
+    if (hasProp("stripeCustomerId")) {
+      updateParts.push("stripeCustomerId = :customerId");
+      attributeValues[":customerId"] = subscription.stripeCustomerId ?? null;
+    }
+
+    if (hasProp("stripeSubscriptionId")) {
+      updateParts.push("stripeSubscriptionId = :subscriptionId");
+      attributeValues[":subscriptionId"] = subscription.stripeSubscriptionId ?? null;
+    }
+
+    if (hasProp("startDate")) {
+      updateParts.push("subscriptionStartDate = :startDate");
+      attributeValues[":startDate"] = subscription.startDate
+        ? subscription.startDate.toISOString()
+        : null;
+    }
+
+    if (hasProp("endDate")) {
+      updateParts.push("subscriptionEndDate = :endDate");
+      attributeValues[":endDate"] = subscription.endDate
+        ? subscription.endDate.toISOString()
+        : null;
+    }
+
+    if (hasProp("trialEndsAt")) {
+      updateParts.push("trialEndsAt = :trialEndsAt");
+      attributeValues[":trialEndsAt"] = subscription.trialEndsAt
+        ? subscription.trialEndsAt.toISOString()
+        : null;
+    }
+
+    // Always update updatedAt
+    updateParts.push("updatedAt = :updatedAt");
+
+    // If nothing besides updatedAt was provided, skip the call
+    if (updateParts.length === 1) {
+      return;
+    }
+
     try {
       await dynamoDb.send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
-          UpdateExpression:
-            "SET subscriptionTier = :tier, subscriptionStatus = :status, " +
-            "stripeCustomerId = :customerId, stripeSubscriptionId = :subscriptionId, " +
-            "subscriptionStartDate = :startDate, subscriptionEndDate = :endDate, " +
-            "updatedAt = :updatedAt",
-          ExpressionAttributeValues: {
-            ":tier": subscription.tier,
-            ":status": subscription.status,
-            ":customerId": subscription.stripeCustomerId || null,
-            ":subscriptionId": subscription.stripeSubscriptionId || null,
-            ":startDate": subscription.startDate?.toISOString() || null,
-            ":endDate": subscription.endDate?.toISOString() || null,
-            ":updatedAt": new Date().toISOString(),
-          },
+          UpdateExpression: `SET ${updateParts.join(", ")}`,
+          ExpressionAttributeValues: attributeValues,
         })
       );
     } catch (error) {
@@ -226,6 +300,79 @@ export const dynamoDBUsers = {
   },
 
   /**
+   * Increment AI request usage counter (Phase 6)
+   */
+  async incrementAIUsage(userId: string): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: "SET aiRequestsUsed = if_not_exists(aiRequestsUsed, :zero) + :inc, updatedAt = :updatedAt",
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":zero": 0,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error incrementing AI usage in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reset AI quota (monthly reset - Phase 6)
+   */
+  async resetAIQuota(userId: string): Promise<void> {
+    try {
+      const now = new Date().toISOString();
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression:
+            "SET aiRequestsUsed = :zero, lastAiRequestReset = :resetDate, updatedAt = :updatedAt",
+          ExpressionAttributeValues: {
+            ":zero": 0,
+            ":resetDate": now,
+            ":updatedAt": now,
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error resetting AI quota in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update training profile (Phase 6)
+   */
+  async updateTrainingProfile(
+    userId: string,
+    profile: DynamoDBUser["trainingProfile"]
+  ): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: "SET trainingProfile = :profile, updatedAt = :updatedAt",
+          ExpressionAttributeValues: {
+            ":profile": profile || {},
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error updating training profile in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Delete user
    */
   async delete(userId: string): Promise<void> {
@@ -252,6 +399,11 @@ export interface DynamoDBExercise {
   weight?: string | null;
   restSeconds?: number | null;
   notes?: string | null;
+  setDetails?: Array<{
+    id?: string | null;
+    reps?: string | number | null;
+    weight?: string | number | null;
+  }> | null;
 }
 
 export interface DynamoDBWorkout {
@@ -277,6 +429,11 @@ export interface DynamoDBWorkout {
   scheduledDate?: string | null; // ISO date (YYYY-MM-DD) when workout is scheduled
   status?: 'scheduled' | 'completed' | 'skipped' | null; // Workout completion status
   completedDate?: string | null; // ISO date when workout was completed (may differ from scheduledDate)
+
+  // Phase 6: AI Enhancement
+  aiEnhanced?: boolean; // Whether workout was enhanced by AI
+  aiNotes?: string | null; // AI-generated notes and recommendations
+  muscleGroups?: string[]; // Muscle groups targeted (can be AI-generated)
 }
 
 // Workout operations

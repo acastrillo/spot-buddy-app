@@ -19,20 +19,34 @@ export function extractExercisesFromWorkout(workout: DynamoDBWorkout): WorkoutEx
   for (const exercise of workout.exercises) {
     const sets: ExerciseSet[] = [];
 
-    // Parse sets from exercise
-    if (exercise.sets && Array.isArray(exercise.sets)) {
-      for (const set of exercise.sets) {
-        // Handle different set formats
-        const weight = typeof set.weight === 'string' ? parseWeight(set.weight) : null;
-        const reps = typeof set.reps === 'number' ? set.reps : parseInt(String(set.reps || 0));
+    const pushSet = (weightText: string | number | null | undefined, repsValue: string | number | null | undefined) => {
+      const weight = typeof weightText === 'string' ? parseWeight(weightText) : typeof weightText === 'number' ? { value: weightText, unit: 'lbs' as const } : null;
+      const reps =
+        typeof repsValue === 'number'
+          ? repsValue
+          : parseInt(String(repsValue || 0));
 
-        if (weight && weight.value > 0 && reps > 0) {
-          sets.push({
-            weight: weight.value,
-            reps,
-            unit: weight.unit,
-          });
-        }
+      if (weight && weight.value > 0 && reps > 0) {
+        sets.push({
+          weight: weight.value,
+          reps,
+          unit: weight.unit,
+        });
+      }
+    };
+
+    if (exercise.setDetails && Array.isArray(exercise.setDetails) && exercise.setDetails.length > 0) {
+      for (const detail of exercise.setDetails) {
+        pushSet(detail?.weight ?? exercise.weight ?? null, detail?.reps ?? exercise.reps ?? null);
+      }
+    } else if (exercise.sets && Array.isArray(exercise.sets)) {
+      for (const set of exercise.sets) {
+        pushSet(set.weight, set.reps);
+      }
+    } else {
+      const totalSets = exercise.sets && typeof exercise.sets === 'number' ? exercise.sets : 1;
+      for (let i = 0; i < totalSets; i++) {
+        pushSet(exercise.weight ?? null, exercise.reps ?? null);
       }
     }
 

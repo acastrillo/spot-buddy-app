@@ -5,6 +5,8 @@ import { TextractClient, DetectDocumentTextCommand } from '@aws-sdk/client-textr
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { dynamoDBUsers } from '@/lib/dynamodb';
+import { getQuotaLimit } from '@/lib/stripe';
+import type { SubscriptionTier } from '@/lib/feature-gating';
 
 // Helper function to create Textract client lazily
 function getTextractClient() {
@@ -42,12 +44,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (user.ocrQuotaUsed >= user.ocrQuotaLimit) {
+    // Get quota limit based on subscription tier
+    const tier = (user.subscriptionTier || 'free') as SubscriptionTier;
+    const weeklyLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
+
+    // Check if user has unlimited quota (null limit means unlimited for pro/elite)
+    if (weeklyLimit !== null && user.ocrQuotaUsed >= weeklyLimit) {
       return NextResponse.json(
         {
           error: 'OCR quota exceeded',
+          message: 'You have reached your weekly OCR limit. Upgrade your subscription for more scans.',
           quotaUsed: user.ocrQuotaUsed,
-          quotaLimit: user.ocrQuotaLimit,
+          quotaLimit: weeklyLimit,
           subscriptionTier: user.subscriptionTier
         },
         { status: 429 }
@@ -90,12 +98,14 @@ export async function POST(req: Request) {
 
     // Get updated quota info
     const updatedUser = await dynamoDBUsers.get(userId);
+    const currentLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
 
     return NextResponse.json({
       text,
       confidence,
       quotaUsed: updatedUser?.ocrQuotaUsed ?? user.ocrQuotaUsed + 1,
-      quotaLimit: updatedUser?.ocrQuotaLimit ?? user.ocrQuotaLimit
+      quotaLimit: currentLimit,
+      isUnlimited: currentLimit === null
     });
   } catch (err: unknown) {
     return NextResponse.json({ error: String((err as Error)?.message || err) }, { status: 500 });

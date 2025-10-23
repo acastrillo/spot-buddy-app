@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { dynamoDBWorkouts } from "@/lib/dynamodb"
-import { calculateWorkoutStats, WorkoutStats } from "@/lib/workout-stats"
+import type { WorkoutStats } from "@/lib/workout-stats"
 import {
   BarChart,
   Bar,
@@ -32,28 +31,114 @@ import {
 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
+const formatVolume = (volume: number): string => {
+  if (volume >= 1_000_000) {
+    return `${(volume / 1_000_000).toFixed(1)}M`
+  }
+
+  if (volume >= 10_000) {
+    return `${Math.round(volume / 1_000)}k`
+  }
+
+  if (volume >= 1_000) {
+    return `${(volume / 1_000).toFixed(1)}k`
+  }
+
+  return volume.toString()
+}
+
 export default function DashboardPage() {
   const { isAuthenticated, user } = useAuthStore()
   const [stats, setStats] = useState<WorkoutStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const hasLoadedStatsRef = useRef(false)
 
   useEffect(() => {
-    async function loadStats() {
-      if (!user?.id) return
+    if (!user?.id) {
+      setStats(null)
+      setIsLoading(false)
+      return
+    }
 
-      setIsLoading(true)
+    let isActive = true
+    let activeController: AbortController | null = null
+
+    const loadStats = async () => {
+      if (!isActive) {
+        return
+      }
+
+      if (activeController) {
+        activeController.abort()
+      }
+
+      const controller = new AbortController()
+      activeController = controller
+
+      if (!hasLoadedStatsRef.current) {
+        setIsLoading(true)
+      }
+
       try {
-        const workouts = await dynamoDBWorkouts.list(user.id)
-        const calculatedStats = calculateWorkoutStats(workouts)
-        setStats(calculatedStats)
+        const response = await fetch("/api/workouts/stats", {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch stats: ${response.status}`)
+        }
+
+        const data = (await response.json()) as { stats: WorkoutStats }
+
+        if (isActive) {
+          hasLoadedStatsRef.current = true
+          setStats(data.stats)
+        }
       } catch (error) {
-        console.error("Error loading workout stats:", error)
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (isActive) {
+          console.error("Error loading workout stats:", error)
+        }
       } finally {
-        setIsLoading(false)
+        if (isActive && !controller.signal.aborted) {
+          setIsLoading(false)
+        }
       }
     }
 
-    loadStats()
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "workouts" || event.key === "completedWorkouts") {
+        void loadStats()
+      }
+    }
+
+    const handleFocus = () => {
+      void loadStats()
+    }
+
+    const handleWorkoutsUpdated = () => {
+      void loadStats()
+    }
+
+    void loadStats()
+
+    window.addEventListener("storage", handleStorage)
+    window.addEventListener("focus", handleFocus)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    window.addEventListener("workoutsUpdated" as any, handleWorkoutsUpdated as EventListener)
+
+    return () => {
+      isActive = false
+      activeController?.abort()
+      hasLoadedStatsRef.current = false
+      window.removeEventListener("storage", handleStorage)
+      window.removeEventListener("focus", handleFocus)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      window.removeEventListener("workoutsUpdated" as any, handleWorkoutsUpdated as EventListener)
+    }
   }, [user?.id])
 
   if (!isAuthenticated) {
@@ -119,7 +204,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-sm text-text-secondary mb-1">Total Volume</p>
                     <p className="text-2xl font-bold text-text-primary">
-                      {(stats.totalVolume / 1000).toFixed(1)}k
+                      {formatVolume(stats.totalVolume)}
                     </p>
                     <p className="text-xs text-text-secondary">lbs lifted</p>
                   </div>
@@ -229,8 +314,46 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Favorite Exercises & PRs */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          {/* Recent Activity & Favorite Exercises */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  <span>Recent Activity</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats.recentWorkouts.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.recentWorkouts.map((workout, idx) => (
+                      <div key={workout.workoutId || idx} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Dumbbell className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-text-primary font-medium">{workout.title}</p>
+                            <p className="text-xs text-text-secondary">
+                              {workout.exercises.length} exercises • {workout.source === 'instagram' ? 'Instagram' : 'Manual'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-text-secondary">
+                            {new Date(workout.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary text-center py-4">No recent workouts</p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Favorite Exercises */}
             <Card>
               <CardHeader>
@@ -259,8 +382,10 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
 
-            {/* Personal Records */}
+          {/* Personal Records */}
+          <div className="grid lg:grid-cols-1 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
