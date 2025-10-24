@@ -11,21 +11,24 @@
  * - Add personalized notes based on user's training profile
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { dynamoDBUsers, dynamoDBWorkouts, DynamoDBWorkout } from '@/lib/dynamodb';
-import { invokeClaude, estimateCost } from '@/lib/ai/bedrock-client';
-import { getAISystemPrompt } from '@/lib/ai/profile-context';
+import { enhanceWorkout, estimateEnhancementCost, type TrainingContext } from '@/lib/ai/workout-enhancer';
 import { getAIRequestLimit } from '@/lib/subscription-tiers';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 interface EnhanceWorkoutRequest {
-  workoutId: string;
+  // Either workoutId (enhance existing) or rawText (parse new)
+  workoutId?: string;
+  rawText?: string;
   enhancementType?: 'full' | 'format' | 'details' | 'optimize';
 }
 
 interface EnhanceWorkoutResponse {
   success: boolean;
   enhancedWorkout?: DynamoDBWorkout;
+  changes?: string[];
+  suggestions?: string[];
   cost?: {
     inputTokens: number;
     outputTokens: number;
@@ -37,22 +40,45 @@ interface EnhanceWorkoutResponse {
 
 export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkoutResponse>> {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+    const { userId } = auth;
 
-    const userId = (session.user as any).id;
-    const body: EnhanceWorkoutRequest = await req.json();
-    const { workoutId, enhancementType = 'full' } = body;
-
-    if (!workoutId) {
+    // RATE LIMITING: Check rate limit (30 AI requests per hour)
+    const rateLimit = await checkRateLimit(userId, 'api:ai');
+    if (!rateLimit.success) {
       return NextResponse.json(
-        { success: false, error: 'workoutId is required' },
+        {
+          success: false,
+          error: 'Too many AI requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
+    const body: EnhanceWorkoutRequest = await req.json();
+    const { workoutId, rawText, enhancementType = 'full' } = body;
+
+    if (!workoutId && !rawText) {
+      return NextResponse.json(
+        { success: false, error: 'Either workoutId or rawText is required' },
         { status: 400 }
       );
     }
@@ -82,58 +108,108 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       );
     }
 
-    // Get the workout
-    const workout = await dynamoDBWorkouts.get(userId, workoutId);
-    if (!workout) {
+    // Determine what we're enhancing: existing workout or raw text
+    let textToEnhance: string;
+    let existingWorkout: DynamoDBWorkout | null = null;
+
+    if (workoutId) {
+      // Enhancing existing workout
+      const workout = await dynamoDBWorkouts.get(userId, workoutId);
+      if (!workout) {
+        return NextResponse.json(
+          { success: false, error: 'Workout not found' },
+          { status: 404 }
+        );
+      }
+      existingWorkout = workout;
+      // Convert workout to text for enhancement
+      textToEnhance = JSON.stringify({
+        title: workout.title,
+        description: workout.description,
+        exercises: workout.exercises,
+      }, null, 2);
+    } else if (rawText) {
+      // Parsing raw text (from OCR or social media)
+      textToEnhance = rawText;
+    } else {
       return NextResponse.json(
-        { success: false, error: 'Workout not found' },
-        { status: 404 }
+        { success: false, error: 'Either workoutId or rawText is required' },
+        { status: 400 }
       );
     }
-
-    // Build AI system prompt with user context
-    const systemPrompt = await getAISystemPrompt(userId, user);
-
-    // Build user prompt based on enhancement type
-    const userPrompt = buildEnhancementPrompt(workout, enhancementType);
 
     console.log('[AI Enhance] Calling Claude Sonnet 4.5...');
     console.log('[AI Enhance] Enhancement type:', enhancementType);
     console.log('[AI Enhance] Quota remaining:', aiLimit - aiUsed);
 
-    // Call Bedrock
-    const response = await invokeClaude(
-      [{ role: 'user', content: userPrompt }],
-      {
-        systemPrompt,
-        temperature: 0.7,
-        maxTokens: 4096,
-      }
-    );
+    // Build training context (TODO: Get PRs from user profile)
+    const trainingContext: TrainingContext = {
+      userId,
+      experience: user.experience || 'intermediate',
+      // personalRecords: await getUserPRs(userId), // TODO: Implement
+    };
 
-    // Parse the enhanced workout from AI response
-    const enhancedWorkout = parseAIResponse(workout, response.content);
+    // Call AI enhancer
+    const result = await enhanceWorkout(textToEnhance, trainingContext);
 
-    // Update the workout in DynamoDB
-    await dynamoDBWorkouts.update(userId, workoutId, enhancedWorkout);
+    // If enhancing existing workout, merge with original
+    let finalWorkout: DynamoDBWorkout;
+    if (existingWorkout) {
+      // Update existing workout
+      const updates = {
+        title: result.enhancedWorkout.title || existingWorkout.title,
+        description: result.enhancedWorkout.description || existingWorkout.description,
+        exercises: result.enhancedWorkout.exercises || existingWorkout.exercises,
+        tags: result.enhancedWorkout.tags || existingWorkout.tags,
+        difficulty: result.enhancedWorkout.difficulty || existingWorkout.difficulty,
+        duration: result.enhancedWorkout.duration || existingWorkout.duration,
+        aiEnhanced: true,
+        aiNotes: `AI Enhancements:\n${result.changes.join('\n')}\n\nSuggestions:\n${result.suggestions.join('\n')}`,
+        updatedAt: new Date().toISOString(),
+      };
+      await dynamoDBWorkouts.update(userId, workoutId!, updates);
+      finalWorkout = { ...existingWorkout, ...updates };
+    } else {
+      // Create new workout from parsed text
+      const newWorkout: Partial<DynamoDBWorkout> = {
+        userId,
+        workoutId: `workout_${Date.now()}`,
+        title: result.enhancedWorkout.title || 'Untitled Workout',
+        description: result.enhancedWorkout.description || '',
+        exercises: result.enhancedWorkout.exercises || [],
+        tags: result.enhancedWorkout.tags || [],
+        difficulty: result.enhancedWorkout.difficulty || 'intermediate',
+        duration: result.enhancedWorkout.duration || 60,
+        source: 'ai-parse',
+        aiEnhanced: true,
+        aiNotes: `AI Enhancements:\n${result.changes.join('\n')}\n\nSuggestions:\n${result.suggestions.join('\n')}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await dynamoDBWorkouts.upsert(userId, newWorkout as DynamoDBWorkout);
+      finalWorkout = newWorkout as DynamoDBWorkout;
+    }
 
     // Increment AI usage counter
     await dynamoDBUsers.incrementAIUsage(userId);
 
     // Calculate cost
-    const cost = estimateCost(response.usage.inputTokens, response.usage.outputTokens);
+    const cost = estimateEnhancementCost(textToEnhance.length);
 
     console.log('[AI Enhance] Success!');
-    console.log('[AI Enhance] Tokens:', response.usage);
+    console.log('[AI Enhance] Tokens:', result.bedrockResponse.usage);
     console.log('[AI Enhance] Estimated cost:', cost);
+    console.log('[AI Enhance] Changes:', result.changes.length);
 
     return NextResponse.json({
       success: true,
-      enhancedWorkout: { ...workout, ...enhancedWorkout },
+      enhancedWorkout: finalWorkout,
+      changes: result.changes,
+      suggestions: result.suggestions,
       cost: {
-        inputTokens: response.usage.inputTokens,
-        outputTokens: response.usage.outputTokens,
-        estimatedCost: cost,
+        inputTokens: result.bedrockResponse.usage.inputTokens,
+        outputTokens: result.bedrockResponse.usage.outputTokens,
+        estimatedCost: result.bedrockResponse.cost?.total || cost,
       },
       quotaRemaining: aiLimit - aiUsed - 1,
     });
@@ -150,116 +226,3 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
   }
 }
 
-/**
- * Build the enhancement prompt based on type
- */
-function buildEnhancementPrompt(workout: DynamoDBWorkout, type: string): string {
-  const workoutJson = JSON.stringify(
-    {
-      title: workout.title,
-      description: workout.description,
-      exercises: workout.exercises,
-      muscleGroups: workout.muscleGroups,
-      difficulty: workout.difficulty,
-    },
-    null,
-    2
-  );
-
-  const basePrompt = `I have the following workout that needs enhancement:\n\n${workoutJson}`;
-
-  switch (type) {
-    case 'format':
-      return `${basePrompt}
-
-Please clean up the formatting and structure of this workout. Ensure:
-- Consistent naming for exercises
-- Proper capitalization
-- Clear set/rep notation
-- Organized muscle group tags
-
-Return ONLY a valid JSON object with the enhanced workout data (same structure as input).`;
-
-    case 'details':
-      return `${basePrompt}
-
-Please add missing details to this workout:
-- Rest times between sets (30-90s for hypertrophy, 2-5min for strength)
-- Tempo notation where helpful (e.g., "3-1-1-0")
-- Form cues for key exercises
-- Equipment needed
-- Any helpful notes about exercise execution
-
-Return ONLY a valid JSON object with the enhanced workout data (same structure as input, but add 'notes' field to exercises if needed).`;
-
-    case 'optimize':
-      return `${basePrompt}
-
-Please optimize this workout:
-- Suggest better exercise order (compounds first, isolations last)
-- Balance muscle group coverage
-- Suggest alternative exercises if equipment is limited
-- Add warm-up and cool-down recommendations
-- Ensure appropriate volume for the difficulty level
-
-Return ONLY a valid JSON object with the enhanced workout data (same structure as input).`;
-
-    case 'full':
-    default:
-      return `${basePrompt}
-
-Please provide a comprehensive enhancement of this workout:
-1. Clean up formatting and exercise names
-2. Add missing details (rest times, tempo, form cues)
-3. Optimize exercise order and selection
-4. Add personalized notes based on my training profile
-5. Suggest modifications for my experience level
-6. Add warm-up/cool-down if missing
-
-Return ONLY a valid JSON object with the enhanced workout data. Include these fields:
-- title (string)
-- description (string, enhanced with AI insights)
-- exercises (array of objects with: name, sets, reps, weight, restSeconds, notes)
-- muscleGroups (array of strings)
-- difficulty (string: beginner/intermediate/advanced)
-- aiEnhanced (boolean: true)
-- aiNotes (string: summary of AI enhancements made)`;
-  }
-}
-
-/**
- * Parse AI response and extract enhanced workout data
- */
-function parseAIResponse(originalWorkout: DynamoDBWorkout, aiResponse: string): Partial<DynamoDBWorkout> {
-  try {
-    // Try to extract JSON from the response
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in AI response');
-    }
-
-    const enhanced = JSON.parse(jsonMatch[0]);
-
-    // Merge with original workout, preserving IDs and metadata
-    return {
-      title: enhanced.title || originalWorkout.title,
-      description: enhanced.description || originalWorkout.description,
-      exercises: enhanced.exercises || originalWorkout.exercises,
-      muscleGroups: enhanced.muscleGroups || originalWorkout.muscleGroups,
-      difficulty: enhanced.difficulty || originalWorkout.difficulty,
-      aiEnhanced: true,
-      aiNotes: enhanced.aiNotes || 'Enhanced by AI',
-      updatedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    console.error('[AI Enhance] Error parsing AI response:', error);
-    console.error('[AI Enhance] Raw response:', aiResponse);
-
-    // Fallback: just add AI notes to description
-    return {
-      description: `${originalWorkout.description}\n\n--- AI Enhancement Notes ---\n${aiResponse}`,
-      aiEnhanced: true,
-      updatedAt: new Date().toISOString(),
-    };
-  }
-}

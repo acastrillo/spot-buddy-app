@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-
-import { authOptions } from "@/lib/auth-options"
+import { getAuthenticatedUserId } from "@/lib/api-auth"
 import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import { calculateWorkoutStats } from "@/lib/workout-stats"
 import { createRequestLogger } from "@/lib/logger"
@@ -11,15 +9,14 @@ export async function GET(request: NextRequest) {
   const reqLogger = createRequestLogger(request)
 
   try {
-    const session = await getServerSession(authOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userId = (session?.user as any)?.id
-
-    if (!userId) {
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) {
       reqLogger.finish(401)
       AppMetrics.apiRequest("GET", "/api/workouts/stats", 401)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return auth.error;
     }
+    const { userId } = auth;
 
     reqLogger.log("Fetching workout stats", { userId })
 

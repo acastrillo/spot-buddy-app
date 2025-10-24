@@ -2,11 +2,11 @@
 export const runtime = 'nodejs'; // ensure Node runtime (AWS SDK needs Node)
 import { NextResponse } from 'next/server';
 import { TextractClient, DetectDocumentTextCommand } from '@aws-sdk/client-textract';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { dynamoDBUsers } from '@/lib/dynamodb';
 import { getQuotaLimit } from '@/lib/stripe';
 import type { SubscriptionTier } from '@/lib/feature-gating';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // Helper function to create Textract client lazily
 function getTextractClient() {
@@ -24,19 +24,32 @@ function getTextractClient() {
 
 export async function POST(req: Request) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
-      console.error('OCR Auth failed:', { session, user: session?.user });
-      return NextResponse.json({
-        error: 'Unauthorized',
-        message: 'Please log in again to use OCR features'
-      }, { status: 401 });
-    }
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userId = (session.user as any).id as string;
+    // RATE LIMITING: Check rate limit (10 OCR requests per hour)
+    const rateLimit = await checkRateLimit(userId, 'api:ocr');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many OCR requests',
+          message: 'You have exceeded the rate limit for OCR processing. Please try again later.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+          },
+        }
+      );
+    }
 
     // Check OCR quota
     const user = await dynamoDBUsers.get(userId);

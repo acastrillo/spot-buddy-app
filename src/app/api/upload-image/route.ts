@@ -1,25 +1,60 @@
 // app/api/upload-image/route.ts
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { uploadWorkoutImage, getWorkoutImageUrl } from '@/lib/s3';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// File validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Magic bytes for image file validation
+const IMAGE_SIGNATURES = {
+  jpeg: [0xFF, 0xD8, 0xFF],
+  png: [0x89, 0x50, 0x4E, 0x47],
+  webp: [0x52, 0x49, 0x46, 0x46],
+};
+
+function validateImageSignature(header: Uint8Array): boolean {
+  // Check JPEG
+  if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) return true;
+  // Check PNG
+  if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47) return true;
+  // Check WebP (RIFF)
+  if (header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46) return true;
+  return false;
+}
 
 export async function POST(req: Request) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
-      console.error('Upload-image Auth failed:', { session, user: session?.user });
-      return NextResponse.json({
-        error: 'Unauthorized',
-        message: 'Please log in again to upload images'
-      }, { status: 401 });
-    }
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userId = (session.user as any).id as string;
+    // RATE LIMITING: Check rate limit (20 uploads per hour)
+    const rateLimit = await checkRateLimit(userId, 'api:upload');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many upload requests',
+          message: 'You have exceeded the upload rate limit. Please try again later.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
 
     const form = await req.formData();
     const file = form.get('file');
@@ -33,8 +68,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'workoutId is required' }, { status: 400 });
     }
 
-    // Convert to buffer
-    const bytes = Buffer.from(await file.arrayBuffer());
+    // SECURITY FIX: Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({
+        error: 'File too large',
+        message: `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      }, { status: 400 });
+    }
+
+    // SECURITY FIX: Validate MIME type
+    if (file instanceof File && !ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json({
+        error: 'Invalid file type',
+        message: 'Only JPEG, PNG, and WebP images are allowed'
+      }, { status: 400 });
+    }
+
+    // SECURITY FIX: Validate magic bytes (actual file content)
+    const arrayBuffer = await file.arrayBuffer();
+    const header = new Uint8Array(arrayBuffer.slice(0, 4));
+    if (!validateImageSignature(header)) {
+      return NextResponse.json({
+        error: 'Invalid image file',
+        message: 'File does not appear to be a valid image'
+      }, { status: 400 });
+    }
+
+    // Convert to buffer (reuse arrayBuffer to avoid double read)
+    const bytes = Buffer.from(arrayBuffer);
     const filename = file instanceof File ? file.name : 'upload.jpg';
 
     // Upload to S3

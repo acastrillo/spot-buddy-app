@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBBodyMetrics } from "@/lib/dynamodb";
 
 // GET /api/body-metrics - List all body metrics for the current user
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
-    const userId = (session.user as any).id;
     const { searchParams } = new URL(request.url);
-    const limit = searchParams.get("limit");
+    const limitParam = searchParams.get("limit");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+
+    // Validate and bound the limit parameter
+    const limit = limitParam
+      ? Math.min(Math.max(parseInt(limitParam, 10) || 100, 1), 1000)
+      : 100;
 
     let metrics;
 
@@ -23,8 +25,8 @@ export async function GET(request: NextRequest) {
       // Query by date range
       metrics = await dynamoDBBodyMetrics.getByDateRange(userId, startDate, endDate);
     } else {
-      // Get all metrics (with optional limit)
-      metrics = await dynamoDBBodyMetrics.list(userId, limit ? parseInt(limit) : undefined);
+      // Get all metrics (with bounded limit)
+      metrics = await dynamoDBBodyMetrics.list(userId, limit);
     }
 
     return NextResponse.json({ metrics });
@@ -40,12 +42,9 @@ export async function GET(request: NextRequest) {
 // POST /api/body-metrics - Create a new body metric entry
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as any).id;
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
     const body = await request.json();
 
     // Validate required fields

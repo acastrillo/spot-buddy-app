@@ -7,6 +7,7 @@ import {
   QueryCommand,
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import type { TrainingProfile } from "./training-profile";
 
 // Initialize DynamoDB client
 const client = new DynamoDBClient({
@@ -51,20 +52,11 @@ export interface DynamoDBUser {
   aiRequestsLimit?: number;
   lastAiRequestReset?: string | null;
 
-  // Training Profile (Phase 6)
-  trainingProfile?: {
-    manualPRs?: { [exercise: string]: number };
-    goals?: string[];
-    favoriteExercises?: string[];
-    dislikedExercises?: string[];
-    equipment?: string[];
-    preferredDuration?: number;
-    trainingFrequency?: number;
-    experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
-    trainingFocus?: string;
-    constraints?: string;
-    energyLevels?: 'morning' | 'evening' | 'flexible';
-  };
+  // Training Profile (Phase 6) - Full profile from training-profile.ts
+  trainingProfile?: TrainingProfile;
+
+  // Experience level (quick access, also in trainingProfile)
+  experience?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 // User operations
@@ -368,6 +360,166 @@ export const dynamoDBUsers = {
       );
     } catch (error) {
       console.error("Error updating training profile in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generic quota counter increment
+   *
+   * Increments any numeric field in the user table by a given amount.
+   * Automatically initializes the field to 0 if it doesn't exist.
+   *
+   * @param userId - User ID
+   * @param field - Field name to increment (e.g., 'ocrQuotaUsed', 'workoutsSaved')
+   * @param amount - Amount to increment by (default: 1)
+   *
+   * @example
+   * ```typescript
+   * // Increment OCR quota by 1
+   * await dynamoDBUsers.incrementCounter(userId, 'ocrQuotaUsed');
+   *
+   * // Increment workouts saved by 1
+   * await dynamoDBUsers.incrementCounter(userId, 'workoutsSaved');
+   *
+   * // Add 5 to AI requests
+   * await dynamoDBUsers.incrementCounter(userId, 'aiRequestsUsed', 5);
+   * ```
+   */
+  async incrementCounter(
+    userId: string,
+    field: keyof Pick<DynamoDBUser, 'ocrQuotaUsed' | 'workoutsSaved' | 'aiRequestsUsed'>,
+    amount: number = 1
+  ): Promise<void> {
+    try {
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: `SET #field = if_not_exists(#field, :zero) + :amount, updatedAt = :updatedAt`,
+          ExpressionAttributeNames: {
+            "#field": field,
+          },
+          ExpressionAttributeValues: {
+            ":amount": amount,
+            ":zero": 0,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error(`Error incrementing ${field} in DynamoDB:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generic quota counter decrement
+   *
+   * Decrements any numeric field in the user table by a given amount.
+   * Will not go below 0.
+   *
+   * @param userId - User ID
+   * @param field - Field name to decrement
+   * @param amount - Amount to decrement by (default: 1)
+   *
+   * @example
+   * ```typescript
+   * // Refund OCR quota by 1
+   * await dynamoDBUsers.decrementCounter(userId, 'ocrQuotaUsed');
+   * ```
+   */
+  async decrementCounter(
+    userId: string,
+    field: keyof Pick<DynamoDBUser, 'ocrQuotaUsed' | 'workoutsSaved' | 'aiRequestsUsed'>,
+    amount: number = 1
+  ): Promise<void> {
+    try {
+      // Get current value first
+      const user = await this.get(userId);
+      if (!user) {
+        throw new Error(`User ${userId} not found`);
+      }
+
+      const currentValue = (user[field] as number) || 0;
+      const newValue = Math.max(0, currentValue - amount);
+
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: `SET #field = :newValue, updatedAt = :updatedAt`,
+          ExpressionAttributeNames: {
+            "#field": field,
+          },
+          ExpressionAttributeValues: {
+            ":newValue": newValue,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error(`Error decrementing ${field} in DynamoDB:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reset quota counter to zero
+   *
+   * @param userId - User ID
+   * @param field - Field name to reset
+   * @param resetDateField - Optional field to track reset date
+   *
+   * @example
+   * ```typescript
+   * // Reset OCR quota with reset date tracking
+   * await dynamoDBUsers.resetCounter(userId, 'ocrQuotaUsed', 'ocrQuotaResetDate');
+   *
+   * // Reset AI requests
+   * await dynamoDBUsers.resetCounter(userId, 'aiRequestsUsed', 'lastAiRequestReset');
+   * ```
+   */
+  async resetCounter(
+    userId: string,
+    field: keyof Pick<DynamoDBUser, 'ocrQuotaUsed' | 'workoutsSaved' | 'aiRequestsUsed'>,
+    resetDateField?: 'ocrQuotaResetDate' | 'lastAiRequestReset'
+  ): Promise<void> {
+    try {
+      const now = new Date().toISOString();
+
+      const updateExpression = resetDateField
+        ? `SET #field = :zero, #resetDate = :now, updatedAt = :updatedAt`
+        : `SET #field = :zero, updatedAt = :updatedAt`;
+
+      const attributeNames: Record<string, string> = {
+        "#field": field,
+      };
+
+      if (resetDateField) {
+        attributeNames["#resetDate"] = resetDateField;
+      }
+
+      const attributeValues: Record<string, unknown> = {
+        ":zero": 0,
+        ":updatedAt": now,
+      };
+
+      if (resetDateField) {
+        attributeValues[":now"] = now;
+      }
+
+      await dynamoDb.send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: updateExpression,
+          ExpressionAttributeNames: attributeNames,
+          ExpressionAttributeValues: attributeValues,
+        })
+      );
+    } catch (error) {
+      console.error(`Error resetting ${field} in DynamoDB:`, error);
       throw error;
     }
   },

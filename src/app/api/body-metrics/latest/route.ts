@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBBodyMetrics } from "@/lib/dynamodb";
 
 // GET /api/body-metrics/latest - Get the most recent body metric entry
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as any).id;
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
     const metric = await dynamoDBBodyMetrics.getLatest(userId);
 
     if (!metric) {

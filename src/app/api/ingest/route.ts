@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { parseWorkoutContent } from "@/lib/smartWorkoutParser";
 
 export async function POST(req: NextRequest){
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!(session?.user as any)?.id) {
-      console.error('Ingest Auth failed:', { session, user: session?.user });
-      return NextResponse.json({
-        error: 'Unauthorized',
-        message: 'Please log in to parse workouts'
-      }, { status: 401 });
-    }
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
 
     const { caption } = await req.json();
 

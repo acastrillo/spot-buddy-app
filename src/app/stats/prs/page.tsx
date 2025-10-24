@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -22,7 +22,6 @@ import { calculate1RM, extractPRsFromWorkout, getCurrentPR, getPRHistory, Person
 export default function PersonalRecordsPage() {
   const { isAuthenticated, user } = useAuthStore()
   const [workouts, setWorkouts] = useState<any[]>([])
-  const [prs, setPRs] = useState<PersonalRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null)
 
@@ -39,15 +38,6 @@ export default function PersonalRecordsPage() {
       if (response.ok) {
         const { workouts: data } = await response.json()
         setWorkouts(data)
-
-        // Extract all PRs from workouts
-        const allPRs: PersonalRecord[] = []
-        for (const workout of data) {
-          const workoutPRs = extractPRsFromWorkout(workout, allPRs)
-          allPRs.push(...workoutPRs)
-        }
-
-        setPRs(allPRs)
       }
     } catch (error) {
       console.error('Error loading workouts:', error)
@@ -56,42 +46,59 @@ export default function PersonalRecordsPage() {
     }
   }
 
+  // PERFORMANCE FIX: Memoize PR extraction (expensive operation)
+  // Only recompute when workouts change
+  const prs = useMemo(() => {
+    const allPRs: PersonalRecord[] = []
+    for (const workout of workouts) {
+      const workoutPRs = extractPRsFromWorkout(workout, allPRs)
+      allPRs.push(...workoutPRs)
+    }
+    return allPRs
+  }, [workouts])
+
   if (!isAuthenticated) {
     return <Login />
   }
 
-  // Get unique exercises with PRs
-  const exercisesWithPRs = Array.from(
-    new Set(prs.map(pr => pr.exerciseName))
-  ).sort()
+  // PERFORMANCE FIX: Memoize derived PR calculations
+  // These are expensive array operations that don't need to run on every render
+  const exercisesWithPRs = useMemo(() => {
+    return Array.from(
+      new Set(prs.map(pr => pr.exerciseName))
+    ).sort()
+  }, [prs])
 
-  // Get top PRs by exercise (highest 1RM)
-  const topPRsByExercise = exercisesWithPRs
-    .map(exercise => getCurrentPR(exercise, prs))
-    .filter((pr): pr is PersonalRecord => pr !== null)
-    .sort((a, b) => b.oneRepMax - a.oneRepMax)
+  const topPRsByExercise = useMemo(() => {
+    return exercisesWithPRs
+      .map(exercise => getCurrentPR(exercise, prs))
+      .filter((pr): pr is PersonalRecord => pr !== null)
+      .sort((a, b) => b.oneRepMax - a.oneRepMax)
+  }, [exercisesWithPRs, prs])
 
-  // Get recent PRs (last 30 days)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const recentPRs = prs
-    .filter(pr => new Date(pr.date) >= thirtyDaysAgo)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const recentPRs = useMemo(() => {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    return prs
+      .filter(pr => new Date(pr.date) >= thirtyDaysAgo)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [prs])
 
-  // Calculate stats
+  // Calculate stats (these are cheap, no need to memoize)
   const totalPRs = prs.length
   const exerciseCount = exercisesWithPRs.length
   const recentPRCount = recentPRs.length
 
-  // Selected exercise history chart data
-  const selectedExerciseHistory = selectedExercise
-    ? getPRHistory(selectedExercise, prs).map(pr => ({
-        date: new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        oneRepMax: Math.round(pr.oneRepMax),
-        weight: pr.weight,
-        reps: pr.reps,
-      }))
-    : []
+  // PERFORMANCE FIX: Memoize selected exercise history
+  const selectedExerciseHistory = useMemo(() => {
+    if (!selectedExercise) return []
+    return getPRHistory(selectedExercise, prs).map(pr => ({
+      date: new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      oneRepMax: Math.round(pr.oneRepMax),
+      weight: pr.weight,
+      reps: pr.reps,
+    }))
+  }, [selectedExercise, prs])
 
   return (
     <>

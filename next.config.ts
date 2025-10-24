@@ -25,11 +25,10 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Improve build performance
-  swcMinify: true, // Use SWC for minification (faster than Terser)
-
   // Enable React compiler optimizations (Next.js 15)
   reactStrictMode: true,
+
+  // Note: swcMinify is now default in Next.js 15+ and the option has been removed
 };
 
 export default nextConfig;

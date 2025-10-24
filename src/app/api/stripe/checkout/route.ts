@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from "@/lib/auth-options"
+import { getAuthenticatedUserId } from '@/lib/api-auth'
 import { stripe, SUBSCRIPTION_TIERS } from '@/lib/stripe'
 import { dynamoDBUsers } from '@/lib/dynamodb'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
     const { tier } = await req.json()
-    const userId = (session.user as any)?.id
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID not found' }, { status: 400 })
-    }
 
     // Validate tier
     if (!['starter', 'pro', 'elite'].includes(tier)) {

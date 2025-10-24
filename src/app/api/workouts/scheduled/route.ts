@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
 
 /**
@@ -11,12 +10,9 @@ import { dynamoDBWorkouts } from "@/lib/dynamodb";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as any).id;
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
 
 /**
@@ -12,13 +11,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
     const { id } = await params;
-    const userId = (session.user as any).id;
 
     // Parse request body
     const body = await req.json().catch(() => ({}));

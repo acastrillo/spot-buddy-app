@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
 
 // GET /api/workouts/[id] - Get a specific workout
@@ -9,15 +8,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
     const { id } = await params;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const workout = await dynamoDBWorkouts.get((session.user as any).id, id);
+    const workout = await dynamoDBWorkouts.get(userId, id);
 
     if (!workout) {
       return NextResponse.json({ error: "Workout not found" }, { status: 404 });
@@ -39,19 +35,16 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
     const { id } = await params;
     const body = await request.json();
     const { title, description, exercises, totalDuration, difficulty, tags } =
       body;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await dynamoDBWorkouts.update((session.user as any).id, id, {
+    await dynamoDBWorkouts.update(userId, id, {
       title,
       description,
       exercises,
@@ -76,15 +69,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
     const { id } = await params;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await dynamoDBWorkouts.delete((session.user as any).id, id);
+    await dynamoDBWorkouts.delete(userId, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

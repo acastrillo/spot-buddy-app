@@ -1,31 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
 import { logger, createRequestLogger } from "@/lib/logger";
 import { AppMetrics, PerformanceMonitor } from "@/lib/metrics";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // GET /api/workouts - List all workouts for the current user
 export async function GET(request: NextRequest) {
   const reqLogger = createRequestLogger(request);
 
   try {
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
+    // Use new auth utility - eliminates unsafe type casting
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) {
       reqLogger.finish(401);
       AppMetrics.apiRequest("GET", "/api/workouts", 401);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return auth.error;
     }
 
-    const userId = (session.user as any).id;
+    const { userId } = auth;
+
+    // RATE LIMITING: Check rate limit (100 reads per minute)
+    const rateLimit = await checkRateLimit(userId, 'api:read');
+    if (!rateLimit.success) {
+      reqLogger.finish(429);
+      AppMetrics.apiRequest("GET", "/api/workouts", 429);
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          message: 'You have exceeded the rate limit. Please try again later.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
     const searchParams = request.nextUrl.searchParams;
-    const limit = searchParams.get("limit");
+
+    // Validate and bound the limit parameter to prevent DoS
+    const limitParam = searchParams.get("limit");
+    const limit = limitParam
+      ? Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 1000)
+      : 50;
+
+    if (limitParam && isNaN(parseInt(limitParam, 10))) {
+      reqLogger.finish(400);
+      AppMetrics.apiRequest("GET", "/api/workouts", 400);
+      return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 });
+    }
 
     reqLogger.log("Fetching workouts", { userId, limit });
 
     const perf = new PerformanceMonitor("api.workouts.get", { userId });
-    const workouts = await dynamoDBWorkouts.list(userId, limit ? parseInt(limit) : undefined);
+    const workouts = await dynamoDBWorkouts.list(userId, limit);
     const duration = perf.finish();
 
     reqLogger.log("Workouts fetched successfully", {
@@ -37,7 +73,15 @@ export async function GET(request: NextRequest) {
     reqLogger.finish(200);
     AppMetrics.apiRequest("GET", "/api/workouts", 200);
 
-    return NextResponse.json({ workouts });
+    // Add cache headers to reduce API calls
+    return NextResponse.json(
+      { workouts },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=30',
+        },
+      }
+    );
   } catch (error) {
     reqLogger.error("Error fetching workouts", error as Error);
     reqLogger.finish(500);
@@ -53,15 +97,41 @@ export async function POST(request: NextRequest) {
   const reqLogger = createRequestLogger(request);
 
   try {
-    const session = await getServerSession(authOptions);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(session?.user as any)?.id) {
+    // Use new auth utility - eliminates unsafe type casting
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) {
       reqLogger.finish(401);
       AppMetrics.apiRequest("POST", "/api/workouts", 401);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return auth.error;
     }
 
-    const userId = (session.user as any).id;
+    const { userId } = auth;
+
+    // RATE LIMITING: Check rate limit (50 writes per minute)
+    const rateLimit = await checkRateLimit(userId, 'api:write');
+    if (!rateLimit.success) {
+      reqLogger.finish(429);
+      AppMetrics.apiRequest("POST", "/api/workouts", 429);
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          message: 'You have exceeded the rate limit. Please try again later.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const {
       workoutId,

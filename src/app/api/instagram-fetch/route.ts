@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { getAuthenticatedUserId } from '@/lib/api-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface ApifyInstagramResult {
   url?: string
@@ -25,14 +25,31 @@ interface InstagramFetchRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!(session?.user as any)?.id) {
-      console.error('Instagram-fetch Auth failed:', { session, user: session?.user });
-      return NextResponse.json({
-        error: 'Unauthorized',
-        message: 'Please log in to fetch Instagram workouts'
-      }, { status: 401 });
+    // SECURITY FIX: Use new auth utility
+    const auth = await getAuthenticatedUserId();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
+
+    // RATE LIMITING: Check rate limit (20 Instagram requests per hour)
+    const rateLimit = await checkRateLimit(userId, 'api:instagram');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many Instagram requests',
+          message: 'You have exceeded the rate limit for Instagram fetching. Please try again later.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+          },
+        }
+      );
     }
 
     const { url }: InstagramFetchRequest = await request.json()
@@ -55,7 +72,8 @@ export async function POST(request: NextRequest) {
 
     const apifyApiToken = process.env.APIFY_API_TOKEN
     if (!apifyApiToken) {
-      console.error('APIFY_API_TOKEN is not configured')
+      // SECURITY FIX: Don't log token presence
+      console.error('[Instagram] APIFY_API_TOKEN not configured')
       return NextResponse.json(
         {
           error:
@@ -64,6 +82,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // SECURITY FIX: Log masked token for debugging
+    console.log('[Instagram] Using APIFY token:', apifyApiToken.substring(0, 8) + '...')
 
     // Fetching Instagram URL
 
@@ -90,11 +111,12 @@ export async function POST(request: NextRequest) {
 
       if (!apifyResponse.ok) {
         const errorText = await apifyResponse.text()
-        console.error('Apify API error:', apifyResponse.status, errorText)
+        // SECURITY FIX: Don't log full error (may contain token)
+        console.error('[Instagram] Apify API error:', apifyResponse.status)
         return NextResponse.json(
           {
             error: `Failed to start Instagram scraper: ${apifyResponse.status}`,
-            details: errorText
+            // SECURITY FIX: Don't expose internal error details to client
           },
           { status: apifyResponse.status }
         )
@@ -103,7 +125,8 @@ export async function POST(request: NextRequest) {
       const runResponse = await apifyResponse.json()
 
       if (!runResponse || !runResponse.data || !runResponse.data.id) {
-        console.error('No run ID in response:', runResponse)
+        // SECURITY FIX: Don't log full response (may contain sensitive data)
+        console.error('[Instagram] No run ID in response')
         return NextResponse.json(
           { error: 'Failed to start Instagram scraper - no run ID returned' },
           { status: 500 }
@@ -135,7 +158,8 @@ export async function POST(request: NextRequest) {
         const statusData = statusResponse_.data || statusResponse_
 
         if (!statusData || !statusData.status) {
-          console.error('Invalid status response:', statusResponse_)
+          // SECURITY FIX: Don't log full response
+          console.error('[Instagram] Invalid status response')
           attempts++
           continue
         }
@@ -153,10 +177,10 @@ export async function POST(request: NextRequest) {
           )
 
           if (!datasetResponse.ok) {
-            const errorText = await datasetResponse.text()
-            console.error('Dataset fetch error:', errorText)
+            // SECURITY FIX: Don't log or expose internal error details
+            console.error('[Instagram] Dataset fetch error:', datasetResponse.status)
             return NextResponse.json(
-              { error: `Failed to fetch dataset: ${errorText}` },
+              { error: 'Failed to fetch Instagram data' },
               { status: datasetResponse.status }
             )
           }

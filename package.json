@@ -12,7 +12,7 @@
     "db:generate": "prisma generate"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.914.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.916.0",
     "@aws-sdk/client-dynamodb": "^3.899.0",
     "@aws-sdk/client-s3": "^3.901.0",
     "@aws-sdk/client-textract": "^3.883.0",
@@ -30,6 +30,8 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@stripe/stripe-js": "^8.0.0",
+    "@upstash/ratelimit": "^2.0.6",
+    "@upstash/redis": "^1.35.6",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

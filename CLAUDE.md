@@ -335,10 +335,7 @@ Next.js App Router pages in `src/app/`:
 ### AI-Powered Features (Phase 6 - Planned)
 
 **Architecture**:
-- Amazon Bedrock (Claude Sonnet 4.5) for AI processing
-  - Model ID: `claude-sonnet-4-5`
-  - Pricing: $3/MTok input, $15/MTok output
-  - Cost Savings: 90% with prompt caching, 50% with batch processing
+- Amazon Bedrock (Claude 3.5 Sonnet) for AI processing
 - Cost: ~$0.01 per enhancement, ~$0.02 per generation
 - Usage quotas by tier to manage costs
 
@@ -386,7 +383,7 @@ Next.js App Router pages in `src/app/`:
 **Three Independent Projects**:
 1. **Web App** (This repo) - Add AI features (Phase 6)
 2. **Android App** (NEW) - Native Kotlin with Instagram share sheet
-3. **iOS App** (Later) - Native Swift
+3. **iOS App** (Later) - Native Swift with Instagram share sheet
 
 **Shared Backend**: All platforms use the same AWS infrastructure:
 - DynamoDB (workouts, users, body metrics)
@@ -395,32 +392,16 @@ Next.js App Router pages in `src/app/`:
 - Stripe (subscriptions sync across platforms)
 - API endpoints via Next.js on ECS Fargate
 
-**Development Priority** (Updated October 2025):
-1. **Web AI Features** (This workspace - Priority #1) - Phase 6 implementation
-2. **Android App** (Separate workspace) - Native Kotlin app with share sheet
-3. **iOS App** (Separate workspace) - Native Swift + SwiftUI app
-
-**Rationale**: Android and iOS development will happen in separate workspaces, so web development is the top priority for THIS repository.
+**Development Priority**:
+1. **Android First** (Next 90 days) - Native app with share sheet integration
+2. **Web AI Features** (After Android MVP) - Phase 6 implementation
+3. **iOS** (Month 7+) - Port Android features to iOS
 
 **Android Killer Feature**:
 - Native share intent handler intercepts Instagram shares
 - 2-tap workflow: Share from Instagram → Open Spot Buddy
 - Automatic OCR processing and workout parsing
 - Offline-first with Room database and background sync
-
-**iOS Development Recommendation**:
-- **Language**: Swift (for business logic, data, API calls)
-- **UI Framework**: SwiftUI (modern, declarative UI - 30-40% faster development)
-- **Share Extension**: UIActivityViewController (native iOS share sheet integration)
-- **API Client**: URLSession (native) or Alamofire (popular third-party)
-- **Offline Storage**: CoreData or Realm
-- **Architecture**: Similar to Android - MVVM with repositories and use cases
-- **Why Swift + SwiftUI**:
-  - Industry standard (80% of companies use Swift)
-  - SwiftUI is the future of iOS development
-  - Better performance than cross-platform solutions
-  - Native integration with iOS share sheet
-  - Declarative UI reduces code by 30-40%
 
 ## Production Considerations
 
