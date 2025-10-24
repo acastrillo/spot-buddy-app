@@ -6,7 +6,7 @@
  *
  * Features:
  * - Smart Workout Parser (enhance messy OCR text)
- * - AI Workout Generator (natural language ’ full workout)
+ * - AI Workout Generator (natural language Â’ full workout)
  * - Training insights and recommendations
  *
  * Cost optimization:

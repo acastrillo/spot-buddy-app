@@ -31,7 +31,7 @@ export interface TrainingConstraint {
  */
 export interface TrainingProfile {
   // Personal Records
-  personalRecords: Record<string, PersonalRecord>; // Exercise name ’ PR
+  personalRecords: Record<string, PersonalRecord>; // Exercise name Â’ PR
 
   // Training preferences
   experience: 'beginner' | 'intermediate' | 'advanced';

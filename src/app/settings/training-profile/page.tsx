@@ -284,7 +284,7 @@ export default function TrainingProfilePage() {
                     <div>
                       <div className="font-semibold">{exercise}</div>
                       <div className="text-sm text-[var(--muted-foreground)]">
-                        {pr.weight} {pr.unit} × {pr.reps} reps (Est. 1RM: {oneRM} {pr.unit})
+                        {pr.weight} {pr.unit} Ã— {pr.reps} reps (Est. 1RM: {oneRM} {pr.unit})
                       </div>
                     </div>
                     <button
