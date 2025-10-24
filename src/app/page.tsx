@@ -20,30 +20,135 @@ import {
 import Link from "next/link"
 
 export default function HomePage() {
-  const { isAuthenticated, user, isLoading } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [workoutStats, setWorkoutStats] = useState({
     thisWeek: 0,
     total: 0,
     hoursTrained: 0,
     streak: 0
   })
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([])
 
-  // ... (rest of the component)
+  useEffect(() => {
+    const loadWorkouts = async () => {
+      if (!user?.id) return
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        {/* You can replace this with a proper spinner component */}
-        <p className="text-lg">Loading...</p>
-      </div>
-    )
-  }
+      try {
+        // Try to load from API first
+        const response = await fetch('/api/workouts')
+        if (response.ok) {
+          const { workouts } = await response.json()
+
+          // Sort by creation date and take most recent
+          const sorted = workouts
+            .sort((a: any, b: any) => {
+              const aDate = new Date(a.createdAt || a.date || 0).getTime()
+              const bDate = new Date(b.createdAt || b.date || 0).getTime()
+              return bDate - aDate
+            })
+            .slice(0, 5)
+
+          setRecentWorkouts(sorted)
+
+          // Update stats based on saved workouts
+          const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+          const now = new Date()
+          const sow = new Date(now)
+          sow.setDate(now.getDate() - now.getDay())
+          sow.setHours(0, 0, 0, 0)
+          const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
+
+          // Streak calculation
+          const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
+            .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
+          let streak = 0
+          const today = new Date().toISOString().split('T')[0]
+          let checkDate = today
+          for (const date of sortedDates) {
+            if (date === checkDate) {
+              streak++
+              const prevDate = new Date(checkDate)
+              prevDate.setDate(prevDate.getDate() - 1)
+              checkDate = prevDate.toISOString().split('T')[0]
+            } else {
+              break
+            }
+          }
+
+          const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
+          setWorkoutStats({
+            thisWeek: thisWeekCompletions.length,
+            total: workouts.length,
+            hoursTrained,
+            streak,
+          })
+        } else {
+          // Fallback to localStorage
+          const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+          const sorted = savedWorkouts.slice().reverse().slice(0, 5)
+          setRecentWorkouts(sorted)
+
+          setWorkoutStats({
+            thisWeek: 0,
+            total: savedWorkouts.length,
+            hoursTrained: 0,
+            streak: 0,
+          })
+        }
+      } catch (error) {
+        console.error('Error loading workouts:', error)
+        // Fallback to localStorage
+        const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+        const sorted = savedWorkouts.slice().reverse().slice(0, 5)
+        setRecentWorkouts(sorted)
+
+        setWorkoutStats({
+          thisWeek: 0,
+          total: savedWorkouts.length,
+          hoursTrained: 0,
+          streak: 0,
+        })
+      }
+    }
+
+    loadWorkouts()
+    const handle = () => loadWorkouts()
+    window.addEventListener('storage', handle)
+    return () => {
+      window.removeEventListener('storage', handle)
+    }
+  }, [user?.id])
 
   if (!isAuthenticated) {
     return <Login />
   }
 
-  return (
+  const stats = [
+    {
+      title: "Workouts This Week",
+      value: workoutStats.thisWeek.toString(),
+      icon: Target,
+      color: "text-primary",
+    },
+    {
+      title: "Total Workouts",
+      value: workoutStats.total.toString(), 
+      icon: Dumbbell,
+      color: "text-secondary",
+    },
+    {
+      title: "Hours Trained",
+      value: `${workoutStats.hoursTrained}h`,
+      icon: Clock,
+      color: "text-rest",
+    },
+    {
+      title: "Streak",
+      value: `${workoutStats.streak} days`,
+      icon: Award,
+      color: "text-success",
+    },
+  ]
 
   const quickActions = [
     {
