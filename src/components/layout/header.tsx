@@ -16,7 +16,8 @@ import {
   User,
   Zap,
   BarChart3,
-  Scale
+  Scale,
+  Sparkles
 } from "lucide-react"
 
 export function Header() {
@@ -30,6 +31,7 @@ export function Header() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
     { name: "Add Workout", href: "/add", icon: Plus },
+    { name: "AI Generator", href: "/add/generate", icon: Sparkles },
     { name: "Library", href: "/library", icon: Library },
     { name: "Stats", href: "/stats", icon: BarChart3 },
     { name: "Calendar", href: "/calendar", icon: Calendar },

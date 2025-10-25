@@ -24,6 +24,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { getQuotaLimit } from "@/lib/stripe"
 import { UpgradePrompt } from "@/components/subscription/upgrade-prompt"
+import { WorkoutEnhancerButton } from "@/components/ai/workout-enhancer-button"
 import Link from "next/link"
 
 export default function ImportWorkoutPage() {
@@ -357,9 +358,19 @@ export default function ImportWorkoutPage() {
                           )}
                           
                           <div className="mt-3 p-3 bg-surface rounded-lg">
-                            <h4 className="text-sm font-medium text-text-primary mb-2">
-                              Full Caption Content:
-                            </h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium text-text-primary">
+                                Full Caption Content:
+                              </h4>
+                              <WorkoutEnhancerButton
+                                rawText={fetchedData.content}
+                                onEnhanced={(enhancedText) => {
+                                  setWorkoutContent(enhancedText)
+                                }}
+                                size="sm"
+                                variant="outline"
+                              />
+                            </div>
                             <div className="text-xs text-text-secondary whitespace-pre-wrap max-h-32 overflow-y-auto">
                               {fetchedData.content}
                             </div>
@@ -553,9 +564,21 @@ export default function ImportWorkoutPage() {
                         onChange={(e) => setWorkoutContent(e.target.value)}
                         className="min-h-[200px]"
                       />
-                      <p className="text-sm text-text-secondary mt-2">
-                        {workoutContent.length}/5000 characters
-                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-sm text-text-secondary">
+                          {workoutContent.length}/5000 characters
+                        </p>
+                        {workoutContent.trim() && (
+                          <WorkoutEnhancerButton
+                            rawText={workoutContent}
+                            onEnhanced={(enhancedText) => {
+                              setWorkoutContent(enhancedText)
+                            }}
+                            size="sm"
+                            variant="outline"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
