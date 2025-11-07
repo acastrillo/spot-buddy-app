@@ -27,8 +27,6 @@ interface EnhanceWorkoutRequest {
 interface EnhanceWorkoutResponse {
   success: boolean;
   enhancedWorkout?: DynamoDBWorkout;
-  changes?: string[];
-  suggestions?: string[];
   cost?: {
     inputTokens: number;
     outputTokens: number;
@@ -36,6 +34,30 @@ interface EnhanceWorkoutResponse {
   };
   quotaRemaining?: number;
   error?: string;
+}
+
+/**
+ * Convert AI flat format to DynamoDB format
+ */
+function convertAIToDynamoDB(aiExercises: any[]): any[] {
+  return aiExercises.map((exercise) => {
+    // AI now returns flat format matching our table structure
+    // AI format: { name, sets: 3, reps: "10" or "150M", weight: "135 lbs", duration: 200, notes, restSeconds }
+    // DynamoDB format: { id, name, sets: number, reps, weight, restSeconds, notes, setDetails: [] }
+
+    return {
+      id: `ex_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      name: exercise.name,
+      sets: exercise.sets || 1,
+      reps: exercise.reps || null,
+      weight: exercise.weight || null,
+      restSeconds: exercise.restSeconds || null,
+      notes: exercise.notes || null,
+      duration: exercise.duration || null,
+      // Keep empty setDetails for backward compatibility
+      setDetails: [],
+    };
+  });
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkoutResponse>> {
@@ -152,6 +174,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     // Call AI enhancer
     const result = await enhanceWorkout(textToEnhance, trainingContext);
 
+    // Convert AI exercises format to DynamoDB format
+    const convertedExercises = result.enhancedWorkout.exercises
+      ? convertAIToDynamoDB(result.enhancedWorkout.exercises)
+      : [];
+
+    // Extract workout structure metadata
+    const workoutType = result.enhancedWorkout.workoutType || 'standard';
+    const structure = result.enhancedWorkout.structure || null;
+
     // If enhancing existing workout, merge with original
     let finalWorkout: DynamoDBWorkout;
     if (existingWorkout) {
@@ -159,12 +190,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       const updates = {
         title: result.enhancedWorkout.title || existingWorkout.title,
         description: result.enhancedWorkout.description || existingWorkout.description,
-        exercises: result.enhancedWorkout.exercises || existingWorkout.exercises,
+        exercises: convertedExercises.length > 0 ? convertedExercises : existingWorkout.exercises,
         tags: result.enhancedWorkout.tags || existingWorkout.tags,
         difficulty: result.enhancedWorkout.difficulty || existingWorkout.difficulty,
         duration: result.enhancedWorkout.duration || existingWorkout.duration,
+        workoutType,
+        structure,
         aiEnhanced: true,
-        aiNotes: `AI Enhancements:\n${result.changes.join('\n')}\n\nSuggestions:\n${result.suggestions.join('\n')}`,
+        aiNotes: 'AI enhanced workout with standardized exercise names and proper structure detection',
         updatedAt: new Date().toISOString(),
       };
       await dynamoDBWorkouts.update(userId, workoutId!, updates);
@@ -176,13 +209,17 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         workoutId: `workout_${Date.now()}`,
         title: result.enhancedWorkout.title || 'Untitled Workout',
         description: result.enhancedWorkout.description || '',
-        exercises: result.enhancedWorkout.exercises || [],
+        exercises: convertedExercises,
+        content: textToEnhance, // Store original text
         tags: result.enhancedWorkout.tags || [],
         difficulty: result.enhancedWorkout.difficulty || 'intermediate',
-        duration: result.enhancedWorkout.duration || 60,
+        totalDuration: result.enhancedWorkout.duration || 60,
         source: 'ai-parse',
+        type: 'manual',
+        workoutType,
+        structure,
         aiEnhanced: true,
-        aiNotes: `AI Enhancements:\n${result.changes.join('\n')}\n\nSuggestions:\n${result.suggestions.join('\n')}`,
+        aiNotes: 'AI enhanced workout with standardized exercise names and proper structure detection',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -197,15 +234,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     const cost = estimateEnhancementCost(textToEnhance.length);
 
     console.log('[AI Enhance] Success!');
+    console.log('[AI Enhance] Workout Type:', workoutType);
+    console.log('[AI Enhance] Structure:', structure);
     console.log('[AI Enhance] Tokens:', result.bedrockResponse.usage);
     console.log('[AI Enhance] Estimated cost:', cost);
-    console.log('[AI Enhance] Changes:', result.changes.length);
 
     return NextResponse.json({
       success: true,
       enhancedWorkout: finalWorkout,
-      changes: result.changes,
-      suggestions: result.suggestions,
       cost: {
         inputTokens: result.bedrockResponse.usage.inputTokens,
         outputTokens: result.bedrockResponse.usage.outputTokens,

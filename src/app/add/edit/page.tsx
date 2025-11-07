@@ -10,14 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { EditableWorkoutTable } from "@/lib/editable-workout-table"
-import { dynamoDBWorkouts } from "@/lib/dynamodb"
+import { EditableWorkoutTable } from "@/store/editable-workout-table"
 import {
   Save,
   ArrowLeft,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from "lucide-react"
+import { WorkoutEnhancerButton } from "@/components/ai/workout-enhancer-button"
 
 interface WorkoutData {
   id: string
@@ -38,6 +39,8 @@ export default function EditWorkoutPage() {
   const [workoutDescription, setWorkoutDescription] = useState("")
   const [exercises, setExercises] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [workoutType, setWorkoutType] = useState<string>('standard')
+  const [workoutStructure, setWorkoutStructure] = useState<any>(null)
 
   useEffect(() => {
     // Load workout data from sessionStorage
@@ -127,6 +130,8 @@ export default function EditWorkoutPage() {
         difficulty: workoutData.llmData?.workoutV1?.difficulty || 'moderate',
         tags: workoutData.llmData?.workoutV1?.tags || [],
         llmData: workoutData.llmData,
+        workoutType: workoutType,
+        structure: workoutStructure,
       }
 
       // Save to DynamoDB via API route
@@ -174,6 +179,38 @@ export default function EditWorkoutPage() {
     return Math.max(exercises.length * 2, 15)
   }
 
+  const handleAIEnhancement = (enhancedWorkout: any) => {
+    // Update exercises from AI enhancement
+    if (enhancedWorkout.exercises && enhancedWorkout.exercises.length > 0) {
+      setExercises(enhancedWorkout.exercises.map((exercise: any) => ({
+        id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
+        name: exercise.name || '',
+        sets: exercise.sets || 1,
+        reps: exercise.reps || '',
+        weight: exercise.weight || '',
+        restSeconds: exercise.restSeconds || null,
+        notes: exercise.notes || '',
+        duration: exercise.duration || null,
+      })))
+    }
+
+    // Update title and description if provided
+    if (enhancedWorkout.title) {
+      setWorkoutTitle(enhancedWorkout.title)
+    }
+    if (enhancedWorkout.description) {
+      setWorkoutDescription(enhancedWorkout.description)
+    }
+
+    // Update workout type and structure
+    if (enhancedWorkout.workoutType) {
+      setWorkoutType(enhancedWorkout.workoutType)
+    }
+    if (enhancedWorkout.structure) {
+      setWorkoutStructure(enhancedWorkout.structure)
+    }
+  }
+
   return (
     <>
       <Header />
@@ -202,18 +239,60 @@ export default function EditWorkoutPage() {
             {/* Import Info */}
             {workoutData.llmData && (
               <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-primary font-medium">
-                    Imported Workout
-                  </span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-primary font-medium">
+                      Imported Workout
+                    </span>
+                  </div>
+
+                  {/* AI Enhancement Button */}
+                  <WorkoutEnhancerButton
+                    rawText={workoutData.content}
+                    onEnhanced={handleAIEnhancement}
+                    size="sm"
+                    variant="outline"
+                  />
                 </div>
-                
+
                 {workoutData.llmData.breakdown && (
                   <div className="text-xs text-text-secondary space-y-1">
                     {workoutData.llmData.breakdown.map((item: string, idx: number) => (
                       <div key={idx}>• {item}</div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Workout Structure Display */}
+            {workoutType && workoutType !== 'standard' && (
+              <div className="mb-6 p-4 bg-secondary/10 border border-secondary/20 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-secondary" />
+                  <span className="text-sm text-secondary font-medium uppercase">
+                    {workoutType.toUpperCase()} Workout
+                  </span>
+                </div>
+
+                {workoutStructure && (
+                  <div className="text-xs text-text-secondary space-y-1">
+                    {workoutStructure.rounds && (
+                      <div>• Rounds: {workoutStructure.rounds}</div>
+                    )}
+                    {workoutStructure.timePerRound && (
+                      <div>• Time per Round: {workoutStructure.timePerRound}s ({Math.floor(workoutStructure.timePerRound / 60)}min)</div>
+                    )}
+                    {workoutStructure.timeLimit && (
+                      <div>• Time Limit: {workoutStructure.timeLimit}s ({Math.floor(workoutStructure.timeLimit / 60)}min)</div>
+                    )}
+                    {workoutStructure.totalTime && (
+                      <div>• Total Time: {workoutStructure.totalTime}s ({Math.floor(workoutStructure.totalTime / 60)}min)</div>
+                    )}
+                    {workoutStructure.pattern && (
+                      <div>• Pattern: {workoutStructure.pattern}</div>
+                    )}
                   </div>
                 )}
               </div>

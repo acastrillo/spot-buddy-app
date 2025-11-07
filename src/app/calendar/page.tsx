@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
-import { dynamoDBWorkouts, DynamoDBWorkout } from "@/lib/dynamodb"
 import {
   Plus,
   Dumbbell,
@@ -20,6 +19,27 @@ import {
   X,
   CheckCircle
 } from "lucide-react"
+
+// Type definition for workout from DynamoDB
+interface DynamoDBWorkout {
+  workoutId: string
+  userId: string
+  title: string
+  description?: string
+  exercises: any[]
+  content: string
+  author?: any
+  createdAt: string
+  updatedAt?: string
+  source: string
+  type: string
+  totalDuration: number
+  difficulty: string
+  tags: string[]
+  status?: 'scheduled' | 'completed'
+  scheduledDate?: string
+  completedDate?: string
+}
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -35,18 +55,23 @@ export default function CalendarPage() {
   const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0])
   const [showAllActivity, setShowAllActivity] = useState(false)
 
-  // Load workouts from DynamoDB
+  // Load workouts from API
   useEffect(() => {
     async function loadWorkouts() {
       if (!user?.id) return
 
       setIsLoading(true)
       try {
-        const data = await dynamoDBWorkouts.list(user.id)
+        // Fetch all workouts
+        const workoutsResponse = await fetch('/api/workouts')
+        if (!workoutsResponse.ok) throw new Error('Failed to fetch workouts')
+        const { workouts: data } = await workoutsResponse.json()
         setWorkouts(data)
 
-        // Also fetch scheduled workouts
-        const scheduled = await dynamoDBWorkouts.getScheduled(user.id)
+        // Fetch scheduled workouts
+        const scheduledResponse = await fetch('/api/workouts/scheduled')
+        if (!scheduledResponse.ok) throw new Error('Failed to fetch scheduled workouts')
+        const scheduled = await scheduledResponse.json()
         setScheduledWorkouts(scheduled)
       } catch (error) {
         console.error("Error loading workouts:", error)
@@ -216,10 +241,17 @@ export default function CalendarPage() {
 
       // Reload workouts
       if (user?.id) {
-        const data = await dynamoDBWorkouts.list(user.id)
-        setWorkouts(data)
-        const scheduled = await dynamoDBWorkouts.getScheduled(user.id)
-        setScheduledWorkouts(scheduled)
+        const workoutsResponse = await fetch('/api/workouts')
+        if (workoutsResponse.ok) {
+          const { workouts: data } = await workoutsResponse.json()
+          setWorkouts(data)
+        }
+
+        const scheduledResponse = await fetch('/api/workouts/scheduled')
+        if (scheduledResponse.ok) {
+          const scheduled = await scheduledResponse.json()
+          setScheduledWorkouts(scheduled)
+        }
       }
 
       // Close modal

@@ -20,7 +20,6 @@ import {
   Legend,
 } from "recharts"
 import { Trophy, TrendingUp, Dumbbell, Calendar, Activity, ArrowLeft } from "lucide-react"
-import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import {
   getExerciseHistory,
   calculateAverageWeight,
@@ -60,7 +59,11 @@ export default function ExerciseDetailPage({ params }: Props) {
 
     setIsLoading(true)
     try {
-      const workouts = await dynamoDBWorkouts.list(user.id)
+      const response = await fetch('/api/workouts')
+      if (!response.ok) {
+        throw new Error('Failed to fetch workouts')
+      }
+      const { workouts } = await response.json()
       const exerciseHistory = getExerciseHistory(workouts, exerciseName)
       const allExercises = exerciseHistory
 

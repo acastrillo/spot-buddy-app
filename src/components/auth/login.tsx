@@ -18,21 +18,56 @@ export function Login() {
 
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
+    const errorDescription = params.get("error_description");
 
     if (!error) {
       setAuthError(null);
       return;
     }
 
+    // Log for debugging (visible in browser console)
+    console.error("Auth error:", error, errorDescription);
+
     switch (error) {
       case "AccessDenied":
-        setAuthError("Access was denied. Please try again or contact support.");
+        setAuthError("Access was denied. This may be a temporary issue. Please try again.");
         break;
       case "Configuration":
-        setAuthError("Sign-in is not configured correctly. Please notify the team.");
+        setAuthError("Sign-in configuration issue. Please clear your cookies and try again.");
+        break;
+      case "OAuthSignin":
+        setAuthError("OAuth sign-in failed. Please try again or use a different browser.");
+        break;
+      case "OAuthCallback":
+        setAuthError("OAuth callback failed. The session may have expired. Please try again.");
+        break;
+      case "OAuthCreateAccount":
+        setAuthError("Could not create account. Please contact support.");
+        break;
+      case "EmailCreateAccount":
+        setAuthError("Could not create account with this email. Please contact support.");
+        break;
+      case "Callback":
+        setAuthError("Callback error. Please clear your cookies and try again.");
+        break;
+      case "OAuthAccountNotLinked":
+        setAuthError("This email is already associated with another account.");
+        break;
+      case "EmailSignin":
+        setAuthError("Email sign-in failed. Please check your email and try again.");
+        break;
+      case "CredentialsSignin":
+        setAuthError("Credentials sign-in failed. Please check your credentials.");
+        break;
+      case "SessionRequired":
+        setAuthError("Session required. Please sign in again.");
         break;
       default:
-        setAuthError("We couldn't complete the sign-in. Please try again.");
+        setAuthError(
+          errorDescription
+            ? `Sign-in error: ${errorDescription}`
+            : "We couldn't complete the sign-in. Please try again."
+        );
         break;
     }
   }, []);
@@ -56,10 +91,10 @@ export function Login() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold text-[var(--text-primary)]">
-            Welcome to Spotter
+            Welcome to Spot Buddy
           </CardTitle>
           <CardDescription className="text-[var(--text-secondary)] text-base">
-            Track your fitness journey with precision
+            Your fitness accountability partner
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 pt-2">
@@ -69,18 +104,46 @@ export function Login() {
             </div>
           )}
           <div className="space-y-3 text-sm text-[var(--text-secondary)] text-center px-2">
-            <p>Sign in to access your workouts, track progress, and sync across all your devices.</p>
+            <p>Track workouts, monitor progress, and sync across all your devices.</p>
           </div>
-          <Button
-            onClick={handleSignIn}
-            className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-black font-semibold h-12 text-base transition-all"
-            disabled={loading}
-            size="lg"
-          >
-            {loading ? "Redirecting..." : "Continue with Spotter"}
-          </Button>
+
+          {/* Sign Up Button - Primary CTA */}
+          <div className="space-y-3">
+            <Button
+              onClick={handleSignIn}
+              className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-black font-semibold h-12 text-base transition-all shadow-lg"
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? "Redirecting..." : "Sign Up with Google"}
+            </Button>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[var(--border)]" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[var(--surface)] px-2 text-[var(--text-tertiary)]">
+                  Already have an account?
+                </span>
+              </div>
+            </div>
+
+            {/* Sign In Button - Secondary */}
+            <Button
+              onClick={handleSignIn}
+              variant="outline"
+              className="w-full border-2 border-[var(--border)] hover:bg-[var(--surface-elevated)] text-[var(--text-primary)] font-semibold h-12 text-base transition-all"
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? "Redirecting..." : "Sign In with Google"}
+            </Button>
+          </div>
+
           <p className="text-xs text-center text-[var(--text-tertiary)] pt-2">
-            Secured by Amazon Cognito
+            Secured by AWS Cognito • By continuing, you agree to our Terms of Service
           </p>
         </CardContent>
       </Card>

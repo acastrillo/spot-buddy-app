@@ -16,7 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { dynamoDBWorkouts } from "@/lib/dynamodb"
 // import { extractWorkoutFromImage, ParsedWorkout } from "@/lib/extractWorkoutFromImage" // Temporarily disabled
 import {
   Plus,

@@ -57,7 +57,25 @@ export const useAuthStore = (): AuthState => {
     isLoading: status === "loading", // Expose the loading state
     user,
     login: async () => {
-      await nextAuthSignIn("cognito", { callbackUrl: "/" });
+      try {
+        await nextAuthSignIn("cognito", {
+          callbackUrl: "/",
+          redirect: true
+        });
+      } catch (error) {
+        console.error("Sign-in error:", error);
+        // Retry once after 1 second if initial attempt fails
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          await nextAuthSignIn("cognito", {
+            callbackUrl: "/",
+            redirect: true
+          });
+        } catch (retryError) {
+          console.error("Sign-in retry failed:", retryError);
+          throw retryError; // Re-throw so the UI can handle it
+        }
+      }
     },
     logout: async () => {
       await nextAuthSignOut({ callbackUrl: "/" });

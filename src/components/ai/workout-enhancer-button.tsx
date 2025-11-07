@@ -7,7 +7,7 @@ import { Sparkles, Loader2, CheckCircle2, Info } from "lucide-react"
 
 interface WorkoutEnhancerButtonProps {
   rawText: string
-  onEnhanced: (enhancedText: string, suggestions: string[]) => void
+  onEnhanced: (enhancedWorkout: any) => void
   disabled?: boolean
   size?: "default" | "sm" | "lg"
   variant?: "default" | "outline" | "ghost"
@@ -52,9 +52,9 @@ export function WorkoutEnhancerButton({
         throw new Error(data.error || 'Failed to enhance workout')
       }
 
-      // Success!
+      // Success! Pass the enhanced workout object directly
       setSuccess(true)
-      onEnhanced(data.enhancedText, data.suggestions || [])
+      onEnhanced(data.enhancedWorkout)
 
       // Reset success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000)
@@ -103,7 +103,7 @@ export function WorkoutEnhancerButton({
         <Alert className="text-sm border-primary bg-primary/5">
           <Info className="h-4 w-4 text-primary" />
           <AlertDescription className="text-primary">
-            Workout enhanced! Text cleaned up, exercise names standardized, and suggestions added.
+            Workout enhanced! Exercise names standardized, structure detected, and format cleaned up.
           </AlertDescription>
         </Alert>
       )}

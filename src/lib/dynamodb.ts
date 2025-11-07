@@ -586,6 +586,16 @@ export interface DynamoDBWorkout {
   aiEnhanced?: boolean; // Whether workout was enhanced by AI
   aiNotes?: string | null; // AI-generated notes and recommendations
   muscleGroups?: string[]; // Muscle groups targeted (can be AI-generated)
+
+  // Workout Structure Metadata
+  workoutType?: 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata'; // Type of workout structure
+  structure?: {
+    rounds?: number; // Number of rounds (EMOM, Rounds)
+    timePerRound?: number; // Seconds per round (EMOM)
+    timeLimit?: number; // Seconds total (AMRAP)
+    totalTime?: number; // Total workout time in seconds
+    pattern?: string; // Rep pattern for ladder workouts (e.g., "21-15-9")
+  } | null;
 }
 
 // Workout operations

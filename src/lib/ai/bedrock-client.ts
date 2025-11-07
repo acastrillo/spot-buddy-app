@@ -23,7 +23,10 @@ import {
 
 // Bedrock configuration
 const BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION || 'us-east-1';
-const MODEL_ID = 'anthropic.claude-sonnet-4-5-20250514';
+// Use cross-region inference profile for Claude 3.5 Sonnet v2 (October 2024)
+// Cross-region inference profiles are required for on-demand throughput
+// This provides automatic routing to the best available region for optimal performance
+const MODEL_ID = 'us.anthropic.claude-3-5-sonnet-20241022-v2:0';
 
 // Cost tracking (approximate)
 const COST_PER_INPUT_TOKEN = 0.000003; // $3 per 1M tokens

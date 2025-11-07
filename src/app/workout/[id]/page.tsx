@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import StreakPopup from "@/components/ui/streak-popup"
 import { RestTimer } from "@/components/timer/rest-timer"
 import { EnhanceWithAIButton } from "@/components/ai/enhance-button"
-import { dynamoDBWorkouts } from "@/lib/dynamodb"
 import {
   ArrowLeft,
   Clock,
@@ -73,36 +72,31 @@ export default function WorkoutViewPage() {
   const loadWorkout = async (workoutId: string) => {
     setLoading(true)
     try {
-      if (user?.id) {
-        // Load from DynamoDB
-        const dbWorkout = await dynamoDBWorkouts.get(user.id, workoutId)
+      // Load from API (which calls DynamoDB on the server)
+      const response = await fetch(`/api/workouts/${workoutId}`)
 
-        if (dbWorkout) {
-          // Transform DynamoDB workout to display format
-          const transformedWorkout: Workout = {
-            id: dbWorkout.workoutId,
-            title: dbWorkout.title,
-            description: dbWorkout.description || '',
-            exercises: dbWorkout.exercises,
-            content: dbWorkout.content,
-            author: dbWorkout.author,
-            createdAt: dbWorkout.createdAt,
-            updatedAt: dbWorkout.updatedAt,
-            source: dbWorkout.source,
-            type: dbWorkout.type,
-            totalDuration: dbWorkout.totalDuration,
-            difficulty: dbWorkout.difficulty,
-            tags: dbWorkout.tags,
-          }
-          setWorkout(transformedWorkout)
-        } else {
-          // Fallback to localStorage
-          const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-          const found = workouts.find((w: Workout) => w.id === workoutId)
-          setWorkout(found || null)
+      if (response.ok) {
+        const { workout: dbWorkout } = await response.json()
+
+        // Transform DynamoDB workout to display format
+        const transformedWorkout: Workout = {
+          id: dbWorkout.workoutId,
+          title: dbWorkout.title,
+          description: dbWorkout.description || '',
+          exercises: dbWorkout.exercises || [],
+          content: dbWorkout.content || '',
+          author: dbWorkout.author,
+          createdAt: dbWorkout.createdAt,
+          updatedAt: dbWorkout.updatedAt,
+          source: dbWorkout.source || '',
+          type: dbWorkout.type || 'manual',
+          totalDuration: dbWorkout.totalDuration || 0,
+          difficulty: dbWorkout.difficulty || 'medium',
+          tags: dbWorkout.tags || [],
         }
+        setWorkout(transformedWorkout)
       } else {
-        // Fallback to localStorage if user not available
+        // Fallback to localStorage if API fails
         const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
         const found = workouts.find((w: Workout) => w.id === workoutId)
         setWorkout(found || null)

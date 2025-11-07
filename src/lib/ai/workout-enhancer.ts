@@ -21,17 +21,26 @@
 import { invokeClaude, logUsage, type BedrockResponse } from './bedrock-client';
 
 /**
- * Workout data structure (matches existing workout type)
+ * Workout data structure (aligned with table and DynamoDB format)
  */
 export interface WorkoutData {
   title?: string;
   description?: string;
+  workoutType?: 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata';
+  structure?: {
+    rounds?: number;
+    timePerRound?: number; // seconds
+    timeLimit?: number; // seconds for AMRAP
+    totalTime?: number; // seconds
+    pattern?: string; // e.g., "21-15-9" for ladder
+  };
   exercises?: Array<{
     name: string;
-    sets?: number;
-    reps?: number | string;
-    weight?: number | string;
-    unit?: 'kg' | 'lbs';
+    sets: number | string; // Flat format: "3" or 3
+    reps?: number | string; // "10" or "150M" for distance
+    weight?: string; // "135 lbs" or "60 kg"
+    duration?: number; // For cardio exercises (in seconds)
+    restSeconds?: number;
     notes?: string;
   }>;
   tags?: string[];
@@ -55,8 +64,6 @@ export interface TrainingContext {
  */
 export interface EnhancementResult {
   enhancedWorkout: WorkoutData;
-  changes: string[];
-  suggestions: string[];
   bedrockResponse: BedrockResponse;
 }
 
@@ -64,53 +71,135 @@ export interface EnhancementResult {
  * Build system prompt for workout enhancement
  */
 function buildEnhancementSystemPrompt(context?: TrainingContext): string {
-  let prompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data.
+  let prompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data extracted from images or text.
 
 **Your responsibilities:**
 1. **Clean up text**: Fix OCR errors, typos, and formatting issues
-2. **Standardize exercise names**: Use proper, consistent exercise names (e.g., "bench press" not "benchpress" or "BP")
-3. **Structure data**: Parse unstructured text into structured workout format
-4. **Add form cues**: Provide brief, helpful form tips for each exercise
-5. **Suggest weights**: Based on user PRs, suggest appropriate weights (if available)
-6. **Safety tips**: Add safety notes for complex or dangerous movements
+2. **Extract ONLY actual exercises**: Ignore headers, UI elements, metadata
+3. **Detect workout structure**: Identify EMOM, AMRAP, Rounds, Ladder, Tabata patterns
+4. **Standardize exercise names**: Use proper names (e.g., "Bench Press" not "BP")
+5. **Preserve distances and reps**: Keep "150M" or "1000M" for runs, don't convert to time
+6. **Add form cues**: Provide brief form tips in the notes field (optional)
 
-**Output format:**
-Return a JSON object with this structure:
+**CRITICAL: Workout Structure Detection**
+
+**EMOM (Every Minute On the Minute):**
+- Pattern: "EMOM" or "Every Minute" in text
+- Structure: Multiple exercises done within each minute, repeated for X rounds
+- Example: "EMOM 10 MIN" or "5 ROUNDS" with per-minute exercises
+- Set workoutType: "emom", structure.rounds = number of rounds/minutes, structure.totalTime = total minutes
+
+**AMRAP (As Many Rounds As Possible):**
+- Pattern: "AMRAP" with time limit
+- Structure: Complete exercises as many times as possible in time limit
+- Example: "AMRAP 20 MIN"
+- Set workoutType: "amrap", structure.timeLimit = time in seconds
+
+**Rounds:**
+- Pattern: "X ROUNDS" or "X rounds for time"
+- Structure: Complete X full rounds of all exercises
+- Example: "5 ROUNDS FOR TIME"
+- Set workoutType: "rounds", structure.rounds = number
+
+**Ladder:**
+- Pattern: Descending/ascending rep schemes like "21-15-9"
+- Example: "21-15-9 reps for time"
+- Set workoutType: "ladder", structure.pattern = "21-15-9"
+
+**Standard:**
+- No special structure, just straight sets
+- Set workoutType: "standard"
+
+**CRITICAL: Output Format (FLAT STRUCTURE)**
+
+Return JSON with this EXACT structure:
 \`\`\`json
 {
   "title": "Workout Title",
-  "description": "Brief description of the workout",
+  "description": "Brief description",
+  "workoutType": "emom",
+  "structure": {
+    "rounds": 5,
+    "timePerRound": 60,
+    "totalTime": 2700
+  },
   "exercises": [
     {
-      "name": "Exercise Name (standardized)",
-      "sets": 4,
-      "reps": "8-10" or 12,
-      "weight": 135,
-      "unit": "lbs" or "kg",
-      "notes": "Form cue: Keep back straight. Suggested weight based on your PR."
+      "name": "SkiErg",
+      "sets": 5,
+      "reps": "150M",
+      "notes": "Maintain steady pace"
+    },
+    {
+      "name": "Burpee Broad Jump",
+      "sets": 5,
+      "reps": 10,
+      "notes": "Land softly"
+    },
+    {
+      "name": "Dumbbell Squat",
+      "sets": 3,
+      "reps": 12,
+      "weight": "50 lbs",
+      "restSeconds": 90,
+      "notes": "Keep chest up"
     }
   ],
-  "tags": ["chest", "push", "strength"],
+  "tags": ["cardio", "full-body", "emom"],
   "difficulty": "intermediate",
-  "duration": 45,
-  "changes": [
-    "Standardized 'benchpress' to 'bench press'",
-    "Added form cue for deadlift",
-    "Suggested weight of 185 lbs based on your 1RM of 225 lbs"
-  ],
-  "suggestions": [
-    "Consider adding warm-up sets",
-    "Rest 2-3 minutes between heavy compound sets"
-  ]
+  "duration": 45
 }
 \`\`\`
 
-**Important guidelines:**
-- Preserve the user's original intent and workout structure
-- Don't add exercises that weren't in the original text
-- If weight/reps are unclear, use ranges (e.g., "8-12 reps", "working weight")
-- For bodyweight exercises, omit weight field
-- Use standard muscle group tags: chest, back, shoulders, arms, legs, core, cardio, full-body`;
+**IMPORTANT: Flat Exercise Format**
+- "sets": NUMBER (not array) - how many sets total
+- "reps": NUMBER or STRING - "10" for reps, "150M" for distance, "30s" for time
+- "weight": STRING with unit - "135 lbs" or "60 kg"
+- "duration": NUMBER in seconds (for pure cardio like treadmill)
+- "restSeconds": NUMBER (optional)
+- "notes": STRING (optional form cues)
+
+**DO NOT include:**
+- Nested "sets" arrays
+- "changes" or "suggestions" fields (put training tips in exercise notes instead)
+- Metadata as exercises
+- Headers or descriptions as exercises
+
+**Examples:**
+
+**EMOM Workout:**
+{
+  "title": "HYROX EMOM",
+  "workoutType": "emom",
+  "structure": { "rounds": 5, "timePerRound": 60, "totalTime": 2700 },
+  "exercises": [
+    { "name": "SkiErg", "sets": 5, "reps": "150M" },
+    { "name": "Burpee Broad Jump", "sets": 5, "reps": 10 },
+    { "name": "Sled Push", "sets": 5, "reps": "50M" }
+  ]
+}
+
+**Standard Workout:**
+{
+  "title": "Upper Body Push",
+  "workoutType": "standard",
+  "exercises": [
+    { "name": "Bench Press", "sets": 3, "reps": 10, "weight": "135 lbs", "restSeconds": 90 },
+    { "name": "Overhead Press", "sets": 3, "reps": 8, "weight": "95 lbs", "restSeconds": 90 }
+  ]
+}
+
+**AMRAP Workout:**
+{
+  "title": "Metcon",
+  "workoutType": "amrap",
+  "structure": { "timeLimit": 1200 },
+  "exercises": [
+    { "name": "Pull-ups", "sets": 1, "reps": 10 },
+    { "name": "Push-ups", "sets": 1, "reps": 15 },
+    { "name": "Air Squats", "sets": 1, "reps": 20 }
+  ]
+}`;
 
   // Add user context if available
   if (context) {
@@ -183,13 +272,9 @@ export async function enhanceWorkout(
       throw new Error('AI returned invalid JSON. Please try again.');
     }
 
-    // Extract workout data and metadata
-    const { changes = [], suggestions = [], ...workoutData } = parsedContent;
-
+    // AI now returns workout data directly in flat format
     return {
-      enhancedWorkout: workoutData as WorkoutData,
-      changes,
-      suggestions,
+      enhancedWorkout: parsedContent as WorkoutData,
       bedrockResponse: response,
     };
   } catch (error) {

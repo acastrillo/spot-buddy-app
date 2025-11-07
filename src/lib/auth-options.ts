@@ -42,24 +42,34 @@ if (!resolvedIssuer) {
   );
 }
 
+// Use the Cognito hosted UI domain for authorization (supports identity_provider param)
+const cognitoHostedDomain = `https://spotter-auth-1758818590.auth.us-east-1.amazoncognito.com`;
+
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Custom Cognito provider that doesn't validate nonce
-    // This is required for Cognito + Google federated identity
+    // Cognito provider with Google federated identity
     {
       id: "cognito",
       name: "Cognito",
       type: "oauth",
-      wellKnown: `${resolvedIssuer}/.well-known/openid-configuration`,
       clientId: COGNITO_CLIENT_ID,
       clientSecret: COGNITO_CLIENT_SECRET,
-      version: "1.0",
+      wellKnown: `${resolvedIssuer}/.well-known/openid-configuration`, // Explicit OIDC discovery endpoint
       authorization: {
+        url: `${cognitoHostedDomain}/oauth2/authorize`,
         params: {
           scope: "openid email profile",
+          response_type: "code",
+          identity_provider: "Google",
         },
       },
-      checks: ["state"], // Only validate state, skip nonce for federated identity
+      token: {
+        url: `${cognitoHostedDomain}/oauth2/token`,
+      },
+      userinfo: {
+        url: `${cognitoHostedDomain}/oauth2/userInfo`, // Use hosted domain, not cognito-idp
+      },
+      checks: ["state", "nonce"], // Required for Cognito with federated Google OAuth
       profile(profile) {
         return {
           id: profile.sub,
@@ -87,7 +97,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: { signIn: "/auth/login" },
-  debug: process.env.NODE_ENV === "development", // Enable debug logs in dev
+  debug: true, // Enable debug logs to diagnose OAuth issues
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {

@@ -29,7 +29,6 @@ import {
   normaliseWorkoutForEditing,
   type StoredWorkout,
 } from "@/lib/workouts/types";
-import { dynamoDBWorkouts } from "@/lib/dynamodb";
 
 type WorkoutSource = "dynamodb" | "local";
 
@@ -252,10 +251,13 @@ export default function EditWorkoutPage() {
       try {
         let workout: DynamoDBWorkout | StoredWorkout | null = null;
         if (user?.id) {
-          const dbWorkout = await dynamoDBWorkouts.get(user.id, workoutId);
-          if (dbWorkout) {
-            workout = dbWorkout;
-            setSource("dynamodb");
+          const response = await fetch(`/api/workouts/${workoutId}`);
+          if (response.ok) {
+            const { workout: dbWorkout } = await response.json();
+            if (dbWorkout) {
+              workout = dbWorkout;
+              setSource("dynamodb");
+            }
           }
         }
 
@@ -428,26 +430,23 @@ export default function EditWorkoutPage() {
       const exercisePayload = denormaliseExercises(exercises);
 
       if (user?.id) {
-        await dynamoDBWorkouts.upsert(user.id, {
-          workoutId: workoutMeta.id,
-          title: workoutMeta.title.trim(),
-          description: workoutMeta.description ?? null,
-          exercises: exercisePayload,
-          content: workoutMeta.content,
-          author: workoutMeta.author ?? null,
-          createdAt: workoutMeta.createdAt,
-          source: workoutMeta.source,
-          type: workoutMeta.type,
-          totalDuration: workoutMeta.totalDuration,
-          difficulty: workoutMeta.difficulty,
-          tags: workoutMeta.tags,
-          llmData: workoutMeta.llmData,
-          imageUrls: workoutMeta.imageUrls,
-          thumbnailUrl: workoutMeta.thumbnailUrl ?? null,
-          scheduledDate: workoutMeta.scheduledDate ?? null,
-          status: workoutMeta.status ?? null,
-          completedDate: workoutMeta.completedDate ?? null,
+        const response = await fetch(`/api/workouts/${workoutMeta.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: workoutMeta.title.trim(),
+            description: workoutMeta.description ?? null,
+            exercises: exercisePayload,
+            totalDuration: workoutMeta.totalDuration,
+            difficulty: workoutMeta.difficulty,
+            tags: workoutMeta.tags,
+          }),
         });
+        if (!response.ok) {
+          throw new Error('Failed to save workout');
+        }
         setSource("dynamodb");
       }
 
@@ -480,7 +479,12 @@ export default function EditWorkoutPage() {
     setSaving(true);
     try {
       if (user?.id) {
-        await dynamoDBWorkouts.delete(user.id, workoutMeta.id);
+        const response = await fetch(`/api/workouts/${workoutMeta.id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete workout');
+        }
       }
       removeFromLocalCache(workoutMeta.id);
       window.dispatchEvent(new Event("workoutsUpdated"));

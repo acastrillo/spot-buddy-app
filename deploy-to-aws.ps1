@@ -40,7 +40,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✅ Docker image built successfully" -ForegroundColor Green
 
-Write-Host "🔑 Step 3: Logging into ECR..." -ForegroundColor Yellow
+Write-Host "Step 3: Logging into ECR..." -ForegroundColor Yellow
 aws ecr get-login-password --region $Region | docker login --username AWS --password-stdin $EcrRepo
 if ($LASTEXITCODE -ne 0) {
     Write-Error "❌ ECR login failed"
