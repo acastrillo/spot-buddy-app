@@ -19,6 +19,13 @@
  */
 
 import { invokeClaude, logUsage, type BedrockResponse } from './bedrock-client';
+import {
+  matchExercise,
+  detectWorkoutFormat,
+  parseWorkoutStructure,
+  generateExerciseContext,
+  suggestExercises,
+} from '../knowledge-base/exercise-matcher';
 
 /**
  * Workout data structure (aligned with table and DynamoDB format)
@@ -68,9 +75,64 @@ export interface EnhancementResult {
 }
 
 /**
- * Build system prompt for workout enhancement
+ * Extract potential exercise names from raw workout text
+ * Uses simple heuristics to identify lines that might contain exercises
  */
-function buildEnhancementSystemPrompt(context?: TrainingContext): string {
+function extractPotentialExerciseNames(text: string): string[] {
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+  const exerciseNames: string[] = [];
+
+  for (const line of lines) {
+    // Skip lines that look like headers, times, or metadata
+    if (
+      /^(workout|title|description|notes|round|time|min|sec|emom|amrap)/i.test(line) ||
+      /^\d+:\d+/.test(line) || // Skip timestamps
+      line.length < 3 || // Skip very short lines
+      /^[A-Z\s]+$/.test(line) && line.split(' ').length > 4 // Skip all-caps headers
+    ) {
+      continue;
+    }
+
+    // Try to extract exercise name from various formats
+    // Format: "Exercise Name - 3x10"
+    const dashMatch = line.match(/^([A-Za-z\s-]+?)(?:\s*[-:]\s*\d|$)/);
+    if (dashMatch) {
+      exerciseNames.push(dashMatch[1].trim());
+      continue;
+    }
+
+    // Format: "10 Push-ups" or "20 Burpees"
+    const repsMatch = line.match(/^\d+\s+([A-Za-z\s-]+?)(?:\s*@|\s*\d|$)/);
+    if (repsMatch) {
+      exerciseNames.push(repsMatch[1].trim());
+      continue;
+    }
+
+    // Format: "Bench Press 3x10"
+    const setsMatch = line.match(/^([A-Za-z\s-]+?)\s+\d+x\d+/);
+    if (setsMatch) {
+      exerciseNames.push(setsMatch[1].trim());
+      continue;
+    }
+
+    // If line contains mostly letters and spaces, might be an exercise name
+    if (/^[A-Za-z\s-]{3,50}$/.test(line)) {
+      exerciseNames.push(line);
+    }
+  }
+
+  // Return unique names
+  return [...new Set(exerciseNames)];
+}
+
+/**
+ * Build system prompt for workout enhancement
+ * Now includes exercise knowledge base context for better recognition
+ */
+function buildEnhancementSystemPrompt(
+  rawText: string,
+  context?: TrainingContext
+): string {
   let prompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data extracted from images or text.
 
 **Your responsibilities:**
@@ -201,6 +263,26 @@ Return JSON with this EXACT structure:
   ]
 }`;
 
+  // Add exercise knowledge base context
+  // Extract exercise names from raw text for fuzzy matching
+  const exerciseNames = extractPotentialExerciseNames(rawText);
+  if (exerciseNames.length > 0) {
+    const exerciseContext = generateExerciseContext(exerciseNames);
+    if (exerciseContext) {
+      prompt += exerciseContext;
+    }
+  }
+
+  // Detect workout format
+  const { detectedFormat, metadata } = parseWorkoutStructure(rawText);
+  if (detectedFormat) {
+    prompt += `\n\n**DETECTED WORKOUT FORMAT:** ${detectedFormat.name} (${detectedFormat.type})`;
+    prompt += `\n${detectedFormat.description}`;
+    if (Object.keys(metadata).length > 0) {
+      prompt += `\nDetected metadata: ${JSON.stringify(metadata)}`;
+    }
+  }
+
   // Add user context if available
   if (context) {
     if (context.personalRecords && Object.keys(context.personalRecords).length > 0) {
@@ -240,8 +322,8 @@ export async function enhanceWorkout(
   rawText: string,
   context?: TrainingContext
 ): Promise<EnhancementResult> {
-  // Build prompt
-  const systemPrompt = buildEnhancementSystemPrompt(context);
+  // Build prompt with exercise knowledge base context
+  const systemPrompt = buildEnhancementSystemPrompt(rawText, context);
   const userMessage = `Please enhance this workout:\n\n${rawText}`;
 
   try {
@@ -342,3 +424,13 @@ export function estimateEnhancementCost(textLength: number): number {
 
   return inputCost + outputCost;
 }
+
+/**
+ * Re-export knowledge base utilities for convenience
+ */
+export {
+  matchExercise,
+  detectWorkoutFormat,
+  parseWorkoutStructure,
+  suggestExercises,
+} from '../knowledge-base/exercise-matcher';
