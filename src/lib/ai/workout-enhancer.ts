@@ -48,8 +48,9 @@ export interface WorkoutData {
     weight?: string; // "135 lbs" or "60 kg"
     duration?: number; // For cardio exercises (in seconds)
     restSeconds?: number;
-    notes?: string;
+    notes?: string; // Exercise-specific notes only
   }>;
+  aiNotes?: string[]; // AI-generated suggestions, tips, and observations (NOT exercises)
   tags?: string[];
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   duration?: number;
@@ -207,6 +208,11 @@ Return JSON with this EXACT structure:
       "notes": "Keep chest up"
     }
   ],
+  "aiNotes": [
+    "This is a high-intensity EMOM focusing on cardio and power",
+    "Rest periods are built into the minute structure",
+    "Maintain consistent pacing throughout all rounds"
+  ],
   "tags": ["cardio", "full-body", "emom"],
   "difficulty": "intermediate",
   "duration": 45
@@ -219,13 +225,21 @@ Return JSON with this EXACT structure:
 - "weight": STRING with unit - "135 lbs" or "60 kg"
 - "duration": NUMBER in seconds (for pure cardio like treadmill)
 - "restSeconds": NUMBER (optional)
-- "notes": STRING (optional form cues)
+- "notes": STRING (optional exercise-specific form cues ONLY)
+
+**IMPORTANT: AI Notes Field**
+- "aiNotes": ARRAY of STRINGS - General workout observations, tips, and suggestions
+- Use this for: overall workout advice, pacing tips, safety reminders, training insights
+- DO NOT put general observations in exercise.notes (those are for exercise-specific form cues only)
+- DO NOT create fake exercises from summary text or observations
 
 **DO NOT include:**
 - Nested "sets" arrays
-- "changes" or "suggestions" fields (put training tips in exercise notes instead)
+- "changes" or "suggestions" fields
 - Metadata as exercises
 - Headers or descriptions as exercises
+- Summary text as exercises
+- Observations as exercises
 
 **Examples:**
 
@@ -238,6 +252,10 @@ Return JSON with this EXACT structure:
     { "name": "SkiErg", "sets": 5, "reps": "150M" },
     { "name": "Burpee Broad Jump", "sets": 5, "reps": 10 },
     { "name": "Sled Push", "sets": 5, "reps": "50M" }
+  ],
+  "aiNotes": [
+    "HYROX-style training focusing on functional movements",
+    "Each exercise should be completed within the minute with rest before next round"
   ]
 }
 
@@ -248,6 +266,10 @@ Return JSON with this EXACT structure:
   "exercises": [
     { "name": "Bench Press", "sets": 3, "reps": 10, "weight": "135 lbs", "restSeconds": 90 },
     { "name": "Overhead Press", "sets": 3, "reps": 8, "weight": "95 lbs", "restSeconds": 90 }
+  ],
+  "aiNotes": [
+    "Focus on pressing movements for chest and shoulders",
+    "Ensure proper warm-up before heavy pressing"
   ]
 }
 
@@ -260,6 +282,10 @@ Return JSON with this EXACT structure:
     { "name": "Pull-ups", "sets": 1, "reps": 10 },
     { "name": "Push-ups", "sets": 1, "reps": 15 },
     { "name": "Air Squats", "sets": 1, "reps": 20 }
+  ],
+  "aiNotes": [
+    "Classic CrossFit triplet focusing on bodyweight movements",
+    "Pace yourself to complete as many full rounds as possible"
   ]
 }`;
 

@@ -38,6 +38,7 @@ export default function EditWorkoutPage() {
   const [workoutTitle, setWorkoutTitle] = useState("")
   const [workoutDescription, setWorkoutDescription] = useState("")
   const [exercises, setExercises] = useState<any[]>([])
+  const [aiNotes, setAiNotes] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [workoutType, setWorkoutType] = useState<string>('standard')
   const [workoutStructure, setWorkoutStructure] = useState<any>(null)
@@ -132,6 +133,8 @@ export default function EditWorkoutPage() {
         llmData: workoutData.llmData,
         workoutType: workoutType,
         structure: workoutStructure,
+        aiNotes: aiNotes.length > 0 ? aiNotes : null,
+        aiEnhanced: aiNotes.length > 0, // Mark as AI enhanced if we have AI notes
       }
 
       // Save to DynamoDB via API route
@@ -192,6 +195,11 @@ export default function EditWorkoutPage() {
         notes: exercise.notes || '',
         duration: exercise.duration || null,
       })))
+    }
+
+    // Update AI notes
+    if (enhancedWorkout.aiNotes && Array.isArray(enhancedWorkout.aiNotes)) {
+      setAiNotes(enhancedWorkout.aiNotes)
     }
 
     // Update title and description if provided
@@ -373,6 +381,31 @@ export default function EditWorkoutPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* AI Notes Section */}
+              {aiNotes.length > 0 && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      AI Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {aiNotes.map((note, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 p-3 rounded-lg bg-surface-elevated border border-border"
+                        >
+                          <div className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0" />
+                          <p className="text-sm text-text-secondary">{note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>

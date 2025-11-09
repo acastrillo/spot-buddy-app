@@ -584,7 +584,7 @@ export interface DynamoDBWorkout {
 
   // Phase 6: AI Enhancement
   aiEnhanced?: boolean; // Whether workout was enhanced by AI
-  aiNotes?: string | null; // AI-generated notes and recommendations
+  aiNotes?: string[] | null; // AI-generated notes and recommendations (array of strings)
   muscleGroups?: string[]; // Muscle groups targeted (can be AI-generated)
 
   // Workout Structure Metadata
