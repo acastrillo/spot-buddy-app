@@ -136,6 +136,8 @@ function buildEnhancementSystemPrompt(
 ): string {
   let prompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data extracted from images or text.
 
+CRITICAL: You must respond with ONLY valid JSON. Do not include any explanatory text, markdown formatting, or commentary. Return ONLY the JSON object.
+
 **Your responsibilities:**
 1. **Clean up text**: Fix OCR errors, typos, and formatting issues
 2. **Extract ONLY actual exercises**: Ignore headers, UI elements, metadata
@@ -287,7 +289,9 @@ Return JSON with this EXACT structure:
     "Classic CrossFit triplet focusing on bodyweight movements",
     "Pace yourself to complete as many full rounds as possible"
   ]
-}`;
+}
+
+REMEMBER: Return ONLY the JSON object. No explanations, no markdown code blocks, no additional text. Just pure JSON.`;
 
   // Add exercise knowledge base context
   // Extract exercise names from raw text for fuzzy matching
@@ -371,12 +375,25 @@ export async function enhanceWorkout(
     // Parse JSON response
     let parsedContent;
     try {
+      let jsonText = response.content.trim();
+
       // Try to extract JSON if it's wrapped in markdown code blocks
-      const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/);
-      const jsonText = jsonMatch ? jsonMatch[1] : response.content;
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+
+      // Remove any leading/trailing text that's not JSON
+      const firstBrace = jsonText.indexOf('{');
+      const lastBrace = jsonText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+      }
+
       parsedContent = JSON.parse(jsonText);
     } catch (parseError) {
       console.error('[WorkoutEnhancer] Failed to parse JSON response:', parseError);
+      console.error('[WorkoutEnhancer] Raw response:', response.content);
       throw new Error('AI returned invalid JSON. Please try again.');
     }
 

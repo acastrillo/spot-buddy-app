@@ -1,0 +1,88 @@
+
+> spot-buddy@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.1
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings in 2.6s
+
+./src/app/api/ai/generate-workout/route.ts
+Attempted import error: 'rateLimit' is not exported from '@/lib/rate-limit' (imported as 'rateLimit').
+
+Import trace for requested module:
+./src/app/api/ai/generate-workout/route.ts
+
+./src/app/api/ai/test-connection/route.ts
+Attempted import error: 'testBedrockConnection' is not exported from '@/lib/ai/bedrock-client' (imported as 'testBedrockConnection').
+
+Import trace for requested module:
+./src/app/api/ai/test-connection/route.ts
+
+ ✓ Compiled successfully in 5.3s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/37) ...
+   Generating static pages (9/37) 
+   Generating static pages (18/37) 
+   Generating static pages (27/37) 
+ ✓ Generating static pages (37/37)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    2.56 kB         124 kB
+├ ○ /_not-found                             1 kB         103 kB
+├ ○ /add                                 7.25 kB         161 kB
+├ ○ /add/edit                            5.95 kB         127 kB
+├ ○ /add/generate                        4.99 kB         122 kB
+├ ƒ /api/ai/enhance-workout                190 B         102 kB
+├ ƒ /api/ai/generate-workout               190 B         102 kB
+├ ƒ /api/ai/test-connection                190 B         102 kB
+├ ƒ /api/auth/[...nextauth]                190 B         102 kB
+├ ƒ /api/body-metrics                      190 B         102 kB
+├ ƒ /api/body-metrics/[date]               190 B         102 kB
+├ ƒ /api/body-metrics/latest               190 B         102 kB
+├ ƒ /api/health                            190 B         102 kB
+├ ƒ /api/ingest                            190 B         102 kB
+├ ƒ /api/instagram-fetch                   190 B         102 kB
+├ ƒ /api/ocr                               190 B         102 kB
+├ ƒ /api/stripe/checkout                   190 B         102 kB
+├ ƒ /api/stripe/portal                     190 B         102 kB
+├ ƒ /api/stripe/webhook                    190 B         102 kB
+├ ƒ /api/upload-image                      190 B         102 kB
+├ ƒ /api/user/profile                      190 B         102 kB
+├ ƒ /api/workouts                          190 B         102 kB
+├ ƒ /api/workouts/[id]                     190 B         102 kB
+├ ƒ /api/workouts/[id]/complete            190 B         102 kB
+├ ƒ /api/workouts/[id]/schedule            190 B         102 kB
+├ ƒ /api/workouts/scheduled                190 B         102 kB
+├ ƒ /api/workouts/stats                    190 B         102 kB
+├ ○ /auth/login                          4.68 kB         115 kB
+├ ○ /body-weight                         49.5 kB         273 kB
+├ ○ /calendar                            4.88 kB         126 kB
+├ ○ /dashboard                           2.73 kB         233 kB
+├ ƒ /exercise/[name]                     7.39 kB         234 kB
+├ ○ /library                             21.1 kB         156 kB
+├ ○ /settings                            4.03 kB         158 kB
+├ ○ /settings/training-profile           2.74 kB         114 kB
+├ ○ /stats                               4.59 kB         122 kB
+├ ○ /stats/metrics                       4.11 kB         224 kB
+├ ○ /stats/prs                           4.44 kB         225 kB
+├ ○ /subscription                        6.14 kB         156 kB
+├ ○ /timer                               5.51 kB         127 kB
+├ ƒ /workout/[id]                          13 kB         177 kB
+└ ƒ /workout/[id]/edit                   5.14 kB         126 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/1255-718aa1e2301bfc34.js      45.5 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js  54.2 kB
+  └ other shared chunks (total)          2.02 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
