@@ -85,19 +85,15 @@ export default function LibraryPage() {
         }))
 
         setWorkouts(transformedWorkouts)
-
-        // Update localStorage cache
-        localStorage.setItem('workouts', JSON.stringify(transformedWorkouts))
       } else {
-        // Fallback to localStorage if user not available
-        const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-        setWorkouts(savedWorkouts)
+        // No user available - show empty state (require login)
+        console.warn('[Library] No user ID available - cannot load workouts')
+        setWorkouts([])
       }
     } catch (error) {
-      console.error('Error loading workouts:', error)
-      // Fallback to localStorage on error
-      const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-      setWorkouts(savedWorkouts)
+      console.error('[Library] Error loading workouts:', error)
+      // Show empty state on error (DynamoDB is source of truth)
+      setWorkouts([])
     } finally {
       setLoading(false)
     }
@@ -225,32 +221,47 @@ export default function LibraryPage() {
     }
   }
 
-  const handleSaveOCRWorkout = () => {
-    if (!showOCRResult) return
-
-    const workout = {
-      id: Date.now().toString(),
-      title: showOCRResult.title || 'OCR Workout',
-      content: showOCRResult.rawText,
-      createdAt: new Date().toISOString(),
-      parsedData: {
-        style: showOCRResult.style,
-        duration_min: showOCRResult.duration_min,
-        interval_sec: showOCRResult.interval_sec,
-        rounds: showOCRResult.rounds,
-        exercises: showOCRResult.sections.flatMap((section: any) => section.exercises),
-        equipment: [], // Could be derived from exercises
-        ocr: showOCRResult.ocr,
-        warnings: showOCRResult.warnings
-      }
+  const handleSaveOCRWorkout = async () => {
+    if (!showOCRResult || !user?.id) {
+      alert('Please log in to save workouts')
+      return
     }
 
-    const existingWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')
-    existingWorkouts.push(workout)
-    localStorage.setItem('workouts', JSON.stringify(existingWorkouts))
-    setWorkouts(existingWorkouts)
-    setShowOCRResult(null)
-    alert('Workout saved successfully!')
+    try {
+      // Save to DynamoDB via API
+      const response = await fetch('/api/workouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: showOCRResult.title || 'OCR Workout',
+          content: showOCRResult.rawText,
+          exercises: showOCRResult.sections.flatMap((section: any) => section.exercises),
+          source: 'ocr',
+          type: 'ocr',
+          llmData: {
+            style: showOCRResult.style,
+            duration_min: showOCRResult.duration_min,
+            interval_sec: showOCRResult.interval_sec,
+            rounds: showOCRResult.rounds,
+            ocr: showOCRResult.ocr,
+            warnings: showOCRResult.warnings
+          }
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save workout')
+      }
+
+      setShowOCRResult(null)
+      alert('Workout saved successfully!')
+
+      // Refresh workouts list
+      fetchWorkouts()
+    } catch (error) {
+      console.error('[Library] Error saving OCR workout:', error)
+      alert('Failed to save workout. Please try again.')
+    }
   }
 
   if (!isAuthenticated) {

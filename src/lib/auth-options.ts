@@ -84,10 +84,24 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Refresh token every 24 hours of activity (sliding session)
   },
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 30 * 24 * 60 * 60, // Must match session.maxAge - fixes incognito mode issues
+        domain: process.env.NODE_ENV === "production"
+          ? ".cannashieldct.com"  // Allows spotter.cannashieldct.com and future subdomains
+          : undefined,  // localhost doesn't need domain
+      },
+    },
+    csrfToken: {
+      name: `__Host-next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -140,6 +154,16 @@ export const authOptions: NextAuthOptions = {
           console.error("Failed to fetch user from DynamoDB:", error);
           // Continue with existing token data
         }
+      }
+
+      // Monitor JWT cookie size (browser limit is 4096 bytes)
+      const tokenSize = JSON.stringify(token).length;
+      if (tokenSize > 3500) {  // Warning threshold (leave buffer for encoding overhead)
+        console.warn(`[Auth] JWT token size: ${tokenSize} bytes - approaching 4096 limit`);
+      }
+      // Log size in development for monitoring
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[Auth] JWT token size: ${tokenSize} bytes`);
       }
 
       return token;
