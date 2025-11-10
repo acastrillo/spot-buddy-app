@@ -25,7 +25,10 @@ export function WorkoutEnhancerButton({
   const [success, setSuccess] = useState(false)
 
   const handleEnhance = async () => {
-    if (!rawText.trim()) {
+    // Ensure rawText is a string before calling trim()
+    const textToEnhance = String(rawText || '').trim()
+
+    if (!textToEnhance) {
       setError("No text to enhance")
       return
     }
@@ -40,7 +43,7 @@ export function WorkoutEnhancerButton({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ rawText: rawText.trim() }),
+        body: JSON.stringify({ rawText: textToEnhance }),
       })
 
       const data = await response.json()
@@ -70,7 +73,7 @@ export function WorkoutEnhancerButton({
     <div className="space-y-2">
       <Button
         onClick={handleEnhance}
-        disabled={disabled || isEnhancing || !rawText.trim()}
+        disabled={disabled || isEnhancing || !rawText || typeof rawText !== 'string' || !rawText.trim()}
         size={size}
         variant={success ? "outline" : variant}
         className={success ? "border-primary text-primary" : ""}
