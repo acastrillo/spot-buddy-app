@@ -49,8 +49,8 @@ export default function EditWorkoutPage() {
     if (stored) {
       const data = JSON.parse(stored)
       setWorkoutData(data)
-      setWorkoutTitle(data.title || '')
-      setWorkoutDescription(data.llmData?.summary || '')
+      setWorkoutTitle(String(data.title || ''))
+      setWorkoutDescription(String(data.llmData?.summary || ''))
       
       // Convert parsed exercises to editable format
       if (data.llmData?.exercises && data.llmData.exercises.length > 0) {
@@ -204,10 +204,10 @@ export default function EditWorkoutPage() {
 
     // Update title and description if provided
     if (enhancedWorkout.title) {
-      setWorkoutTitle(enhancedWorkout.title)
+      setWorkoutTitle(String(enhancedWorkout.title))
     }
     if (enhancedWorkout.description) {
-      setWorkoutDescription(enhancedWorkout.description)
+      setWorkoutDescription(String(enhancedWorkout.description))
     }
 
     // Update workout type and structure
@@ -350,10 +350,10 @@ export default function EditWorkoutPage() {
                     </div>
                   </div>
 
-                  <Button 
-                    className="w-full mt-6" 
+                  <Button
+                    className="w-full mt-6"
                     onClick={handleSave}
-                    disabled={!workoutTitle.trim() || exercises.length === 0 || isSaving}
+                    disabled={!workoutTitle || typeof workoutTitle !== 'string' || !workoutTitle.trim() || exercises.length === 0 || isSaving}
                   >
                     {isSaving ? (
                       <>Saving...</>
