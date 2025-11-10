@@ -197,9 +197,9 @@ export default function EditWorkoutPage() {
       })))
     }
 
-    // Update AI notes
+    // Update AI notes - filter to ensure all items are valid strings
     if (enhancedWorkout.aiNotes && Array.isArray(enhancedWorkout.aiNotes)) {
-      setAiNotes(enhancedWorkout.aiNotes)
+      setAiNotes(enhancedWorkout.aiNotes.filter((note: any) => note && typeof note === 'string'))
     }
 
     // Update title and description if provided
@@ -393,7 +393,7 @@ export default function EditWorkoutPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {aiNotes.map((note, index) => (
+                      {aiNotes.filter(note => note && typeof note === 'string').map((note, index) => (
                         <div
                           key={index}
                           className="flex items-start gap-2 p-3 rounded-lg bg-surface-elevated border border-border"
