@@ -27,13 +27,93 @@ import { UpgradePrompt } from "@/components/subscription/upgrade-prompt"
 import { WorkoutEnhancerButton } from "@/components/ai/workout-enhancer-button"
 import Link from "next/link"
 
+const formatEnhancedWorkoutText = (enhancedWorkout: any): string => {
+  if (!enhancedWorkout) return ""
+
+  const toStringValue = (value: unknown): string => {
+    if (typeof value === "string") return value.trim()
+    if (typeof value === "number" && Number.isFinite(value)) return value.toString()
+    return ""
+  }
+
+  const lines: string[] = []
+  const title = toStringValue(enhancedWorkout.title)
+  const description = toStringValue(enhancedWorkout.description)
+  if (title) {
+    lines.push(title)
+  }
+  if (description) {
+    lines.push("", description)
+  }
+
+  const metaParts: string[] = []
+  const workoutType = toStringValue(enhancedWorkout.workoutType)
+  const difficulty = toStringValue(enhancedWorkout.difficulty)
+  const duration = toStringValue(enhancedWorkout.duration)
+
+  if (workoutType) metaParts.push(`Type: ${workoutType}`)
+  if (difficulty) metaParts.push(`Difficulty: ${difficulty}`)
+  if (duration) metaParts.push(`Duration: ${duration} min`)
+
+  if (metaParts.length > 0) {
+    lines.push("", metaParts.join(" | "))
+  }
+
+  if (enhancedWorkout.structure && typeof enhancedWorkout.structure === "object") {
+    lines.push("", `Structure: ${JSON.stringify(enhancedWorkout.structure)}`)
+  }
+
+  const exercises = Array.isArray(enhancedWorkout.exercises) ? enhancedWorkout.exercises : []
+  if (exercises.length > 0) {
+    lines.push("", "Exercises:", "")
+    exercises.forEach((exercise: any, idx: number) => {
+      if (!exercise) return
+      const name = toStringValue(exercise.name) || `Exercise ${idx + 1}`
+      const detailParts: string[] = []
+      if (exercise.sets !== undefined && exercise.sets !== null && exercise.sets !== "") {
+        detailParts.push(`${exercise.sets} sets`)
+      }
+      if (exercise.reps) {
+        detailParts.push(`${exercise.reps} reps`)
+      }
+      if (exercise.weight) {
+        detailParts.push(`${exercise.weight}`)
+      }
+      if (exercise.duration) {
+        detailParts.push(`${exercise.duration} sec`)
+      }
+      if (exercise.restSeconds) {
+        detailParts.push(`Rest ${exercise.restSeconds}s`)
+      }
+
+      const detail = detailParts.length ? ` – ${detailParts.join(" | ")}` : ""
+      lines.push(`${idx + 1}. ${name}${detail}`)
+
+      const notes = toStringValue(exercise.notes)
+      if (notes) {
+        lines.push(`   Notes: ${notes}`)
+      }
+    })
+  }
+
+  const aiNotes = Array.isArray(enhancedWorkout.aiNotes)
+    ? enhancedWorkout.aiNotes.filter((note: any) => typeof note === "string" && note.trim())
+    : []
+  if (aiNotes.length > 0) {
+    lines.push("", "AI Notes:")
+    aiNotes.forEach((note: string) => lines.push(`- ${note.trim()}`))
+  }
+
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+}
+
 export default function ImportWorkoutPage() {
   const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("url")
   const [url, setUrl] = useState("")
   const [workoutTitle, setWorkoutTitle] = useState("")
-  const [workoutContent, setWorkoutContent] = useState("")
+  const [workoutContent, setWorkoutContentState] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [fetchedData, setFetchedData] = useState<any>(null)
   const [workoutData, setWorkoutData] = useState<any>(null)
@@ -43,9 +123,26 @@ export default function ImportWorkoutPage() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
 
-  if (!isAuthenticated) {
-    return <Login />
-  }
+  const setWorkoutContent = useCallback((value: unknown) => {
+    if (typeof value === "string") {
+      setWorkoutContentState(value)
+      return
+    }
+
+    if (value && typeof value === "object") {
+      const candidate = (value as { content?: unknown }).content
+      const normalized =
+        typeof candidate === "string"
+          ? candidate
+          : JSON.stringify(value, null, 2)
+
+      console.warn("[ImportWorkout] Non-string workout content received. Coercing to string.")
+      setWorkoutContentState(normalized)
+      return
+    }
+
+    setWorkoutContentState("")
+  }, [])
 
   const handleImageUpload = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -97,6 +194,14 @@ export default function ImportWorkoutPage() {
     setOcrError(null)
   }
 
+  const handleEnhancedWorkoutText = useCallback((enhancedWorkout: any) => {
+    const formatted = formatEnhancedWorkoutText(enhancedWorkout)
+    setWorkoutContent(formatted || "")
+    if (!workoutTitle && enhancedWorkout?.title) {
+      setWorkoutTitle(String(enhancedWorkout.title))
+    }
+  }, [setWorkoutContent, workoutTitle])
+
   const processImageWithOCR = async () => {
     if (!uploadedImage) return
 
@@ -125,12 +230,39 @@ export default function ImportWorkoutPage() {
       // Set the extracted text as workout content
       setWorkoutContent(data.text)
       setWorkoutTitle('OCR Extracted Workout')
-      setActiveTab('manual')
 
       // Update user quota in store (refresh session)
       if (user) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).ocrQuotaUsed = data.quotaUsed
+      }
+
+      // Process the OCR text and auto-navigate to edit page
+      const processResponse = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caption: data.text,
+          url: undefined
+        }),
+      })
+
+      if (processResponse.ok) {
+        const workoutResult = await processResponse.json()
+        const workoutForEdit = {
+          id: Date.now().toString(),
+          title: 'OCR Extracted Workout',
+          content: data.text,
+          llmData: workoutResult,
+          author: null,
+          createdAt: new Date().toISOString(),
+          source: 'ocr',
+          type: 'image'
+        }
+        sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
+        router.push('/add/edit')
       }
 
     } catch (error) {
@@ -193,7 +325,21 @@ export default function ImportWorkoutPage() {
       const workoutResult = await processResponse.json()
       setWorkoutData(workoutResult)
       setWorkoutTitle(fetchData.title || 'Imported Workout')
-      
+
+      // Automatically navigate to edit page
+      const workoutForEdit = {
+        id: Date.now().toString(),
+        title: fetchData.title || 'Imported Workout',
+        content: fetchData.content,
+        llmData: workoutResult,
+        author: fetchData?.author || null,
+        createdAt: new Date().toISOString(),
+        source: url.trim(),
+        type: 'url'
+      }
+      sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
+      router.push('/add/edit')
+
     } catch (error) {
       console.error('Process error:', error)
       alert(error instanceof Error ? error.message : 'Failed to process workout')
@@ -248,6 +394,10 @@ export default function ImportWorkoutPage() {
       console.error('Processing error:', error)
       alert('Failed to process workout')
     }
+  }
+
+  if (!isAuthenticated) {
+    return <Login />
   }
 
   return (
@@ -364,9 +514,7 @@ export default function ImportWorkoutPage() {
                               </h4>
                               <WorkoutEnhancerButton
                                 rawText={fetchedData.content}
-                                onEnhanced={(enhancedText) => {
-                                  setWorkoutContent(enhancedText)
-                                }}
+                                onEnhanced={handleEnhancedWorkoutText}
                                 size="sm"
                                 variant="outline"
                               />
@@ -571,9 +719,7 @@ export default function ImportWorkoutPage() {
                         {workoutContent.trim() && (
                           <WorkoutEnhancerButton
                             rawText={workoutContent}
-                            onEnhanced={(enhancedText) => {
-                              setWorkoutContent(enhancedText)
-                            }}
+                            onEnhanced={handleEnhancedWorkoutText}
                             size="sm"
                             variant="outline"
                           />

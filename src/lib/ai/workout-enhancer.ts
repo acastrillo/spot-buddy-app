@@ -26,6 +26,7 @@ import {
   generateExerciseContext,
   suggestExercises,
 } from '../knowledge-base/exercise-matcher';
+import type { OrganizedContent } from './workout-content-organizer';
 
 /**
  * Workout data structure (aligned with table and DynamoDB format)
@@ -406,6 +407,196 @@ export async function enhanceWorkout(
     console.error('[WorkoutEnhancer] Error enhancing workout:', error);
     throw new Error(`Failed to enhance workout: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+/**
+ * Agent 2: Structure Workout from Organized Content
+ *
+ * This is the SECOND STEP of the two-agent workflow.
+ * Takes pre-filtered exercise lines from Agent 1 and structures them into a complete workout.
+ *
+ * @param organized - Organized content from Agent 1
+ * @param context - User training context for personalization
+ * @returns Structured workout with AI improvements
+ */
+export async function structureWorkout(
+  organized: OrganizedContent,
+  context?: TrainingContext
+): Promise<EnhancementResult> {
+  // Build a focused prompt for Agent 2 using the filtered content
+  const systemPrompt = buildStructurePrompt(organized, context);
+
+  // Create focused input from organized content
+  const exerciseText = organized.exerciseLines.join('\n');
+  const notesText = organized.notes.length > 0 ? `\n\nNotes:\n${organized.notes.join('\n')}` : '';
+  const structureHint = organized.structure ? `\n\nDetected structure: ${JSON.stringify(organized.structure)}` : '';
+
+  const userMessage = `Please structure this workout:\n\n${exerciseText}${notesText}${structureHint}`;
+
+  try {
+    // Call Bedrock with Sonnet model for better reasoning
+    const response = await invokeClaude({
+      messages: [
+        { role: 'user', content: userMessage },
+      ],
+      systemPrompt,
+      maxTokens: 4096,
+      temperature: 0.3,
+      model: 'sonnet', // Use Sonnet for better structuring
+    });
+
+    // Log usage
+    if (context?.userId) {
+      logUsage('workout-structuring', context.userId, response);
+    }
+
+    // Parse JSON response
+    let parsedContent;
+    try {
+      let jsonText = response.content.trim();
+
+      // Try to extract JSON if it's wrapped in markdown code blocks
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+
+      // Remove any leading/trailing text that's not JSON
+      const firstBrace = jsonText.indexOf('{');
+      const lastBrace = jsonText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+      }
+
+      parsedContent = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('[WorkoutStructurer] Failed to parse JSON response:', parseError);
+      console.error('[WorkoutStructurer] Raw response:', response.content);
+      throw new Error('Agent 2 returned invalid JSON. Please try again.');
+    }
+
+    return {
+      enhancedWorkout: parsedContent as WorkoutData,
+      bedrockResponse: response,
+    };
+  } catch (error) {
+    console.error('[WorkoutStructurer] Error structuring workout:', error);
+    throw new Error(`Agent 2 failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Build system prompt for Agent 2 (Workout Structurer)
+ */
+function buildStructurePrompt(
+  organized: OrganizedContent,
+  context?: TrainingContext
+): string {
+  let prompt = `You are an expert fitness coach. Your job is to structure pre-filtered exercise data into a complete workout.
+
+**IMPORTANT:** The exercise lines have already been filtered by another AI. They contain ONLY real exercises.
+Your job is NOT to filter - it's to STRUCTURE and ENHANCE.
+
+**Your responsibilities:**
+1. **Parse exercise lines**: Extract name, sets, reps, weight from each line
+2. **Detect workout structure**: Use the provided structure hints
+3. **Standardize exercise names**: Use proper names (e.g., "Bench Press" not "BP")
+4. **Add form cues**: Provide brief form tips in notes field
+5. **Generate title**: Create an appropriate workout title
+6. **Add AI insights**: Provide training tips in aiNotes field
+
+**CRITICAL: Output Format (FLAT STRUCTURE)**
+
+Return JSON with this EXACT structure:
+\`\`\`json
+{
+  "title": "Workout Title",
+  "description": "Brief description",
+  "workoutType": "emom",
+  "structure": {
+    "rounds": 5,
+    "timePerRound": 60,
+    "totalTime": 2700
+  },
+  "exercises": [
+    {
+      "name": "SkiErg",
+      "sets": 5,
+      "reps": "150M",
+      "notes": "Maintain steady pace"
+    },
+    {
+      "name": "Burpee Broad Jump",
+      "sets": 5,
+      "reps": 10,
+      "notes": "Land softly"
+    }
+  ],
+  "aiNotes": [
+    "This is a high-intensity EMOM focusing on cardio and power",
+    "Rest periods are built into the minute structure"
+  ],
+  "tags": ["cardio", "full-body", "emom"],
+  "difficulty": "intermediate",
+  "duration": 45
+}
+\`\`\`
+
+**Exercise Format:**
+- "sets": NUMBER - how many sets total
+- "reps": NUMBER or STRING - "10" for reps, "150M" for distance, "30s" for time
+- "weight": STRING with unit - "135 lbs" or "60 kg" (optional)
+- "duration": NUMBER in seconds (optional, for pure cardio)
+- "restSeconds": NUMBER (optional)
+- "notes": STRING (optional, exercise-specific form cues ONLY)
+
+**AI Notes Field:**
+- "aiNotes": ARRAY of STRINGS
+- General workout observations, tips, and suggestions
+- NOT for exercise-specific notes (use exercise.notes for that)
+
+**Workout Types:**
+- "standard" - Regular sets and reps
+- "emom" - Every Minute On the Minute
+- "amrap" - As Many Rounds As Possible
+- "rounds" - X rounds for time
+- "ladder" - Descending/ascending reps (e.g., 21-15-9)
+- "tabata" - 20s work / 10s rest
+
+REMEMBER: Return ONLY the JSON object. No explanations, no markdown, no extra text.`;
+
+  // Add structure hints from Agent 1
+  if (organized.structure) {
+    prompt += `\n\n**DETECTED STRUCTURE FROM AGENT 1:**`;
+    prompt += `\nType: ${organized.structure.type || 'standard'}`;
+    if (organized.structure.rounds) {
+      prompt += `\nRounds: ${organized.structure.rounds}`;
+    }
+    if (organized.structure.timeLimit) {
+      prompt += `\nTime Limit: ${organized.structure.timeLimit} seconds`;
+    }
+    if (organized.structure.pattern) {
+      prompt += `\nPattern: ${organized.structure.pattern}`;
+    }
+    prompt += `\n\nUse these hints to set the correct workoutType and structure fields.`;
+  }
+
+  // Add user context if available
+  if (context) {
+    if (context.personalRecords && Object.keys(context.personalRecords).length > 0) {
+      prompt += `\n\n**User's Personal Records:**\n`;
+      for (const [exercise, pr] of Object.entries(context.personalRecords)) {
+        prompt += `- ${exercise}: ${pr.weight} ${pr.unit} for ${pr.reps} reps\n`;
+      }
+      prompt += `\nUse these PRs to suggest appropriate working weights (typically 70-85% of 1RM).`;
+    }
+
+    if (context.experience) {
+      prompt += `\n\n**User experience level:** ${context.experience}`;
+    }
+  }
+
+  return prompt;
 }
 
 /**

@@ -49,6 +49,15 @@ interface Workout {
   totalDuration: number
   difficulty: string
   tags: string[]
+  aiEnhanced?: boolean
+  workoutType?: 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata'
+  structure?: {
+    rounds?: number
+    timePerRound?: number
+    timeLimit?: number
+    totalTime?: number
+    pattern?: string
+  }
 }
 
 export default function WorkoutViewPage() {
@@ -93,6 +102,9 @@ export default function WorkoutViewPage() {
           totalDuration: dbWorkout.totalDuration || 0,
           difficulty: dbWorkout.difficulty || 'medium',
           tags: dbWorkout.tags || [],
+          aiEnhanced: dbWorkout.aiEnhanced,
+          workoutType: dbWorkout.workoutType,
+          structure: dbWorkout.structure,
         }
         setWorkout(transformedWorkout)
       } else {
@@ -236,7 +248,33 @@ export default function WorkoutViewPage() {
                   onEnhanced={() => loadWorkout(workout.id)}
                   variant="outline"
                   size="sm"
+                  aiEnhanced={workout.aiEnhanced}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Navigate to card view
+                    const workoutForEdit = {
+                      id: workout.id,
+                      title: workout.title,
+                      content: workout.content,
+                      llmData: {
+                        exercises: workout.exercises,
+                        workoutType: workout.workoutType,
+                        structure: workout.structure,
+                      },
+                      createdAt: workout.createdAt,
+                      source: workout.source,
+                      type: workout.type,
+                    }
+                    sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
+                    router.push('/add/edit')
+                  }}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  View Cards
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

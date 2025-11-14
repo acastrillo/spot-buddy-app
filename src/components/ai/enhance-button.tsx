@@ -20,6 +20,7 @@ interface EnhanceWithAIButtonProps {
   className?: string;
   enhancementType?: 'full' | 'format' | 'details' | 'optimize';
   showQuota?: boolean;
+  aiEnhanced?: boolean;
 }
 
 export function EnhanceWithAIButton({
@@ -30,6 +31,7 @@ export function EnhanceWithAIButton({
   className = '',
   enhancementType = 'full',
   showQuota = true,
+  aiEnhanced = false,
 }: EnhanceWithAIButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,18 @@ export function EnhanceWithAIButton({
   const quotaCheck = useQuotaCheck('aiRequestsMonthly');
 
   const handleEnhance = async () => {
+    // Warn if workout already enhanced
+    if (aiEnhanced) {
+      const confirmed = confirm(
+        '⚠️ This workout has already been enhanced with AI.\n\n' +
+        'Enhancing again will overwrite the previous AI improvements and use another AI credit.\n\n' +
+        'Are you sure you want to continue?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
     // Check if user has access to AI features
     if (!featureAccess.allowed) {
       router.push('/subscription?reason=ai_enhancement');

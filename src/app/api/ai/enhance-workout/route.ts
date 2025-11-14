@@ -11,9 +11,19 @@
  * - Add personalized notes based on user's training profile
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUserId } from '@/lib/api-auth';
+import { getAuthenticatedSession } from '@/lib/api-auth';
 import { dynamoDBUsers, dynamoDBWorkouts, DynamoDBWorkout } from '@/lib/dynamodb';
-import { enhanceWorkout, estimateEnhancementCost, type TrainingContext } from '@/lib/ai/workout-enhancer';
+import {
+  enhanceWorkout,
+  structureWorkout,
+  estimateEnhancementCost,
+  type TrainingContext
+} from '@/lib/ai/workout-enhancer';
+import {
+  organizeWorkoutContent,
+  validateOrganizedContent,
+  estimateOrganizationCost
+} from '@/lib/ai/workout-content-organizer';
 import { getAIRequestLimit } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -62,15 +72,15 @@ function convertAIToDynamoDB(aiExercises: any[]): any[] {
 
 export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkoutResponse>> {
   try {
-    // SECURITY FIX: Use new auth utility
-    const auth = await getAuthenticatedUserId();
+    // SECURITY FIX: Use new auth utility with session
+    const auth = await getAuthenticatedSession();
     if ('error' in auth) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-    const { userId } = auth;
+    const { userId, session } = auth;
 
     // RATE LIMITING: Check rate limit (30 AI requests per hour)
     const rateLimit = await checkRateLimit(userId, 'api:ai');
@@ -105,13 +115,33 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       );
     }
 
-    // Get user and check AI quota
-    const user = await dynamoDBUsers.get(userId);
+    // Get user and check AI quota (create if doesn't exist)
+    let user = await dynamoDBUsers.get(userId);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      // User not synced to DynamoDB yet - create with defaults
+      console.log('[AI Enhance] User not found in DynamoDB, creating with defaults');
+      try {
+        const userEmail = session.user?.email || `user-${userId}@temp.com`;
+        const firstName = (session.user as any)?.firstName || null;
+        const lastName = (session.user as any)?.lastName || null;
+
+        // Create user with free tier (production default)
+        user = await dynamoDBUsers.upsert({
+          id: userId,
+          email: userEmail,
+          firstName,
+          lastName,
+          subscriptionTier: 'free',
+          aiRequestsLimit: 0,
+        });
+        console.log('[AI Enhance] User created successfully');
+      } catch (createError) {
+        console.error('[AI Enhance] Failed to create user:', createError);
+        return NextResponse.json(
+          { success: false, error: 'User not found and could not be created. Please try logging out and back in.' },
+          { status: 500 }
+        );
+      }
     }
 
     const tier = user.subscriptionTier || 'free';
@@ -120,11 +150,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
 
     // Check if user has AI quota remaining
     if (aiUsed >= aiLimit) {
+      const upgradeMessage = aiLimit === 0
+        ? 'AI features are not available on the free tier. Upgrade to Starter ($7.99/mo) for 10 AI requests per month.'
+        : `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
+
       return NextResponse.json(
         {
           success: false,
-          error: `You've reached your AI request limit (${aiLimit}/month). Upgrade to continue.`,
+          error: upgradeMessage,
           quotaRemaining: 0,
+          tier,
+          aiUsed,
+          aiLimit,
         },
         { status: 403 }
       );
@@ -160,7 +197,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       );
     }
 
-    console.log('[AI Enhance] Calling Claude Sonnet 4.5...');
+    console.log('[AI Enhance] Starting two-step agentic workflow...');
     console.log('[AI Enhance] Enhancement type:', enhancementType);
     console.log('[AI Enhance] Quota remaining:', aiLimit - aiUsed);
 
@@ -171,8 +208,38 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       // personalRecords: await getUserPRs(userId), // TODO: Implement
     };
 
-    // Call AI enhancer
-    const result = await enhanceWorkout(textToEnhance, trainingContext);
+    // STEP 1: Agent 1 - Organize Content (Filter exercises from fluff)
+    console.log('[AI Enhance] Step 1: Organizing content with Agent 1 (Haiku)...');
+    const organizationResult = await organizeWorkoutContent(textToEnhance);
+
+    // Validate organized content
+    if (!validateOrganizedContent(organizationResult.organized)) {
+      console.error('[AI Enhance] Agent 1 returned invalid organized content');
+      return NextResponse.json(
+        { success: false, error: 'Failed to organize workout content. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[AI Enhance] Agent 1 results:');
+    console.log(`  - Exercise lines: ${organizationResult.organized.exerciseLines.length}`);
+    console.log(`  - Notes: ${organizationResult.organized.notes.length}`);
+    console.log(`  - Rejected: ${organizationResult.organized.rejected.length}`);
+    if (organizationResult.organized.structure) {
+      console.log(`  - Detected structure: ${organizationResult.organized.structure.type}`);
+    }
+
+    // STEP 2: Agent 2 - Structure Workout (Build final workout)
+    console.log('[AI Enhance] Step 2: Structuring workout with Agent 2 (Sonnet)...');
+    const result = await structureWorkout(organizationResult.organized, trainingContext);
+
+    // Calculate total cost (both agents)
+    const totalCost = (organizationResult.bedrockResponse.cost?.total || 0) +
+                     (result.bedrockResponse.cost?.total || 0);
+    console.log('[AI Enhance] Two-step workflow complete!');
+    console.log(`  - Agent 1 cost: $${organizationResult.bedrockResponse.cost?.total.toFixed(4) || '0.0000'}`);
+    console.log(`  - Agent 2 cost: $${result.bedrockResponse.cost?.total.toFixed(4) || '0.0000'}`);
+    console.log(`  - Total cost: $${totalCost.toFixed(4)}`);
 
     // Convert AI exercises format to DynamoDB format
     const convertedExercises = result.enhancedWorkout.exercises
@@ -189,15 +256,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       // Update existing workout
       const updates = {
         title: result.enhancedWorkout.title || existingWorkout.title,
-        description: result.enhancedWorkout.description || existingWorkout.description,
+        description: result.enhancedWorkout.description || existingWorkout.description || undefined,
         exercises: convertedExercises.length > 0 ? convertedExercises : existingWorkout.exercises,
         tags: result.enhancedWorkout.tags || existingWorkout.tags,
         difficulty: result.enhancedWorkout.difficulty || existingWorkout.difficulty,
-        duration: result.enhancedWorkout.duration || existingWorkout.duration,
+        totalDuration: result.enhancedWorkout.duration || existingWorkout.totalDuration,
         workoutType,
         structure,
         aiEnhanced: true,
-        aiNotes: 'AI enhanced workout with standardized exercise names and proper structure detection',
+        aiNotes: ['AI enhanced workout with standardized exercise names and proper structure detection'],
         updatedAt: new Date().toISOString(),
       };
       await dynamoDBWorkouts.update(userId, workoutId!, updates);
@@ -219,7 +286,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         workoutType,
         structure,
         aiEnhanced: true,
-        aiNotes: 'AI enhanced workout with standardized exercise names and proper structure detection',
+        aiNotes: ['AI enhanced workout with standardized exercise names and proper structure detection'],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

@@ -23,10 +23,14 @@ import {
 
 // Bedrock configuration
 const BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION || 'us-east-1';
-// Use cross-region inference profile for Claude 3.5 Sonnet v2 (October 2024)
+// Use cross-region inference profiles for Claude models
 // Cross-region inference profiles are required for on-demand throughput
 // This provides automatic routing to the best available region for optimal performance
-const MODEL_ID = 'us.anthropic.claude-3-5-sonnet-20241022-v2:0';
+const MODEL_IDS = {
+  sonnet: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0', // Default: Sonnet 4.5
+  haiku: 'us.anthropic.claude-3-5-haiku-20241022-v1:0', // Haiku 3.5 (cheaper, faster)
+} as const;
+const DEFAULT_MODEL = 'sonnet';
 
 // Cost tracking (approximate)
 const COST_PER_INPUT_TOKEN = 0.000003; // $3 per 1M tokens
@@ -72,6 +76,7 @@ export interface BedrockInvokeParams {
   temperature?: number;
   topP?: number;
   stopSequences?: string[];
+  model?: 'sonnet' | 'haiku'; // Model selection for cost/performance tradeoff
 }
 
 /**
@@ -102,6 +107,10 @@ export async function invokeClaude(
 ): Promise<BedrockResponse> {
   const client = getBedrockClient();
 
+  // Select model (default to sonnet)
+  const modelKey = params.model || DEFAULT_MODEL;
+  const modelId = MODEL_IDS[modelKey];
+
   // Build request body
   const requestBody = {
     anthropic_version: 'bedrock-2023-05-31',
@@ -115,7 +124,7 @@ export async function invokeClaude(
 
   try {
     const command = new InvokeModelCommand({
-      modelId: MODEL_ID,
+      modelId,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify(requestBody),
@@ -161,6 +170,10 @@ export async function invokeClaudeStream(
 ): Promise<BedrockResponse> {
   const client = getBedrockClient();
 
+  // Select model (default to sonnet)
+  const modelKey = params.model || DEFAULT_MODEL;
+  const modelId = MODEL_IDS[modelKey];
+
   // Build request body (same as non-streaming)
   const requestBody = {
     anthropic_version: 'bedrock-2023-05-31',
@@ -174,7 +187,7 @@ export async function invokeClaudeStream(
 
   try {
     const command = new InvokeModelWithResponseStreamCommand({
-      modelId: MODEL_ID,
+      modelId,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify(requestBody),
@@ -282,4 +295,29 @@ export function logUsage(
   // - Track per-user AI request counts
   // - Monitor cost per subscription tier
   // - Generate usage reports
+}
+
+/**
+ * Simple health check to verify Bedrock credentials and model access.
+ * Keeps the prompt tiny so it costs only a few tokens.
+ */
+export async function testBedrockConnection(): Promise<boolean> {
+  try {
+    const response = await invokeClaude({
+      messages: [
+        {
+          role: 'user',
+          content: 'Reply with the word OK to confirm connectivity.',
+        },
+      ],
+      systemPrompt: 'You are a health check. Output exactly "OK".',
+      maxTokens: 2,
+      temperature: 0,
+    });
+
+    return response.content.trim().toUpperCase().startsWith('OK');
+  } catch (error) {
+    console.error('[Bedrock] Connection test failed:', error);
+    return false;
+  }
 }

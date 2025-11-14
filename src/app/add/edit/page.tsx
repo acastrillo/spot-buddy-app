@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { EditableWorkoutTable } from "@/store/editable-workout-table"
+import { WorkoutCardList } from "@/components/workout/workout-card-list"
+import { expandWorkoutToCards, collapseCardsToExercises, detectRepetitionPattern } from "@/lib/workout/card-transformer"
+import type { WorkoutCard } from "@/types/workout-card"
 import {
   Save,
   ArrowLeft,
@@ -36,9 +38,8 @@ export default function EditWorkoutPage() {
   const router = useRouter()
   const [workoutData, setWorkoutData] = useState<WorkoutData | null>(null)
   const [workoutTitle, setWorkoutTitle] = useState("")
-  const [workoutDescription, setWorkoutDescription] = useState("")
-  const [exercises, setExercises] = useState<any[]>([])
-  const [aiNotes, setAiNotes] = useState<string[]>([])
+  const [workoutNotes, setWorkoutNotes] = useState("")  // Renamed from workoutDescription
+  const [cards, setCards] = useState<WorkoutCard[]>([])  // Changed from exercises
   const [isSaving, setIsSaving] = useState(false)
   const [workoutType, setWorkoutType] = useState<string>('standard')
   const [workoutStructure, setWorkoutStructure] = useState<any>(null)
@@ -50,22 +51,40 @@ export default function EditWorkoutPage() {
       const data = JSON.parse(stored)
       setWorkoutData(data)
       setWorkoutTitle(String(data.title || ''))
-      setWorkoutDescription(String(data.llmData?.summary || ''))
-      
-      // Convert parsed exercises to editable format
+
+      // Merge AI Notes into Notes field
+      let notesContent = String(data.llmData?.summary || '')
+      if (data.llmData?.aiNotes && Array.isArray(data.llmData.aiNotes)) {
+        const aiNotesText = data.llmData.aiNotes
+          .filter((note: any) => note && typeof note === 'string')
+          .map((note: string) => `• ${note}`)
+          .join('\n')
+
+        if (aiNotesText) {
+          notesContent = notesContent
+            ? `${notesContent}\n\n**AI Insights:**\n${aiNotesText}`
+            : `**AI Insights:**\n${aiNotesText}`
+        }
+      }
+      setWorkoutNotes(notesContent)
+
+      // Convert parsed exercises to card format
+      let exerciseData = []
       if (data.llmData?.exercises && data.llmData.exercises.length > 0) {
-        setExercises(data.llmData.exercises.map((exercise: any) => ({
+        exerciseData = data.llmData.exercises.map((exercise: any) => ({
           id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
           name: exercise.name || exercise.movement || '',
           sets: exercise.sets || 1,
           reps: exercise.reps || '',
           weight: exercise.weight || '',
+          distance: exercise.distance || null,
+          timing: exercise.timing || null,
           restSeconds: exercise.restSeconds || 60,
           notes: exercise.notes || ''
-        })))
+        }))
       } else if (data.llmData?.rows) {
         // Fallback to old rows format
-        setExercises(data.llmData.rows.map((row: any) => ({
+        exerciseData = data.llmData.rows.map((row: any) => ({
           id: row.id || `ex-${Date.now()}-${Math.random()}`,
           name: row.movement || '',
           sets: row.sets || 1,
@@ -73,7 +92,30 @@ export default function EditWorkoutPage() {
           weight: row.weight || '',
           restSeconds: 60,
           notes: row.notes || ''
-        })))
+        }))
+      }
+
+      // Detect repetition pattern and expand to cards
+      // For "rounds" workout type, use structure.rounds instead of exercise.sets
+      let repetition = detectRepetitionPattern(exerciseData, data.llmData?.workoutType)
+
+      // Override for rounds-based workouts
+      if (data.llmData?.workoutType === 'rounds' && data.llmData?.structure?.rounds) {
+        repetition = {
+          rounds: data.llmData.structure.rounds,
+          pattern: 'circuit' as const,
+          restBetweenExercises: false,  // No rest between exercises in same round
+          restBetweenRounds: true,  // Rest between rounds
+          defaultRestDuration: 60,
+        }
+      }
+
+      const expandedCards = expandWorkoutToCards(exerciseData, repetition)
+      setCards(expandedCards)
+
+      // Auto-fill workout title from first exercise if title is empty
+      if (!data.title && exerciseData.length > 0 && exerciseData[0].name) {
+        setWorkoutTitle(String(exerciseData[0].name))
       }
     } else {
       // No data found, redirect back
@@ -116,11 +158,14 @@ export default function EditWorkoutPage() {
 
     setIsSaving(true)
     try {
+      // Collapse cards back to exercises for saving
+      const exercises = collapseCardsToExercises(cards)
+
       // Prepare workout data for DynamoDB
       const workoutToSave = {
         workoutId: workoutData.id,
         title: workoutTitle,
-        description: workoutDescription,
+        description: workoutNotes,  // Changed from workoutDescription
         exercises: exercises,
         content: workoutData.content,
         author: workoutData.author,
@@ -133,8 +178,8 @@ export default function EditWorkoutPage() {
         llmData: workoutData.llmData,
         workoutType: workoutType,
         structure: workoutStructure,
-        aiNotes: aiNotes.length > 0 ? aiNotes : null,
-        aiEnhanced: aiNotes.length > 0, // Mark as AI enhanced if we have AI notes
+        aiNotes: null,  // AI notes now merged into description
+        aiEnhanced: workoutNotes.includes('**AI Insights:**'), // Mark as AI enhanced if notes contain AI insights
       }
 
       // Save to DynamoDB via API route
@@ -183,32 +228,31 @@ export default function EditWorkoutPage() {
   }
 
   const handleAIEnhancement = (enhancedWorkout: any) => {
-    // Update exercises from AI enhancement
-    if (enhancedWorkout.exercises && enhancedWorkout.exercises.length > 0) {
-      setExercises(enhancedWorkout.exercises.map((exercise: any) => ({
-        id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
-        name: exercise.name || '',
-        sets: exercise.sets || 1,
-        reps: exercise.reps || '',
-        weight: exercise.weight || '',
-        restSeconds: exercise.restSeconds || null,
-        notes: exercise.notes || '',
-        duration: exercise.duration || null,
-      })))
-    }
-
-    // Update AI notes - filter to ensure all items are valid strings
-    if (enhancedWorkout.aiNotes && Array.isArray(enhancedWorkout.aiNotes)) {
-      setAiNotes(enhancedWorkout.aiNotes.filter((note: any) => note && typeof note === 'string'))
-    }
-
-    // Update title and description if provided
+    // Update title if provided
     if (enhancedWorkout.title) {
       setWorkoutTitle(String(enhancedWorkout.title))
     }
+
+    // Merge AI notes into description field
+    let updatedNotes = workoutNotes
     if (enhancedWorkout.description) {
-      setWorkoutDescription(String(enhancedWorkout.description))
+      updatedNotes = String(enhancedWorkout.description)
     }
+
+    // Append AI notes to description
+    if (enhancedWorkout.aiNotes && Array.isArray(enhancedWorkout.aiNotes)) {
+      const aiNotesText = enhancedWorkout.aiNotes
+        .filter((note: any) => note && typeof note === 'string')
+        .map((note: string) => `• ${note}`)
+        .join('\n')
+
+      if (aiNotesText) {
+        updatedNotes = updatedNotes
+          ? `${updatedNotes}\n\n**AI Insights:**\n${aiNotesText}`
+          : `**AI Insights:**\n${aiNotesText}`
+      }
+    }
+    setWorkoutNotes(updatedNotes)
 
     // Update workout type and structure
     if (enhancedWorkout.workoutType) {
@@ -216,6 +260,45 @@ export default function EditWorkoutPage() {
     }
     if (enhancedWorkout.structure) {
       setWorkoutStructure(enhancedWorkout.structure)
+    }
+
+    // Convert enhanced exercises to card format
+    if (enhancedWorkout.exercises && enhancedWorkout.exercises.length > 0) {
+      const exerciseData = enhancedWorkout.exercises.map((exercise: any) => ({
+        id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
+        name: exercise.name || '',
+        sets: exercise.sets || 1,
+        reps: exercise.reps || '',
+        weight: exercise.weight || '',
+        distance: exercise.distance || null,
+        timing: exercise.timing || null,
+        restSeconds: exercise.restSeconds || null,
+        notes: exercise.notes || '',
+        duration: exercise.duration || null,
+      }))
+
+      // Detect repetition pattern and expand to cards
+      // For "rounds" workout type, use structure.rounds instead of exercise.sets
+      let repetition = detectRepetitionPattern(exerciseData, enhancedWorkout.workoutType)
+
+      // Override for rounds-based workouts
+      if (enhancedWorkout.workoutType === 'rounds' && enhancedWorkout.structure?.rounds) {
+        repetition = {
+          rounds: enhancedWorkout.structure.rounds,
+          pattern: 'circuit' as const,
+          restBetweenExercises: false,  // No rest between exercises in same round
+          restBetweenRounds: true,  // Rest between rounds
+          defaultRestDuration: 60,
+        }
+      }
+
+      const expandedCards = expandWorkoutToCards(exerciseData, repetition)
+      setCards(expandedCards)
+
+      // Auto-fill title from first exercise if not provided
+      if (!enhancedWorkout.title && !workoutTitle && exerciseData.length > 0 && exerciseData[0].name) {
+        setWorkoutTitle(String(exerciseData[0].name))
+      }
     }
   }
 
@@ -328,21 +411,22 @@ export default function EditWorkoutPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-2">
-                      Description
+                      Notes
                     </label>
                     <Textarea
-                      value={workoutDescription}
-                      onChange={(e) => setWorkoutDescription(e.target.value)}
-                      placeholder="Brief description of the workout..."
-                      rows={3}
+                      value={workoutNotes}
+                      onChange={(e) => setWorkoutNotes(e.target.value)}
+                      placeholder="Workout description, AI insights, form cues..."
+                      rows={5}
                     />
                   </div>
 
                   <div className="pt-4 border-t border-border">
                     <h4 className="font-medium text-text-primary mb-2">Summary</h4>
                     <div className="text-sm text-text-secondary space-y-1">
-                      <div>Exercises: {exercises.length}</div>
-                      <div>Est. Duration: {estimateDuration(exercises)} min</div>
+                      <div>Cards: {cards.length}</div>
+                      <div>Exercises: {cards.filter(c => c.type === 'exercise').length}</div>
+                      <div>Est. Duration: {estimateDuration(collapseCardsToExercises(cards))} min</div>
                       <div>Source: {workoutData.source === 'manual' ? 'Manual Entry' : 'Instagram'}</div>
                       {workoutData.author && (
                         <div>From: @{workoutData.author.username}</div>
@@ -353,7 +437,7 @@ export default function EditWorkoutPage() {
                   <Button
                     className="w-full mt-6"
                     onClick={handleSave}
-                    disabled={!workoutTitle || typeof workoutTitle !== 'string' || !workoutTitle.trim() || exercises.length === 0 || isSaving}
+                    disabled={!workoutTitle || typeof workoutTitle !== 'string' || !workoutTitle.trim() || cards.length === 0 || isSaving}
                   >
                     {isSaving ? (
                       <>Saving...</>
@@ -368,44 +452,23 @@ export default function EditWorkoutPage() {
               </Card>
             </div>
 
-            {/* Exercise Table */}
+            {/* Exercise Cards */}
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Exercises</CardTitle>
+                  <CardTitle className="text-lg">Workout Cards</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Long-press any card to edit. Empty fields auto-hide.
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <EditableWorkoutTable
-                    exercises={exercises}
-                    onExercisesChange={setExercises}
+                  <WorkoutCardList
+                    cards={cards}
+                    onCardsChange={setCards}
+                    showAddButton={true}
                   />
                 </CardContent>
               </Card>
-
-              {/* AI Notes Section */}
-              {aiNotes.length > 0 && (
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      AI Notes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {aiNotes.filter(note => note && typeof note === 'string').map((note, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-2 p-3 rounded-lg bg-surface-elevated border border-border"
-                        >
-                          <div className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0" />
-                          <p className="text-sm text-text-secondary">{note}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>
