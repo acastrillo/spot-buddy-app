@@ -355,23 +355,23 @@ export default function LibraryPage() {
             dateLabel={popupDateLabel}
           />
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-text-primary mb-2">
+          <div className="mb-8">
+            <div className="mb-4">
+              <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
                 Workout Library
               </h1>
-              <p className="text-text-secondary">
+              <p className="text-text-secondary text-sm md:text-base">
                 Your saved workouts and routines
               </p>
             </div>
-            <div className="flex gap-2">
-              <Link href="/add">
-                <Button className="flex items-center space-x-2">
+            <div className="flex flex-wrap gap-2">
+              <Link href="/add" className="flex-1 sm:flex-initial">
+                <Button className="w-full sm:w-auto flex items-center justify-center space-x-2">
                   <Plus className="h-4 w-4" />
                   <span>Add Workout</span>
                 </Button>
               </Link>
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-initial">
                 <input
                   type="file"
                   accept="image/*"
@@ -380,9 +380,9 @@ export default function LibraryPage() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   id="image-upload"
                 />
-                <Button 
-                  variant="outline" 
-                  className="flex items-center space-x-2"
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2"
                   disabled={isProcessingImage}
                 >
                   {isProcessingImage ? (

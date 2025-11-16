@@ -223,73 +223,77 @@ export default function WorkoutViewPage() {
           />
           {/* Header */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/library')}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-text-primary">
-                    {workout.title}
-                  </h1>
-                  <p className="text-sm text-text-secondary">
-                    {workout.description}
-                  </p>
-                </div>
+            {/* Back button and title */}
+            <div className="flex items-start gap-3 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/library')}
+                className="flex-shrink-0 mt-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-text-primary break-words">
+                  {workout.title}
+                </h1>
+                <p className="text-sm text-text-secondary break-words">
+                  {workout.description}
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <EnhanceWithAIButton
-                  workoutId={workout.id}
-                  onEnhanced={() => loadWorkout(workout.id)}
-                  variant="outline"
-                  size="sm"
-                  aiEnhanced={workout.aiEnhanced}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Navigate to card view
-                    const workoutForEdit = {
-                      id: workout.id,
-                      title: workout.title,
-                      content: workout.content,
-                      llmData: {
-                        exercises: workout.exercises,
-                        workoutType: workout.workoutType,
-                        structure: workout.structure,
-                      },
-                      createdAt: workout.createdAt,
-                      source: workout.source,
-                      type: workout.type,
-                    }
-                    sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-                    router.push('/add/edit')
-                  }}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  View Cards
+            </div>
+
+            {/* Action buttons - responsive grid layout */}
+            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 mb-4">
+              <EnhanceWithAIButton
+                workoutId={workout.id}
+                onEnhanced={() => loadWorkout(workout.id)}
+                variant="outline"
+                size="sm"
+                aiEnhanced={workout.aiEnhanced}
+                className="w-full md:w-auto"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Navigate to card view
+                  const workoutForEdit = {
+                    id: workout.id,
+                    title: workout.title,
+                    content: workout.content,
+                    llmData: {
+                      exercises: workout.exercises,
+                      workoutType: workout.workoutType,
+                      structure: workout.structure,
+                    },
+                    createdAt: workout.createdAt,
+                    source: workout.source,
+                    type: workout.type,
+                  }
+                  sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
+                  router.push('/add/edit')
+                }}
+                className="w-full md:w-auto"
+              >
+                <Play className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline">View Cards</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestTimer(!showRestTimer)}
+                className="w-full md:w-auto"
+              >
+                <Timer className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline">Rest Timer</span>
+              </Button>
+              <Link href={`/workout/${workout.id}/edit`} className="w-full md:w-auto">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Edit className="h-4 w-4 md:mr-2" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowRestTimer(!showRestTimer)}
-                >
-                  <Timer className="h-4 w-4 mr-2" />
-                  Rest Timer
-                </Button>
-                <Link href={`/workout/${workout.id}/edit`}>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </Link>
-              </div>
+              </Link>
             </div>
 
             {/* Workout Meta */}
@@ -314,10 +318,10 @@ export default function WorkoutViewPage() {
             </div>
 
             {/* Quick actions */}
-            <div className="flex gap-2 justify-end mt-2">
-              <Button onClick={markCompletedToday} className="flex items-center gap-2">
+            <div className="flex gap-2 mt-2">
+              <Button onClick={markCompletedToday} className="w-full md:w-auto flex items-center justify-center gap-2">
                 <Play className="h-4 w-4" />
-                Mark Completed Today
+                <span>Mark Completed Today</span>
               </Button>
             </div>
 

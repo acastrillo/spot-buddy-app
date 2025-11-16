@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthSessionProvider from "@/components/providers/session-provider";
@@ -17,6 +17,13 @@ import AuthSessionProvider from "@/components/providers/session-provider";
 export const metadata: Metadata = {
   title: "Spot Buddy - Your Fitness Accountability Partner",
   description: "Track workouts with your crew, celebrate PRs, and stay accountable. Spot Buddy is the fitness app that keeps you motivated with your gym squad.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({

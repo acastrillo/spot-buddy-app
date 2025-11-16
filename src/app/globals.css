@@ -36,6 +36,11 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -44,6 +49,9 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 /* High contrast and accessibility */
@@ -150,6 +158,21 @@ button {
 /* Mobile-first responsive padding */
 .container-padding {
   @apply px-4 sm:px-6 lg:px-8;
+}
+
+/* Responsive container with max-width */
+.responsive-container {
+  @apply w-full max-w-4xl mx-auto px-4 overflow-x-hidden;
+}
+
+/* Prevent text overflow */
+.text-overflow-safe {
+  @apply break-words overflow-wrap-anywhere;
+}
+
+/* Responsive button group */
+.button-group-responsive {
+  @apply flex flex-wrap gap-2 w-full;
 }
 
 /* Touch-friendly button */
