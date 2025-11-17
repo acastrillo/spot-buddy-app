@@ -159,15 +159,9 @@ export default function HomePage() {
       primary: true,
     },
     {
-      title: "Browse Library", 
-      description: "View your saved workouts",
-      href: "/library",
-      icon: Library,
-    },
-    {
       title: "View Calendar",
       description: "See your workout schedule",
-      href: "/calendar", 
+      href: "/calendar",
       icon: Calendar,
     },
   ]
