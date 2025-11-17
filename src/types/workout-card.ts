@@ -34,6 +34,7 @@ export interface ExerciseCard extends BaseCard {
   // Conditional fields (only show if populated)
   weight?: string | null;
   distance?: string | null;
+  time?: string | null;  // For cardio time tracking (e.g., "2:30" for run time)
   timing?: string | null;  // For EMOM, timed holds, etc.
   restSeconds?: number | null;
   notes?: string | null;

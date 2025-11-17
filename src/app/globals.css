@@ -167,7 +167,8 @@ button {
 
 /* Prevent text overflow */
 .text-overflow-safe {
-  @apply break-words overflow-wrap-anywhere;
+  @apply break-words;
+  overflow-wrap: anywhere;
 }
 
 /* Responsive button group */

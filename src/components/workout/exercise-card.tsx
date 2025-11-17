@@ -65,6 +65,7 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
       ...editedCard,
       weight: editedCard.weight?.trim() || null,
       distance: editedCard.distance?.trim() || null,
+      time: editedCard.time?.trim() || null,
       timing: editedCard.timing?.trim() || null,
       notes: editedCard.notes?.trim() || null,
       restSeconds: editedCard.restSeconds || null,
@@ -89,6 +90,7 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
   // Check if field has content (for conditional rendering)
   const hasWeight = card.weight && String(card.weight).trim().length > 0
   const hasDistance = card.distance && String(card.distance).trim().length > 0
+  const hasTime = card.time && String(card.time).trim().length > 0
   const hasTiming = card.timing && String(card.timing).trim().length > 0
   const hasRest = card.restSeconds != null && card.restSeconds > 0
   const hasNotes = card.notes && String(card.notes).trim().length > 0
@@ -179,6 +181,13 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Distance:</span>
                 <span>{card.distance}</span>
+              </div>
+            )}
+
+            {hasTime && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Time:</span>
+                <span>{card.time}</span>
               </div>
             )}
 
@@ -281,32 +290,6 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
           </div>
 
           <div>
-            <Label htmlFor="distance">Distance</Label>
-            <Input
-              id="distance"
-              value={editedCard.distance || ''}
-              onChange={(e) =>
-                setEditedCard({ ...editedCard, distance: e.target.value || null })
-              }
-              placeholder="e.g., 400m"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="timing">Timing</Label>
-            <Input
-              id="timing"
-              value={editedCard.timing || ''}
-              onChange={(e) =>
-                setEditedCard({ ...editedCard, timing: e.target.value || null })
-              }
-              placeholder="e.g., EMOM, 30s"
-            />
-          </div>
-
-          <div>
             <Label htmlFor="rest">Rest (seconds)</Label>
             <Input
               id="rest"
@@ -322,6 +305,44 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
               placeholder="60"
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="distance">Distance</Label>
+            <Input
+              id="distance"
+              value={editedCard.distance || ''}
+              onChange={(e) =>
+                setEditedCard({ ...editedCard, distance: e.target.value || null })
+              }
+              placeholder="e.g., 400m"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="time">Time</Label>
+            <Input
+              id="time"
+              value={editedCard.time || ''}
+              onChange={(e) =>
+                setEditedCard({ ...editedCard, time: e.target.value || null })
+              }
+              placeholder="e.g., 2:30"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="timing">Timing/Tempo</Label>
+          <Input
+            id="timing"
+            value={editedCard.timing || ''}
+            onChange={(e) =>
+              setEditedCard({ ...editedCard, timing: e.target.value || null })
+            }
+            placeholder="e.g., EMOM, 3-1-1-0"
+          />
         </div>
 
         {/* Notes */}
