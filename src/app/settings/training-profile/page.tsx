@@ -186,12 +186,12 @@ export default function TrainingProfilePage() {
         {/* Experience Level */}
         <div className="bg-[var(--surface)] p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Experience Level</h2>
-          <div className="flex gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
               <button
                 key={level}
                 onClick={() => setProfile({ ...profile, experience: level })}
-                className={`px-6 py-3 rounded-lg capitalize ${
+                className={`px-3 py-3 sm:px-6 rounded-lg capitalize text-sm sm:text-base ${
                   profile.experience === level
                     ? 'bg-[var(--primary)] text-white'
                     : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
