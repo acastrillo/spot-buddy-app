@@ -78,39 +78,98 @@ export const defaultTrainingProfile: TrainingProfile = {
 
 /**
  * Common equipment options
+ * Comprehensive list covering home gym, boutique fitness, and commercial gym equipment
  */
 export const EQUIPMENT_OPTIONS = [
+  // Free Weights
   'Barbell',
   'Dumbbells',
   'Kettlebells',
-  'Bench',
+  'Weight plates',
+  'EZ curl bar',
+
+  // Racks & Benches
   'Squat rack',
+  'Power rack',
+  'Bench (flat)',
+  'Bench (adjustable)',
+  'Preacher curl bench',
+
+  // Bodyweight & Functional
   'Pull-up bar',
   'Dip station',
-  'Cables',
-  'Machines',
-  'Resistance bands',
-  'TRX/Suspension trainer',
+  'Gymnastics rings',
+  'Parallettes',
+  'Battle ropes',
+  'Slam balls',
+
+  // Cable & Machines
+  'Cable machine',
+  'Functional trainer',
+  'Smith machine',
+  'Leg press',
+  'Leg extension',
+  'Leg curl',
+  'Lat pulldown',
+  'Seated row',
+  'Chest press machine',
+  'Shoulder press machine',
+
+  // Cardio Equipment
+  'Treadmill',
+  'Stationary bike',
+  'Rowing machine',
+  'Elliptical',
+  'Stair climber',
+  'Assault bike',
+  'Ski erg',
+
+  // Functional Training
   'Plyometric box',
+  'Step platform',
+  'TRX/Suspension trainer',
+  'Resistance bands',
+  'Resistance loops',
   'Medicine ball',
+  'Weighted vest',
+  'Sandbag',
+  'Landmine attachment',
+
+  // Recovery & Flexibility
   'Foam roller',
   'Yoga mat',
+  'Massage gun',
+  'Stretching strap',
+  'Balance board',
+
+  // Other
+  'Jump rope',
+  'Barre',
+  'Ab wheel',
+  'Glute-ham developer (GHD)',
+  'Trap bar',
 ] as const;
 
 /**
  * Common training goals
+ * Clear, descriptive goals that LLMs can understand and use to personalize workouts
  */
 export const TRAINING_GOALS = [
   'Build muscle (hypertrophy)',
-  'Increase strength',
-  'Lose fat',
-  'Improve endurance',
-  'Improve mobility',
-  'Athletic performance',
-  'General fitness',
-  'Powerlifting',
-  'Bodybuilding',
-  'CrossFit',
+  'Increase strength (powerlifting)',
+  'Lose fat / Weight loss',
+  'Improve cardiovascular endurance',
+  'Improve mobility / Flexibility',
+  'Athletic performance / Sports training',
+  'General fitness / Health maintenance',
+  'Bodybuilding / Physique competition',
+  'Functional fitness / CrossFit',
+  'Rehabilitation / Injury recovery',
+  'Improve posture / Core stability',
+  'Increase power / Explosiveness',
+  'Marathon / Endurance event training',
+  'Tone and define muscles',
+  'Build work capacity / Conditioning',
 ] as const;
 
 /**

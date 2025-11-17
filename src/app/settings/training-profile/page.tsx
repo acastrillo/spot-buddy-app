@@ -237,34 +237,36 @@ export default function TrainingProfilePage() {
           <h2 className="text-xl font-semibold mb-4">Personal Records</h2>
 
           {/* Add PR Form */}
-          <div className="grid gap-3 md:grid-cols-5 mb-6">
+          <div className="space-y-3 mb-6">
             <select
               value={newPR.exercise}
               onChange={(e) => setNewPR({ ...newPR, exercise: e.target.value })}
-              className="px-4 py-2 bg-[var(--surface-2)] rounded-lg md:col-span-2"
+              className="w-full px-4 py-2 bg-[var(--surface-2)] rounded-lg"
             >
               <option value="">Select exercise</option>
               {COMMON_EXERCISES.map((ex) => (
                 <option key={ex} value={ex}>{ex}</option>
               ))}
             </select>
-            <input
-              type="number"
-              placeholder="Weight"
-              value={newPR.weight}
-              onChange={(e) => setNewPR({ ...newPR, weight: e.target.value })}
-              className="px-4 py-2 bg-[var(--surface-2)] rounded-lg"
-            />
-            <input
-              type="number"
-              placeholder="Reps"
-              value={newPR.reps}
-              onChange={(e) => setNewPR({ ...newPR, reps: e.target.value })}
-              className="px-4 py-2 bg-[var(--surface-2)] rounded-lg"
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                placeholder="Weight"
+                value={newPR.weight}
+                onChange={(e) => setNewPR({ ...newPR, weight: e.target.value })}
+                className="px-4 py-2 bg-[var(--surface-2)] rounded-lg"
+              />
+              <input
+                type="number"
+                placeholder="Reps"
+                value={newPR.reps}
+                onChange={(e) => setNewPR({ ...newPR, reps: e.target.value })}
+                className="px-4 py-2 bg-[var(--surface-2)] rounded-lg"
+              />
+            </div>
             <button
               onClick={addPR}
-              className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:opacity-90"
+              className="w-full px-4 py-3 bg-[var(--primary)] text-white rounded-lg hover:opacity-90 font-semibold"
             >
               Add PR
             </button>

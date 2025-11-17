@@ -28,6 +28,12 @@ const eslintConfig = [
       "prefer-const": "warn"
     },
   },
+  {
+    files: ["next-env.d.ts"],
+    rules: {
+      "@typescript-eslint/triple-slash-reference": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

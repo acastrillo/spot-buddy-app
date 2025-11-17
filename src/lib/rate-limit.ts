@@ -80,6 +80,10 @@ export const RATE_LIMITS = {
     requests: 30,
     window: '1 h', // 30 AI requests per hour (Bedrock costs)
   },
+  'api:ai-generate': {
+    requests: 20,
+    window: '1 h', // 20 AI generation requests per hour
+  },
 
   // Authentication (per IP for login attempts)
   'auth:login': {

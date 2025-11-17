@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { generateWorkout } from '@/lib/ai/workout-generator';
 import { dynamoDBWorkouts } from '@/lib/dynamodb';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,16 +25,29 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate limiting
-    const rateLimitResult = await rateLimit(userId, 'ai-generate');
-    if (!rateLimitResult.success) {
+    const rateLimitStatus = await checkRateLimit(userId, 'api:ai-generate');
+    if (!rateLimitStatus.success) {
+      const retryAfterSeconds = Math.max(
+        0,
+        Math.ceil((rateLimitStatus.reset - Date.now()) / 1000)
+      );
+
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
-          limit: rateLimitResult.limit,
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset,
+          limit: rateLimitStatus.limit,
+          remaining: rateLimitStatus.remaining,
+          reset: rateLimitStatus.reset,
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitStatus.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitStatus.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitStatus.reset.toString(),
+            'Retry-After': retryAfterSeconds.toString(),
+          },
+        }
       );
     }
 

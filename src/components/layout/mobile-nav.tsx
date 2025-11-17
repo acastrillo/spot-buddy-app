@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Plus,
-  Library,
   Calendar,
   Home,
-  Timer
+  Timer,
+  Target
 } from "lucide-react"
 
 export function MobileNav() {
@@ -16,10 +16,10 @@ export function MobileNav() {
 
   const navigation = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Library", href: "/library", icon: Library },
     { name: "Add", href: "/add", icon: Plus },
     { name: "Timer", href: "/timer", icon: Timer },
     { name: "Calendar", href: "/calendar", icon: Calendar },
+    { name: "Profile", href: "/settings/training-profile", icon: Target },
   ]
 
   return (

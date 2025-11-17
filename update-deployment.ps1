@@ -17,7 +17,7 @@ docker push "$EcrRepo:latest"
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Host "🚀 Updating ECS service..." -ForegroundColor Yellow
-aws ecs update-service --cluster spotter-cluster --service spotter-service --force-new-deployment --region $Region
+aws ecs update-service --cluster SpotterCluster --service spotter-app --force-new-deployment --region $Region
 
 Write-Host "✅ Deployment started! Checking status..." -ForegroundColor Green
 Write-Host "Monitor logs: MSYS_NO_PATHCONV=1 aws logs tail /ecs/spotter-app --region us-east-1 --follow" -ForegroundColor Cyan

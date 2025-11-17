@@ -164,6 +164,12 @@ export default function HomePage() {
       href: "/calendar",
       icon: Calendar,
     },
+    {
+      title: "Training Profile",
+      description: "Set goals and PRs for AI workouts",
+      href: "/settings/training-profile",
+      icon: Target,
+    },
   ]
 
   return (
