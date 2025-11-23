@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Check, Loader2, Crown, Zap, Sparkles, CheckCircle, XCircle, RefreshCw } from "lucide-react"
 import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
 
-export default function SubscriptionPage() {
+// Inner component that uses useSearchParams
+function SubscriptionContent() {
   const { isAuthenticated, user, isLoading: authLoading } = useAuthStore()
   const { update: updateSession } = useSession()
   const searchParams = useSearchParams()
@@ -340,5 +341,14 @@ export default function SubscriptionPage() {
       </main>
       <MobileNav />
     </>
+  )
+}
+
+// Export the page with Suspense boundary for useSearchParams
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SubscriptionContent />
+    </Suspense>
   )
 }

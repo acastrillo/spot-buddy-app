@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
@@ -31,7 +31,8 @@ import Link from "next/link"
 import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
 import { getTierBadge } from "@/lib/feature-gating"
 
-export default function SettingsPage() {
+// Wrapper component to handle Suspense boundary for useSearchParams
+function SettingsContent() {
   const { isAuthenticated, user } = useAuthStore()
   const { update: updateSession } = useSession()
   const searchParams = useSearchParams()
@@ -346,5 +347,14 @@ export default function SettingsPage() {
       </main>
       <MobileNav />
     </>
+  )
+}
+
+// Export the page with Suspense boundary for useSearchParams
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SettingsContent />
+    </Suspense>
   )
 }
