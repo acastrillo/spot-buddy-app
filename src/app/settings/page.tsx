@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -21,7 +23,9 @@ import {
   TrendingUp,
   Activity,
   Crown,
-  Target
+  Target,
+  CheckCircle,
+  XCircle
 } from "lucide-react"
 import Link from "next/link"
 import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
@@ -29,9 +33,43 @@ import { getTierBadge } from "@/lib/feature-gating"
 
 export default function SettingsPage() {
   const { isAuthenticated, user } = useAuthStore()
+  const { update: updateSession } = useSession()
+  const searchParams = useSearchParams()
   const [firstName, setFirstName] = useState(user?.firstName || "test")
   const [lastName, setLastName] = useState(user?.lastName || "test")
   const [email, setEmail] = useState(user?.email || "test@test.com")
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  // Handle checkout success/cancel redirects from Stripe
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const canceled = searchParams.get('canceled')
+
+    if (success === 'true') {
+      // Force session refresh to get updated subscription from DynamoDB
+      updateSession()
+      setNotification({
+        type: 'success',
+        message: 'Subscription updated successfully! Your new plan is now active.'
+      })
+      // Clear URL params after handling
+      window.history.replaceState({}, '', '/settings')
+    } else if (canceled === 'true') {
+      setNotification({
+        type: 'error',
+        message: 'Checkout was canceled. No changes were made to your subscription.'
+      })
+      window.history.replaceState({}, '', '/settings')
+    }
+  }, [searchParams, updateSession])
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
 
   if (!isAuthenticated) {
     return <Login />
@@ -150,6 +188,28 @@ export default function SettingsPage() {
       <Header />
       <main className="min-h-screen pb-20 md:pb-8 flex justify-center">
         <div className="w-full max-w-4xl mx-auto px-4 py-8">
+          {/* Notification Banner */}
+          {notification && (
+            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+              notification.type === 'success'
+                ? 'bg-success/10 border border-success text-success'
+                : 'bg-destructive/10 border border-destructive text-destructive'
+            }`}>
+              {notification.type === 'success' ? (
+                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 flex-shrink-0" />
+              )}
+              <span className="font-medium">{notification.message}</span>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-auto text-current hover:opacity-70"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-text-primary mb-2">

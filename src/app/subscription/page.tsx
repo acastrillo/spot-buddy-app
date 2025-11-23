@@ -1,18 +1,66 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check, Loader2, Crown, Zap, Sparkles } from "lucide-react"
+import { Check, Loader2, Crown, Zap, Sparkles, CheckCircle, XCircle, RefreshCw } from "lucide-react"
 import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
 
 export default function SubscriptionPage() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, isLoading: authLoading } = useAuthStore()
+  const { update: updateSession } = useSession()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState<string | null>(null)
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Force refresh subscription data from server
+  const refreshSubscription = useCallback(async () => {
+    setIsRefreshing(true)
+    await updateSession()
+    // Small delay to allow UI to update
+    setTimeout(() => setIsRefreshing(false), 1000)
+  }, [updateSession])
+
+  // Handle checkout success/cancel redirects from Stripe
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const canceled = searchParams.get('canceled')
+
+    if (success === 'true') {
+      // Force session refresh to get updated subscription from DynamoDB
+      // Add small delay to allow webhook to process
+      setTimeout(() => {
+        updateSession()
+        setNotification({
+          type: 'success',
+          message: 'Subscription updated successfully! Your new plan is now active.'
+        })
+      }, 1000)
+      // Clear URL params after handling
+      window.history.replaceState({}, '', '/subscription')
+    } else if (canceled === 'true') {
+      setNotification({
+        type: 'error',
+        message: 'Checkout was canceled. No changes were made to your subscription.'
+      })
+      window.history.replaceState({}, '', '/subscription')
+    }
+  }, [searchParams, updateSession])
+
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
 
   if (!isAuthenticated) {
     return <Login />
@@ -103,6 +151,28 @@ export default function SubscriptionPage() {
       <Header />
       <main className="min-h-screen pb-20 md:pb-8">
         <div className="w-full max-w-7xl mx-auto px-4 py-8">
+          {/* Notification Banner */}
+          {notification && (
+            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+              notification.type === 'success'
+                ? 'bg-success/10 border border-success text-success'
+                : 'bg-destructive/10 border border-destructive text-destructive'
+            }`}>
+              {notification.type === 'success' ? (
+                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 flex-shrink-0" />
+              )}
+              <span className="font-medium">{notification.message}</span>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-auto text-current hover:opacity-70"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-text-primary mb-4">
               Choose Your Plan
@@ -116,7 +186,7 @@ export default function SubscriptionPage() {
           {currentTier !== 'free' && (
             <Card className="mb-8 border-primary">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-text-primary mb-1">
                       Current Plan: {SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS].name}
@@ -125,20 +195,31 @@ export default function SubscriptionPage() {
                       Status: {user?.subscriptionStatus || 'Active'}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleManageSubscription}
-                    disabled={loading === 'portal'}
-                  >
-                    {loading === 'portal' ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      'Manage Subscription'
-                    )}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshSubscription}
+                      disabled={isRefreshing}
+                      title="Refresh subscription status"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleManageSubscription}
+                      disabled={loading === 'portal'}
+                    >
+                      {loading === 'portal' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Manage Subscription'
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
