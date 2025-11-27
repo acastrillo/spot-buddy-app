@@ -9,12 +9,22 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import type { TrainingProfile } from "./training-profile";
 
-// Initialize DynamoDB client
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || "us-east-1",
-});
+// Lazy-initialized DynamoDB client singleton
+let dynamoDbInstance: DynamoDBDocumentClient | null = null;
 
-const dynamoDb = DynamoDBDocumentClient.from(client);
+/**
+ * Get the DynamoDB Document client instance (lazy initialization)
+ * Only initializes when first called, not at module load time
+ */
+function getDynamoDb(): DynamoDBDocumentClient {
+  if (!dynamoDbInstance) {
+    const client = new DynamoDBClient({
+      region: process.env.AWS_REGION || "us-east-1",
+    });
+    dynamoDbInstance = DynamoDBDocumentClient.from(client);
+  }
+  return dynamoDbInstance;
+}
 
 // Table names from environment
 const USERS_TABLE = process.env.DYNAMODB_USERS_TABLE || "spotter-users";
@@ -66,10 +76,12 @@ export const dynamoDBUsers = {
    */
   async get(userId: string): Promise<DynamoDBUser | null> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new GetCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
+          // Use strongly consistent reads so auth/session reflects webhook updates immediately
+          ConsistentRead: true,
         })
       );
 
@@ -85,7 +97,7 @@ export const dynamoDBUsers = {
    */
   async getByEmail(email: string): Promise<DynamoDBUser | null> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: USERS_TABLE,
           IndexName: "email-index", // Assumes GSI on email field
@@ -99,6 +111,29 @@ export const dynamoDBUsers = {
       return (result.Items?.[0] as DynamoDBUser) || null;
     } catch (error) {
       console.error("Error querying user by email from DynamoDB:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get user by Stripe customer ID
+   */
+  async getByStripeCustomerId(stripeCustomerId: string): Promise<DynamoDBUser | null> {
+    try {
+      const result = await getDynamoDb().send(
+        new QueryCommand({
+          TableName: USERS_TABLE,
+          IndexName: "stripeCustomerId-index", // Assumes GSI on stripeCustomerId field
+          KeyConditionExpression: "stripeCustomerId = :customerId",
+          ExpressionAttributeValues: {
+            ":customerId": stripeCustomerId,
+          },
+        })
+      );
+
+      return (result.Items?.[0] as DynamoDBUser) || null;
+    } catch (error) {
+      console.error("Error querying user by stripeCustomerId from DynamoDB:", error);
       return null;
     }
   },
@@ -143,7 +178,7 @@ export const dynamoDBUsers = {
     };
 
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new PutCommand({
           TableName: USERS_TABLE,
           Item: userData,
@@ -230,7 +265,7 @@ export const dynamoDBUsers = {
     }
 
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -249,7 +284,7 @@ export const dynamoDBUsers = {
    */
   async incrementOCRUsage(userId: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -272,7 +307,7 @@ export const dynamoDBUsers = {
   async resetOCRQuota(userId: string): Promise<void> {
     try {
       const now = new Date().toISOString();
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -296,7 +331,7 @@ export const dynamoDBUsers = {
    */
   async incrementAIUsage(userId: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -320,7 +355,7 @@ export const dynamoDBUsers = {
   async resetAIQuota(userId: string): Promise<void> {
     try {
       const now = new Date().toISOString();
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -347,7 +382,7 @@ export const dynamoDBUsers = {
     profile: DynamoDBUser["trainingProfile"]
   ): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -360,6 +395,63 @@ export const dynamoDBUsers = {
       );
     } catch (error) {
       console.error("Error updating training profile in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update user profile fields
+   */
+  async update(
+    userId: string,
+    updates: {
+      firstName?: string | null;
+      lastName?: string | null;
+      trainingProfile?: DynamoDBUser["trainingProfile"];
+    }
+  ): Promise<void> {
+    const updateParts: string[] = [];
+    const attributeValues: Record<string, unknown> = {
+      ":updatedAt": new Date().toISOString(),
+    };
+
+    const hasProp = <K extends keyof typeof updates>(key: K): boolean =>
+      Object.prototype.hasOwnProperty.call(updates, key);
+
+    if (hasProp("firstName")) {
+      updateParts.push("firstName = :firstName");
+      attributeValues[":firstName"] = updates.firstName ?? null;
+    }
+
+    if (hasProp("lastName")) {
+      updateParts.push("lastName = :lastName");
+      attributeValues[":lastName"] = updates.lastName ?? null;
+    }
+
+    if (hasProp("trainingProfile")) {
+      updateParts.push("trainingProfile = :trainingProfile");
+      attributeValues[":trainingProfile"] = updates.trainingProfile ?? {};
+    }
+
+    // Always update updatedAt
+    updateParts.push("updatedAt = :updatedAt");
+
+    // If nothing besides updatedAt was provided, skip the call
+    if (updateParts.length === 1) {
+      return;
+    }
+
+    try {
+      await getDynamoDb().send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: `SET ${updateParts.join(", ")}`,
+          ExpressionAttributeValues: attributeValues,
+        })
+      );
+    } catch (error) {
+      console.error("Error updating user in DynamoDB:", error);
       throw error;
     }
   },
@@ -392,7 +484,7 @@ export const dynamoDBUsers = {
     amount: number = 1
   ): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -444,7 +536,7 @@ export const dynamoDBUsers = {
       const currentValue = (user[field] as number) || 0;
       const newValue = Math.max(0, currentValue - amount);
 
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -509,7 +601,7 @@ export const dynamoDBUsers = {
         attributeValues[":now"] = now;
       }
 
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -529,7 +621,7 @@ export const dynamoDBUsers = {
    */
   async delete(userId: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new DeleteCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -605,7 +697,7 @@ export const dynamoDBWorkouts = {
    */
   async list(userId: string, limit?: number): Promise<DynamoDBWorkout[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: WORKOUTS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -629,7 +721,7 @@ export const dynamoDBWorkouts = {
    */
   async get(userId: string, workoutId: string): Promise<DynamoDBWorkout | null> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new GetCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -678,7 +770,7 @@ export const dynamoDBWorkouts = {
     };
 
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new PutCommand({
           TableName: WORKOUTS_TABLE,
           Item: workoutData,
@@ -756,7 +848,7 @@ export const dynamoDBWorkouts = {
         attributeValues[":completedDate"] = updates.completedDate;
       }
 
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -778,7 +870,7 @@ export const dynamoDBWorkouts = {
    */
   async delete(userId: string, workoutId: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new DeleteCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -799,7 +891,7 @@ export const dynamoDBWorkouts = {
     endDate: string
   ): Promise<DynamoDBWorkout[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: WORKOUTS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -825,7 +917,7 @@ export const dynamoDBWorkouts = {
    */
   async search(userId: string, searchTerm: string): Promise<DynamoDBWorkout[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: WORKOUTS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -857,7 +949,7 @@ export const dynamoDBWorkouts = {
     date: string
   ): Promise<DynamoDBWorkout[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: WORKOUTS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -881,7 +973,7 @@ export const dynamoDBWorkouts = {
    */
   async getScheduled(userId: string): Promise<DynamoDBWorkout[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: WORKOUTS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -909,7 +1001,7 @@ export const dynamoDBWorkouts = {
     status: 'scheduled' | 'completed' | 'skipped' = 'scheduled'
   ): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -940,7 +1032,7 @@ export const dynamoDBWorkouts = {
     completedDate?: string
   ): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -967,7 +1059,7 @@ export const dynamoDBWorkouts = {
    */
   async unscheduleWorkout(userId: string, workoutId: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
@@ -1024,7 +1116,7 @@ export const dynamoDBBodyMetrics = {
    */
   async list(userId: string, limit?: number): Promise<DynamoDBBodyMetric[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: BODY_METRICS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -1048,7 +1140,7 @@ export const dynamoDBBodyMetrics = {
    */
   async get(userId: string, date: string): Promise<DynamoDBBodyMetric | null> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new GetCommand({
           TableName: BODY_METRICS_TABLE,
           Key: { userId, date },
@@ -1071,7 +1163,7 @@ export const dynamoDBBodyMetrics = {
     endDate: string
   ): Promise<DynamoDBBodyMetric[]> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: BODY_METRICS_TABLE,
           KeyConditionExpression: "userId = :userId AND #date BETWEEN :startDate AND :endDate",
@@ -1126,7 +1218,7 @@ export const dynamoDBBodyMetrics = {
     };
 
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new PutCommand({
           TableName: BODY_METRICS_TABLE,
           Item: metricData,
@@ -1145,7 +1237,7 @@ export const dynamoDBBodyMetrics = {
    */
   async delete(userId: string, date: string): Promise<void> {
     try {
-      await dynamoDb.send(
+      await getDynamoDb().send(
         new DeleteCommand({
           TableName: BODY_METRICS_TABLE,
           Key: { userId, date },
@@ -1162,7 +1254,7 @@ export const dynamoDBBodyMetrics = {
    */
   async getLatest(userId: string): Promise<DynamoDBBodyMetric | null> {
     try {
-      const result = await dynamoDb.send(
+      const result = await getDynamoDb().send(
         new QueryCommand({
           TableName: BODY_METRICS_TABLE,
           KeyConditionExpression: "userId = :userId",
@@ -1182,5 +1274,5 @@ export const dynamoDBBodyMetrics = {
   },
 };
 
-// Export DynamoDB client for custom queries
-export { dynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE };
+// Export DynamoDB client getter for custom queries
+export { getDynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE };
