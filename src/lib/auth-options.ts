@@ -10,6 +10,7 @@ import { type NextAuthOptions } from "next-auth";
 import { dynamoDBUsers } from "@/lib/dynamodb";
 import { randomUUID } from "crypto";
 import { compare } from "bcryptjs";
+import { maskEmail } from "@/lib/safe-logger";
 
 type GoogleProfile = {
   sub?: string;
@@ -124,12 +125,12 @@ providers.push(
         const user = await dynamoDBUsers.getByEmail(credentials.email);
 
         if (!user) {
-          console.log('[Credentials] User not found:', credentials.email);
+          console.log('[Credentials] User not found:', maskEmail(credentials.email));
           return null;
         }
 
         if (!user.passwordHash) {
-          console.log('[Credentials] User exists but has no password (OAuth user):', credentials.email);
+          console.log('[Credentials] User exists but has no password (OAuth user):', maskEmail(credentials.email));
           return null;
         }
 
@@ -137,11 +138,11 @@ providers.push(
         const isValid = await compare(credentials.password, user.passwordHash);
 
         if (!isValid) {
-          console.log('[Credentials] Invalid password for:', credentials.email);
+          console.log('[Credentials] Invalid password for:', maskEmail(credentials.email));
           return null;
         }
 
-        console.log('[Credentials] ✓ Successful login:', credentials.email);
+        console.log('[Credentials] ✓ Successful login:', maskEmail(credentials.email));
 
         // Return user object (signIn callback will handle DynamoDB sync)
         return {
@@ -227,7 +228,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // Refresh token every 24 hours of activity (sliding session)
+    updateAge: 5 * 60, // Refresh token every 5 minutes of activity (ensures subscription updates are reflected quickly)
   },
   cookies: {
     sessionToken: {
@@ -293,7 +294,7 @@ export const authOptions: NextAuthOptions = {
         if (existingUser) {
           // User exists! Use their existing ID
           user.id = existingUser.id;
-          console.log(`[Auth:SignIn] ✓ Existing user found for ${user.email} - ID: ${existingUser.id}`);
+          console.log(`[Auth:SignIn] ✓ Existing user found for ${maskEmail(user.email)} - ID: ${existingUser.id}`);
 
           // Update with latest profile info from OAuth provider
           await dynamoDBUsers.upsert({
@@ -307,7 +308,7 @@ export const authOptions: NextAuthOptions = {
           const newUserId = randomUUID();
           user.id = newUserId;
 
-          console.log(`[Auth:SignIn] ✓ Creating new user for ${user.email} - ID: ${newUserId}`);
+          console.log(`[Auth:SignIn] ✓ Creating new user for ${maskEmail(user.email)} - ID: ${newUserId}`);
 
           // Create user in DynamoDB with race condition protection
           // ConditionExpression ensures we don't overwrite if another request created this user concurrently
@@ -324,7 +325,7 @@ export const authOptions: NextAuthOptions = {
           } catch (error: any) {
             // If condition fails, another concurrent request created the user - fetch and use it
             if (error.name === 'ConditionalCheckFailedException') {
-              console.log(`[Auth:SignIn] ⚠️  Concurrent user creation detected for ${user.email}, fetching existing user`);
+              console.log(`[Auth:SignIn] ⚠️  Concurrent user creation detected for ${maskEmail(user.email)}, fetching existing user`);
               const concurrentUser = await dynamoDBUsers.getByEmail(user.email);
               if (concurrentUser) {
                 user.id = concurrentUser.id;
@@ -369,7 +370,7 @@ export const authOptions: NextAuthOptions = {
         if (user.email && user.email.trim()) {
           token.email = user.email;
           if (previousEmail && previousEmail !== user.email) {
-            console.warn(`[Auth:JWT] Email changed for user ${user.id}: ${previousEmail} → ${user.email}`);
+            console.warn(`[Auth:JWT] Email changed for user ${user.id}: ${maskEmail(previousEmail)} → ${maskEmail(user.email)}`);
           }
         }
         token.firstName = (user as { firstName?: string | null }).firstName ?? token.firstName ?? null;
@@ -385,11 +386,11 @@ export const authOptions: NextAuthOptions = {
           // Only update email if Google provides a real value (never overwrite with placeholder)
           if (googleProfile.email && googleProfile.email.trim()) {
             if (previousEmail && previousEmail !== googleProfile.email) {
-              console.warn(`[Auth:JWT] Google email differs from token: ${previousEmail} → ${googleProfile.email}`);
+              console.warn(`[Auth:JWT] Google email differs from token: ${maskEmail(previousEmail)} → ${maskEmail(googleProfile.email)}`);
             }
             token.email = googleProfile.email;
           } else if (googleProfile.email === null || googleProfile.email === "") {
-            console.warn(`[Auth:JWT] Google returned empty email - keeping existing: ${previousEmail}`);
+            console.warn(`[Auth:JWT] Google returned empty email - keeping existing: ${maskEmail(previousEmail)}`);
           }
           token.name = googleProfile.name ?? token.name;
           token.image = googleProfile.picture ?? token.image;
@@ -400,11 +401,11 @@ export const authOptions: NextAuthOptions = {
           // Only update email if Facebook provides a real value (never overwrite with placeholder)
           if (fbProfile.email && fbProfile.email.trim()) {
             if (previousEmail && previousEmail !== fbProfile.email) {
-              console.warn(`[Auth:JWT] Facebook email differs from token: ${previousEmail} → ${fbProfile.email}`);
+              console.warn(`[Auth:JWT] Facebook email differs from token: ${maskEmail(previousEmail)} → ${maskEmail(fbProfile.email)}`);
             }
             token.email = fbProfile.email;
           } else if (fbProfile.email === null || fbProfile.email === "") {
-            console.warn(`[Auth:JWT] Facebook returned empty email - keeping existing: ${previousEmail}`);
+            console.warn(`[Auth:JWT] Facebook returned empty email - keeping existing: ${maskEmail(previousEmail)}`);
           }
           token.name = fbProfile.name ?? token.name;
           token.image = fbProfile.picture?.data?.url ?? token.image;
@@ -422,7 +423,7 @@ export const authOptions: NextAuthOptions = {
             lastName: (token.lastName as string | null) ?? null,
           });
           if (isInitialSignIn) {
-            console.log(`[Auth:JWT] ✓ User ${token.id} synced to DynamoDB (${token.email})`);
+            console.log(`[Auth:JWT] ✓ User ${token.id} synced to DynamoDB (${maskEmail(token.email as string)})`);
           }
         } catch (error) {
           console.error(`[Auth:JWT] ✗ Failed to sync user ${token.id} to DynamoDB:`, error);

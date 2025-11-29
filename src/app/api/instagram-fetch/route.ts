@@ -83,8 +83,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // SECURITY FIX: Log masked token for debugging
-    console.log('[Instagram] Using APIFY token:', apifyApiToken.substring(0, 8) + '...')
+    // SECURITY FIX: Log masked token for debugging (only first 4 chars in production)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const maskedToken = isProduction ? apifyApiToken.substring(0, 4) + '***' : apifyApiToken.substring(0, 8) + '...';
+    console.log('[Instagram] Using APIFY token:', maskedToken);
 
     // Fetching Instagram URL
 

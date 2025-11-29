@@ -105,11 +105,16 @@ export type RateLimitKey = keyof typeof RATE_LIMITS;
  *
  * @param identifier - Usually userId, or IP address for unauthenticated endpoints
  * @param operation - The operation type (e.g., 'api:read', 'api:ocr')
+ * @param options - Optional configuration
+ * @param options.failClosed - If true, deny requests when Redis is down (default: false for reads, true for expensive ops)
  * @returns Result with success status and rate limit metadata
  */
 export async function checkRateLimit(
   identifier: string,
-  operation: RateLimitKey
+  operation: RateLimitKey,
+  options?: {
+    failClosed?: boolean;
+  }
 ): Promise<{
   success: boolean;
   limit: number;
@@ -140,8 +145,23 @@ export async function checkRateLimit(
   } catch (error) {
     console.error('[RateLimit] Error checking rate limit:', error);
 
-    // IMPORTANT: Fail open in case of Redis errors
-    // We don't want to block legitimate users if Redis is down
+    // Determine if we should fail closed (block requests) or open (allow requests)
+    // For expensive operations (OCR, AI, Instagram), default to fail closed to prevent abuse
+    const expensiveOps = ['api:ocr', 'api:ai', 'api:ai-generate', 'api:instagram'];
+    const shouldFailClosed = options?.failClosed ?? expensiveOps.includes(operation);
+
+    if (shouldFailClosed) {
+      console.error(`[RateLimit] CRITICAL: Redis down for ${operation} - blocking request for safety`);
+      return {
+        success: false,
+        limit: RATE_LIMITS[operation].requests,
+        remaining: 0,
+        reset: Date.now() + parseWindow(RATE_LIMITS[operation].window),
+      };
+    }
+
+    // For non-critical operations, fail open to not block legitimate users
+    console.warn(`[RateLimit] Redis down for ${operation} - allowing request (fail open)`);
     return {
       success: true,
       limit: 0,
