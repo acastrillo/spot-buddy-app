@@ -39,6 +39,7 @@ export interface DynamoDBUser {
   lastName?: string | null;
   emailVerified?: string | null;
   image?: string | null;
+  passwordHash?: string | null; // For email/password authentication
   createdAt: string;
   updatedAt: string;
 
@@ -140,9 +141,18 @@ export const dynamoDBUsers = {
 
   /**
    * Create or update user (upsert)
+   * @param options Optional DynamoDB options (e.g., ConditionExpression for race condition protection)
    */
-  async upsert(user: Partial<DynamoDBUser> & { id: string; email: string }): Promise<DynamoDBUser> {
+  async upsert(
+    user: Partial<DynamoDBUser> & { id: string; email: string },
+    options?: {
+      ConditionExpression?: string;
+      ExpressionAttributeNames?: Record<string, string>;
+    }
+  ): Promise<DynamoDBUser> {
     const now = new Date().toISOString();
+
+    // Build userData object - omit stripeCustomerId if null to avoid GSI validation errors
     const userData: DynamoDBUser = {
       id: user.id,
       email: user.email,
@@ -150,6 +160,7 @@ export const dynamoDBUsers = {
       lastName: user.lastName || null,
       emailVerified: user.emailVerified || null,
       image: user.image || null,
+      passwordHash: user.passwordHash || null,
       createdAt: user.createdAt || now,
       updatedAt: now,
 
@@ -177,11 +188,22 @@ export const dynamoDBUsers = {
       trainingProfile: user.trainingProfile || undefined,
     };
 
+    // Remove stripeCustomerId from item if it's null/undefined to avoid GSI validation errors
+    // (DynamoDB GSI requires non-null values for index keys)
+    const itemToWrite = { ...userData };
+    if (!itemToWrite.stripeCustomerId) {
+      delete (itemToWrite as any).stripeCustomerId;
+    }
+
     try {
       await getDynamoDb().send(
         new PutCommand({
           TableName: USERS_TABLE,
-          Item: userData,
+          Item: itemToWrite,
+          ...(options?.ConditionExpression && {
+            ConditionExpression: options.ConditionExpression,
+            ExpressionAttributeNames: options.ExpressionAttributeNames,
+          }),
         })
       );
 
@@ -225,9 +247,11 @@ export const dynamoDBUsers = {
       attributeValues[":status"] = subscription.status ?? null;
     }
 
-    if (hasProp("stripeCustomerId")) {
+    // Handle stripeCustomerId specially - can't SET to null due to GSI constraint
+    // Only SET if we have a non-null value
+    if (hasProp("stripeCustomerId") && subscription.stripeCustomerId) {
       updateParts.push("stripeCustomerId = :customerId");
-      attributeValues[":customerId"] = subscription.stripeCustomerId ?? null;
+      attributeValues[":customerId"] = subscription.stripeCustomerId;
     }
 
     if (hasProp("stripeSubscriptionId")) {

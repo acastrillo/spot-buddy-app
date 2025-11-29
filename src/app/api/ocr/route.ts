@@ -101,12 +101,18 @@ export async function POST(req: Request) {
         ? Math.round((lines.reduce((s, l) => s + (l.conf ?? 0), 0) / lines.length) * 10) / 10
         : undefined;
 
-    // Increment OCR usage
+    // Increment OCR usage (CRITICAL: Must succeed to prevent quota abuse)
     try {
       await dynamoDBUsers.incrementOCRUsage(userId);
     } catch (error) {
-      console.error('Failed to increment OCR usage:', error);
-      // Don't fail the request if quota tracking fails
+      console.error('[OCR] CRITICAL: Failed to increment OCR usage - blocking request:', error);
+      return NextResponse.json(
+        {
+          error: 'Quota tracking failed',
+          message: 'Unable to track OCR usage. Please try again.',
+        },
+        { status: 503 } // Service unavailable - temporary issue
+      );
     }
 
     // Get updated quota info

@@ -325,10 +325,24 @@ async function resolveUserByCustomer(
     const user = await dynamoDBUsers.getByEmail(email)
     if (user) {
       console.log(`[resolveUserByCustomer] Found user by email: userId=${user.id}`)
-      // Also update user's stripeCustomerId for future lookups
+      // Also update user's stripeCustomerId for future lookups (with race condition protection)
       if (!user.stripeCustomerId && stripeCustomerId) {
         console.log(`[resolveUserByCustomer] Linking stripeCustomerId=${stripeCustomerId} to user=${user.id}`)
-        await dynamoDBUsers.upsert({ id: user.id, email: user.email, stripeCustomerId })
+        try {
+          await dynamoDBUsers.upsert(
+            { id: user.id, email: user.email, stripeCustomerId },
+            {
+              // Only link if stripeCustomerId doesn't exist yet (prevent concurrent webhooks from overwriting)
+              ConditionExpression: 'attribute_not_exists(stripeCustomerId)',
+            }
+          )
+        } catch (error: any) {
+          if (error.name === 'ConditionalCheckFailedException') {
+            console.log(`[resolveUserByCustomer] ⚠️  stripeCustomerId already set for user=${user.id} (concurrent webhook)`)
+          } else {
+            throw error
+          }
+        }
       }
     }
     return user ? { userId: user.id, tier } : null

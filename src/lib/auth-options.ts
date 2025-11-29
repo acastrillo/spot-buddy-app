@@ -5,12 +5,11 @@
 
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
-import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/db";
 import { type NextAuthOptions } from "next-auth";
 import { dynamoDBUsers } from "@/lib/dynamodb";
+import { randomUUID } from "crypto";
+import { compare } from "bcryptjs";
 
 type GoogleProfile = {
   sub?: string;
@@ -69,7 +68,6 @@ if (hasGoogle && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     GoogleProvider({
       clientId: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true, // Allow existing users to link Google account
       authorization: { params: { prompt: "consent", access_type: "offline", response_type: "code" } },
       profile(profile) {
         const googleProfile = profile as GoogleProfile;
@@ -91,7 +89,6 @@ if (hasFacebook && FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET) {
     FacebookProvider({
       clientId: FACEBOOK_CLIENT_ID,
       clientSecret: FACEBOOK_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true, // Allow existing users to link Facebook account
       profile(profile) {
         const fbProfile = profile as FacebookProfile;
         return {
@@ -107,22 +104,60 @@ if (hasFacebook && FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET) {
   );
 }
 
-if (hasEmail && EMAIL_SERVER_HOST && EMAIL_FROM) {
-  providers.push(
-    EmailProvider({
-      server: {
-        host: EMAIL_SERVER_HOST,
-        port: emailPort,
-        auth: {
-          user: EMAIL_SERVER_USER,
-          pass: EMAIL_SERVER_PASSWORD,
-        },
-        secure: emailSecure,
-      },
-      from: EMAIL_FROM,
-    })
-  );
-}
+// Email/Password authentication (replaces EmailProvider magic links)
+providers.push(
+  CredentialsProvider({
+    id: "credentials",
+    name: "Email and Password",
+    credentials: {
+      email: { label: "Email", type: "email", placeholder: "your@email.com" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) {
+        console.log('[Credentials] Missing email or password');
+        return null;
+      }
+
+      try {
+        // Look up user by email
+        const user = await dynamoDBUsers.getByEmail(credentials.email);
+
+        if (!user) {
+          console.log('[Credentials] User not found:', credentials.email);
+          return null;
+        }
+
+        if (!user.passwordHash) {
+          console.log('[Credentials] User exists but has no password (OAuth user):', credentials.email);
+          return null;
+        }
+
+        // Verify password
+        const isValid = await compare(credentials.password, user.passwordHash);
+
+        if (!isValid) {
+          console.log('[Credentials] Invalid password for:', credentials.email);
+          return null;
+        }
+
+        console.log('[Credentials] ✓ Successful login:', credentials.email);
+
+        // Return user object (signIn callback will handle DynamoDB sync)
+        return {
+          id: user.id,
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        };
+      } catch (error) {
+        console.error('[Credentials] Error during authorization:', error);
+        return null;
+      }
+    },
+  })
+);
 
 // Development-only credentials provider for local testing
 if (process.env.NODE_ENV === "development") {
@@ -185,7 +220,8 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // NOTE: We don't use PrismaAdapter - DynamoDB is our single source of truth
+  // The signIn callback below handles user lookup/creation in DynamoDB
   providers,
   secret: AUTH_SECRET,
   session: {
@@ -235,6 +271,81 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/auth/login" },
   debug: process.env.AUTH_DEBUG === "true", // Only enable debug logs when AUTH_DEBUG=true
   callbacks: {
+    /**
+     * signIn callback - runs BEFORE jwt callback
+     * This is where we prevent duplicate user creation by checking DynamoDB first
+     */
+    async signIn({ user, account, profile }) {
+      try {
+        // Skip for credentials provider (dev login handles its own logic)
+        if (account?.provider === 'dev-credentials' || account?.provider === 'credentials') {
+          return true;
+        }
+
+        if (!user.email) {
+          console.error('[Auth:SignIn] No email provided - denying sign-in');
+          return false;
+        }
+
+        // Check if user already exists in DynamoDB by email
+        const existingUser = await dynamoDBUsers.getByEmail(user.email);
+
+        if (existingUser) {
+          // User exists! Use their existing ID
+          user.id = existingUser.id;
+          console.log(`[Auth:SignIn] ✓ Existing user found for ${user.email} - ID: ${existingUser.id}`);
+
+          // Update with latest profile info from OAuth provider
+          await dynamoDBUsers.upsert({
+            id: existingUser.id,
+            email: user.email,
+            firstName: (user as any).firstName || existingUser.firstName || null,
+            lastName: (user as any).lastName || existingUser.lastName || null,
+          });
+        } else {
+          // New user - create with new UUID
+          const newUserId = randomUUID();
+          user.id = newUserId;
+
+          console.log(`[Auth:SignIn] ✓ Creating new user for ${user.email} - ID: ${newUserId}`);
+
+          // Create user in DynamoDB with race condition protection
+          // ConditionExpression ensures we don't overwrite if another request created this user concurrently
+          try {
+            await dynamoDBUsers.upsert({
+              id: newUserId,
+              email: user.email,
+              firstName: (user as any).firstName || null,
+              lastName: (user as any).lastName || null,
+            }, {
+              ConditionExpression: 'attribute_not_exists(#id)',
+              ExpressionAttributeNames: { '#id': 'id' },
+            });
+          } catch (error: any) {
+            // If condition fails, another concurrent request created the user - fetch and use it
+            if (error.name === 'ConditionalCheckFailedException') {
+              console.log(`[Auth:SignIn] ⚠️  Concurrent user creation detected for ${user.email}, fetching existing user`);
+              const concurrentUser = await dynamoDBUsers.getByEmail(user.email);
+              if (concurrentUser) {
+                user.id = concurrentUser.id;
+                console.log(`[Auth:SignIn] ✓ Using concurrent user ID: ${concurrentUser.id}`);
+              } else {
+                throw new Error('Race condition: User creation failed but cannot find existing user');
+              }
+            } else {
+              throw error; // Re-throw other errors
+            }
+          }
+        }
+
+        return true;
+      } catch (error) {
+        console.error('[Auth:SignIn] Error during sign-in:', error);
+        // Allow sign-in to proceed even if DynamoDB fails (will retry in JWT callback)
+        return true;
+      }
+    },
+
     async jwt({ token, account, profile, user }) {
       const isInitialSignIn = !!user;
       const provider = account?.provider || (token.provider as string | undefined) || 'unknown';
@@ -251,7 +362,7 @@ export const authOptions: NextAuthOptions = {
       // Track email changes for debugging
       const previousEmail = token.email as string | undefined;
 
-      // On initial sign-in, user will be defined (from Prisma adapter). Capture base identity.
+      // On initial sign-in, user will be defined (from signIn callback above). Capture base identity.
       if (user) {
         token.id = user.id;
         // Only update email if we have a real value from the provider (not null/empty)
@@ -300,7 +411,8 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Sync user to DynamoDB on first login or when email is present
+      // Backup sync to DynamoDB (primary sync happens in signIn callback)
+      // This ensures user exists even if signIn callback failed
       if (token.id && token.email) {
         try {
           await dynamoDBUsers.upsert({
