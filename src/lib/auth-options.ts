@@ -289,12 +289,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Check if user already exists in DynamoDB by email
+        // CRITICAL: This uses the email-index GSI which may have eventual consistency
         const existingUser = await dynamoDBUsers.getByEmail(user.email);
 
         if (existingUser) {
           // User exists! Use their existing ID
           user.id = existingUser.id;
-          console.log(`[Auth:SignIn] ✓ Existing user found for ${maskEmail(user.email)} - ID: ${existingUser.id}`);
+          console.log(`[Auth:SignIn] ✓ Existing user found for ${maskEmail(user.email)} - ID: ${existingUser.id} (provider: ${account?.provider})`);
+          console.log(`[Auth:SignIn] User created at: ${existingUser.createdAt}, last updated: ${existingUser.updatedAt}`);
 
           // Update with latest profile info from OAuth provider
           await dynamoDBUsers.upsert({
@@ -308,7 +310,8 @@ export const authOptions: NextAuthOptions = {
           const newUserId = randomUUID();
           user.id = newUserId;
 
-          console.log(`[Auth:SignIn] ✓ Creating new user for ${maskEmail(user.email)} - ID: ${newUserId}`);
+          console.log(`[Auth:SignIn] ✓ Creating NEW user for ${maskEmail(user.email)} - ID: ${newUserId} (provider: ${account?.provider})`);
+          console.log(`[Auth:SignIn] WARNING: About to create new user. If this email already exists, this indicates a race condition or GSI inconsistency!`);
 
           // Create user in DynamoDB with race condition protection
           // ConditionExpression ensures we don't overwrite if another request created this user concurrently
@@ -336,6 +339,20 @@ export const authOptions: NextAuthOptions = {
             } else {
               throw error; // Re-throw other errors
             }
+          }
+
+          // DUPLICATE DETECTION: Check if multiple users exist with this email after creation
+          try {
+            const allUsersWithEmail = await dynamoDBUsers.getAllByEmail(user.email);
+            if (allUsersWithEmail && allUsersWithEmail.length > 1) {
+              console.error(`[Auth:SignIn] 🚨 DUPLICATE USER DETECTED! Email ${maskEmail(user.email)} has ${allUsersWithEmail.length} users:`);
+              allUsersWithEmail.forEach((u, i) => {
+                console.error(`  ${i + 1}. ID: ${u.id}, created: ${u.createdAt}`);
+              });
+              console.error(`[Auth:SignIn] Using user ID: ${user.id}. Other duplicate(s) should be manually deleted!`);
+            }
+          } catch (error) {
+            console.error('[Auth:SignIn] Failed to check for duplicates:', error);
           }
         }
 

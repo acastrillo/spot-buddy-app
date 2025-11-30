@@ -95,7 +95,7 @@ export const dynamoDBUsers = {
   },
 
   /**
-   * Get user by email
+   * Get user by email (returns first match only - use getAllByEmail to detect duplicates)
    */
   async getByEmail(email: string): Promise<DynamoDBUser | null> {
     try {
@@ -114,6 +114,29 @@ export const dynamoDBUsers = {
     } catch (error) {
       console.error("Error querying user by email from DynamoDB:", error);
       return null;
+    }
+  },
+
+  /**
+   * Get ALL users with the same email (for duplicate detection)
+   */
+  async getAllByEmail(email: string): Promise<DynamoDBUser[]> {
+    try {
+      const result = await getDynamoDb().send(
+        new QueryCommand({
+          TableName: USERS_TABLE,
+          IndexName: "email-index",
+          KeyConditionExpression: "email = :email",
+          ExpressionAttributeValues: {
+            ":email": email,
+          },
+        })
+      );
+
+      return (result.Items as DynamoDBUser[]) || [];
+    } catch (error) {
+      console.error("Error querying all users by email from DynamoDB:", error);
+      return [];
     }
   },
 
@@ -289,8 +312,13 @@ export const dynamoDBUsers = {
       return;
     }
 
+    console.log(`[DynamoDB] Updating user ${userId} subscription:`, {
+      updateExpression: `SET ${updateParts.join(", ")}`,
+      attributeValues,
+    });
+
     try {
-      await getDynamoDb().send(
+      const result = await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -298,8 +326,12 @@ export const dynamoDBUsers = {
           ExpressionAttributeValues: attributeValues,
         })
       );
+      console.log(`[DynamoDB] ✓ Successfully updated user ${userId} subscription`);
+      return;
     } catch (error) {
-      console.error("Error updating subscription in DynamoDB:", error);
+      console.error(`[DynamoDB] ✗ CRITICAL: Failed to update subscription for user ${userId}:`, error);
+      console.error(`[DynamoDB] Update expression: SET ${updateParts.join(", ")}`);
+      console.error(`[DynamoDB] Attribute values:`, JSON.stringify(attributeValues));
       throw error;
     }
   },
