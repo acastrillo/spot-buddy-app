@@ -35,16 +35,26 @@ function validateStripeMode(secretKey: string): void {
   const mode = detectStripeMode(secretKey)
   const nodeEnv = process.env.NODE_ENV
   const isProduction = nodeEnv === 'production'
+  const allowTestInProd = process.env.STRIPE_ALLOW_TEST_IN_PRODUCTION === 'true'
 
   // Log the detected mode for visibility
   console.log(`[Stripe] Detected key mode: ${mode}, Environment: ${nodeEnv}`)
 
-  // CRITICAL: Never use test keys in production
-  if (isProduction && mode === 'test') {
+  // CRITICAL: Never use test keys in production (unless explicitly allowed for sandbox testing)
+  if (isProduction && mode === 'test' && !allowTestInProd) {
     throw new Error(
       'CRITICAL SECURITY ERROR: Test Stripe keys detected in production environment! ' +
       'This will prevent real payments from being processed. ' +
-      'Please set STRIPE_SECRET_KEY to a live key (sk_live_...)'
+      'Please set STRIPE_SECRET_KEY to a live key (sk_live_...) or set STRIPE_ALLOW_TEST_IN_PRODUCTION=true for sandbox testing.'
+    )
+  }
+
+  // WARNING: Using test keys in production with explicit override (sandbox mode)
+  if (isProduction && mode === 'test' && allowTestInProd) {
+    console.warn(
+      '⚠️  WARNING: Using TEST Stripe keys in production environment (sandbox mode enabled)! ' +
+      'No real payments will be processed. Only test cards will work. ' +
+      'Set STRIPE_ALLOW_TEST_IN_PRODUCTION=false and use live keys for real payments.'
     )
   }
 
