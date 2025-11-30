@@ -1,76 +1,95 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
-import { stripe, SUBSCRIPTION_TIERS } from '@/lib/stripe'
 import { dynamoDBUsers } from '@/lib/dynamodb'
+import {
+  assertPaidTier,
+  buildMetadata,
+  getPriceIdForTier,
+  getReturnUrls,
+  getStripe,
+} from '@/lib/stripe-server'
+
+export const runtime = 'nodejs'
+
+const requestSchema = z.object({
+  tier: z.enum(['starter', 'pro', 'elite']),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    // SECURITY FIX: Use new auth utility
-    const auth = await getAuthenticatedUserId();
-    if ('error' in auth) return auth.error;
-    const { userId } = auth;
+    const auth = await getAuthenticatedUserId()
+    if ('error' in auth) return auth.error
+    const { userId } = auth
 
-    const { tier } = await req.json()
-
-    // Validate tier
-    if (!['starter', 'pro', 'elite'].includes(tier)) {
-      return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 400 })
+    // Safe JSON parsing to prevent malformed requests from crashing
+    let body
+    try {
+      body = await req.json()
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
 
-    // Get user from DynamoDB
+    const parsed = requestSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
+    const tier = assertPaidTier(parsed.data.tier)
+    const stripe = getStripe()
+
     const user = await dynamoDBUsers.get(userId)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get or create Stripe customer
-    let customerId = user.stripeCustomerId
+    let customerId = user.stripeCustomerId?.trim() || null
 
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
-        metadata: {
-          userId: user.id,
-        },
+        metadata: { userId },
       })
       customerId = customer.id
 
-      // Update user with Stripe customer ID
       await dynamoDBUsers.upsert({ id: userId, email: user.email, stripeCustomerId: customerId })
     }
 
-    const tierConfig = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS]
-    const priceId = tierConfig.priceId
+    const priceId = getPriceIdForTier(tier)
 
     if (!priceId) {
       return NextResponse.json({ error: 'Price ID not configured for this tier' }, { status: 500 })
     }
 
-    // Create Stripe checkout session
-    const checkoutSession = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
+    const { successUrl, cancelUrl } = getReturnUrls()
+    const metadata = buildMetadata(userId, tier)
+    const idempotencyKey = req.headers.get('Idempotency-Key') || randomUUID()
+
+    const checkoutSession = await stripe.checkout.sessions.create(
+      {
+        ui_mode: 'hosted',
+        mode: 'subscription',
+        customer: customerId,
+        payment_method_types: ['card'],
+        billing_address_collection: 'auto',
+        allow_promotion_codes: true,
+        client_reference_id: userId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata,
+        subscription_data: {
+          metadata,
         },
-      ],
-      success_url: `${process.env.NEXTAUTH_URL}/settings?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/settings?canceled=true`,
-      metadata: {
-        userId: user.id,
-        tier,
-      },
-      subscription_data: {
-        metadata: {
-          userId: user.id,
-          tier,
+        customer_update: {
+          address: 'auto',
+          name: 'auto',
         },
       },
-    })
+      { idempotencyKey }
+    )
 
     return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {

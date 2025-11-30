@@ -1,0 +1,139 @@
+import Stripe from 'stripe'
+
+const API_VERSION: Stripe.LatestApiVersion = '2024-12-18.acacia'
+const PAID_TIERS = ['starter', 'pro', 'elite'] as const
+
+export type PaidTier = (typeof PAID_TIERS)[number]
+
+let stripeInstance: Stripe | null = null
+
+function getStripeSecretKey(): string {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new Error('STRIPE_SECRET_KEY is not set')
+  return key
+}
+
+/**
+ * Detect if a Stripe key is in test or live mode
+ * Returns 'test' or 'live' based on key prefix
+ */
+function detectStripeMode(key: string): 'test' | 'live' | 'unknown' {
+  if (key.startsWith('sk_test_') || key.startsWith('pk_test_')) {
+    return 'test'
+  }
+  if (key.startsWith('sk_live_') || key.startsWith('pk_live_')) {
+    return 'live'
+  }
+  return 'unknown'
+}
+
+/**
+ * Validate Stripe keys against environment
+ * CRITICAL: Prevents using test keys in production or live keys in development
+ */
+function validateStripeMode(secretKey: string): void {
+  const mode = detectStripeMode(secretKey)
+  const nodeEnv = process.env.NODE_ENV
+  const isProduction = nodeEnv === 'production'
+
+  // Log the detected mode for visibility
+  console.log(`[Stripe] Detected key mode: ${mode}, Environment: ${nodeEnv}`)
+
+  // CRITICAL: Never use test keys in production
+  if (isProduction && mode === 'test') {
+    throw new Error(
+      'CRITICAL SECURITY ERROR: Test Stripe keys detected in production environment! ' +
+      'This will prevent real payments from being processed. ' +
+      'Please set STRIPE_SECRET_KEY to a live key (sk_live_...)'
+    )
+  }
+
+  // WARNING: Using live keys in development/test (allow but warn)
+  if (!isProduction && mode === 'live') {
+    console.warn(
+      '⚠️  WARNING: Live Stripe keys detected in non-production environment! ' +
+      'Real charges will be processed. Consider using test keys (sk_test_...) for development.'
+    )
+  }
+
+  // ERROR: Unknown key format
+  if (mode === 'unknown') {
+    throw new Error(
+      'Invalid Stripe secret key format. Expected format: sk_test_... or sk_live_...'
+    )
+  }
+}
+
+export function getStripe(): Stripe {
+  if (typeof window !== 'undefined') {
+    throw new Error('Stripe server client must not be used in the browser')
+  }
+
+  if (!stripeInstance) {
+    const secretKey = getStripeSecretKey()
+
+    // SECURITY: Validate key mode against environment
+    validateStripeMode(secretKey)
+
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: API_VERSION,
+      typescript: true,
+    })
+  }
+
+  return stripeInstance
+}
+
+export function assertPaidTier(tier: string): PaidTier {
+  if (!PAID_TIERS.includes(tier as PaidTier)) {
+    throw new Error('Invalid subscription tier')
+  }
+  return tier as PaidTier
+}
+
+export function getPriceIdForTier(tier: PaidTier): string {
+  const envKeys: Record<PaidTier, (keyof NodeJS.ProcessEnv)[]> = {
+    starter: ['STRIPE_PRICE_STARTER', 'NEXT_PUBLIC_STRIPE_PRICE_STARTER'],
+    pro: ['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
+    elite: ['STRIPE_PRICE_ELITE', 'NEXT_PUBLIC_STRIPE_PRICE_ELITE'],
+  }
+
+  for (const key of envKeys[tier]) {
+    const value = process.env[key]
+    if (value) return value
+  }
+
+  throw new Error(`Price ID for tier "${tier}" is not configured`)
+}
+
+export function getReturnUrls() {
+  const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) {
+    throw new Error('NEXTAUTH_URL or NEXT_PUBLIC_APP_URL must be set for Stripe redirects')
+  }
+
+  return {
+    successUrl: `${appUrl}/settings?session_id={CHECKOUT_SESSION_ID}&success=true&refresh_session=true`,
+    cancelUrl: `${appUrl}/settings?canceled=true`,
+  }
+}
+
+export function getWebhookSecret(): string {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!secret) {
+    throw new Error('STRIPE_WEBHOOK_SECRET is not set')
+  }
+  return secret
+}
+
+export function buildMetadata(userId: string, tier: PaidTier) {
+  return { userId, tier }
+}
+
+export function constructEventFromPayload(rawBody: string, signature: string | null): Stripe.Event {
+  if (!signature) {
+    throw new Error('Missing stripe-signature header')
+  }
+
+  return getStripe().webhooks.constructEvent(rawBody, signature, getWebhookSecret())
+}

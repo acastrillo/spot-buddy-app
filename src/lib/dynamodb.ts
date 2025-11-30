@@ -29,6 +29,7 @@ function getDynamoDb(): DynamoDBDocumentClient {
 // Table names from environment
 const USERS_TABLE = process.env.DYNAMODB_USERS_TABLE || "spotter-users";
 const WORKOUTS_TABLE = process.env.DYNAMODB_WORKOUTS_TABLE || "spotter-workouts";
+const WEBHOOK_EVENTS_TABLE = process.env.DYNAMODB_WEBHOOK_EVENTS_TABLE || "spotter-webhook-events";
 
 // User type matching Prisma schema + subscription fields
 // Note: Dates are stored as ISO strings in DynamoDB
@@ -1298,5 +1299,74 @@ export const dynamoDBBodyMetrics = {
   },
 };
 
+// Webhook Event type for idempotency tracking
+export interface DynamoDBWebhookEvent {
+  eventId: string; // Stripe event ID (primary key)
+  eventType: string; // Event type for debugging (e.g., "customer.subscription.updated")
+  processedAt: string; // ISO timestamp when processed
+  ttl: number; // Unix timestamp for auto-expiration (7 days after processing)
+}
+
+// Webhook event operations for idempotency
+export const dynamoDBWebhookEvents = {
+  /**
+   * Check if a webhook event has already been processed
+   * Returns the existing event if found, null if not processed yet
+   */
+  async isProcessed(eventId: string): Promise<DynamoDBWebhookEvent | null> {
+    try {
+      const result = await getDynamoDb().send(
+        new GetCommand({
+          TableName: WEBHOOK_EVENTS_TABLE,
+          Key: { eventId },
+        })
+      );
+
+      return result.Item as DynamoDBWebhookEvent | null;
+    } catch (error) {
+      console.error("[WebhookEvents] Error checking if event processed:", error);
+      // Fail closed: if we can't check, assume not processed to avoid blocking legitimate events
+      // but log the error for investigation
+      return null;
+    }
+  },
+
+  /**
+   * Mark a webhook event as processed
+   * Uses conditional expression to prevent race conditions (only write if eventId doesn't exist)
+   */
+  async markProcessed(eventId: string, eventType: string): Promise<void> {
+    const now = new Date();
+    const processedAt = now.toISOString();
+    // TTL: 7 days (604800 seconds) from now for auto-expiration
+    const ttl = Math.floor(now.getTime() / 1000) + 604800;
+
+    try {
+      await getDynamoDb().send(
+        new PutCommand({
+          TableName: WEBHOOK_EVENTS_TABLE,
+          Item: {
+            eventId,
+            eventType,
+            processedAt,
+            ttl,
+          },
+          // Only write if eventId doesn't exist yet (prevent duplicate marking)
+          ConditionExpression: 'attribute_not_exists(eventId)',
+        })
+      );
+    } catch (error: any) {
+      // If condition fails, event was already marked (race condition)
+      if (error.name === 'ConditionalCheckFailedException') {
+        console.log(`[WebhookEvents] ⚠️  Event ${eventId} already marked as processed (concurrent processing)`);
+        return; // This is expected in race conditions, not an error
+      }
+      // For other errors, re-throw so caller knows marking failed
+      console.error(`[WebhookEvents] CRITICAL: Failed to mark event ${eventId} as processed:`, error);
+      throw error;
+    }
+  },
+};
+
 // Export DynamoDB client getter for custom queries
-export { getDynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE };
+export { getDynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE, WEBHOOK_EVENTS_TABLE };

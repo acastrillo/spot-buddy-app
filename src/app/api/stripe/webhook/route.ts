@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { dynamoDBUsers } from '@/lib/dynamodb'
+import { dynamoDBUsers, dynamoDBWebhookEvents } from '@/lib/dynamodb'
 import { PaidTier, assertPaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
 
 export const runtime = 'nodejs'
@@ -16,6 +16,20 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[Webhook] Signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  // SECURITY: Idempotency check - prevent duplicate processing of webhook events
+  // Stripe retries webhooks, so we need to track which events we've already processed
+  try {
+    const alreadyProcessed = await dynamoDBWebhookEvents.isProcessed(event.id)
+    if (alreadyProcessed) {
+      console.log(`[Webhook:${event.id}] ⚠️  Event already processed at ${alreadyProcessed.processedAt} - returning success to acknowledge`)
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+  } catch (error) {
+    console.error(`[Webhook:${event.id}] CRITICAL: Failed to check idempotency - blocking request for safety:`, error)
+    // Fail closed: if we can't check idempotency, block the request to prevent duplicate processing
+    return NextResponse.json({ error: 'Idempotency check failed' }, { status: 503 })
   }
 
   try {
@@ -40,6 +54,16 @@ export async function POST(req: NextRequest) {
         break
       default:
         console.log(`[Webhook:${event.id}] Unhandled event type: ${event.type}`)
+    }
+
+    // Mark event as processed after successful handling
+    try {
+      await dynamoDBWebhookEvents.markProcessed(event.id, event.type)
+      console.log(`[Webhook:${event.id}] ✓ Marked event as processed`)
+    } catch (error) {
+      console.error(`[Webhook:${event.id}] WARNING: Failed to mark event as processed (may be reprocessed on retry):`, error)
+      // Don't fail the webhook if we can't mark it processed - better to potentially reprocess
+      // than to reject and cause Stripe to keep retrying indefinitely
     }
 
     return NextResponse.json({ received: true })
