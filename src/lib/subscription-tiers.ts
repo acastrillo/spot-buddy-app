@@ -26,7 +26,8 @@ export const SUBSCRIPTION_TIERS = {
   starter: {
     name: 'Starter',
     price: 7.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_STARTER,
+    // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
+    priceId: process.env.STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
     features: [
       '3 OCR scans per week',
       '5 Instagram saves per week',
@@ -48,7 +49,8 @@ export const SUBSCRIPTION_TIERS = {
   pro: {
     name: 'Pro',
     price: 14.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.STRIPE_PRICE_PRO,
+    // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
+    priceId: process.env.STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
     features: [
       '5 OCR scans per week',
       '7 Instagram saves per week',
@@ -71,7 +73,8 @@ export const SUBSCRIPTION_TIERS = {
   elite: {
     name: 'Elite',
     price: 34.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || process.env.STRIPE_PRICE_ELITE,
+    // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
+    priceId: process.env.STRIPE_PRICE_ELITE || process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE,
     features: [
       '10 workout image saves per week',
       '12 Instagram saves per week',

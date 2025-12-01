@@ -1,0 +1,2016 @@
+{
+    "events": [
+        {
+            "timestamp": 1764523300100,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300100,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "[Webhook:evt_1SZEJbHqcH7hy1ecRESxr6Lu] checkout.session.completed: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  sessionId: 'cs_test_b15nsDwmbsFswEU5GfPxRQaJJBSAYHxQmolmFt4vd72UFZ3AcwIjIZtqqw',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  metadataUserId: 'b7bd0a33-fc85-4f23-84b3-91f14dc9415d',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  metadataTier: 'elite',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  customerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  customerEmail: 'acastrillo87@gmail.com',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "  clientReferenceId: 'b7bd0a33-fc85-4f23-84b3-91f14dc9415d'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300101,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300116,
+            "message": "[Webhook:evt_1SZEJbHqcH7hy1ecRESxr6Lu] Updating user b7bd0a33-fc85-4f23-84b3-91f14dc9415d to tier=elite, status=active, subscriptionId=sub_1SZEJYHqcH7hy1eca9giEelx",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300125,
+            "message": "[Webhook:evt_1SZEJbHqcH7hy1ecRESxr6Lu] Successfully updated user b7bd0a33-fc85-4f23-84b3-91f14dc9415d subscription",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300136,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJbHqcH7hy1ecRESxr6Lu as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300137,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "[Webhook:evt_1SZEJbHqcH7hy1ecRESxr6Lu] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300138,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300277,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecmfM9WCCM] subscription.upsert: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "  subscriptionId: 'sub_1SZEJYHqcH7hy1eca9giEelx',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "  metadataUserId: 'b7bd0a33-fc85-4f23-84b3-91f14dc9415d',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "  metadataTier: 'elite',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "  customerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "  status: 'incomplete'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300279,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecmfM9WCCM] Updating user b7bd0a33-fc85-4f23-84b3-91f14dc9415d: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  status: 'inactive',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  stripeCustomerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  stripeSubscriptionId: 'sub_1SZEJYHqcH7hy1eca9giEelx',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  startDate: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  endDate: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  trialEndsAt: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "  tier: 'elite'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300285,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300292,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecmfM9WCCM] Successfully updated user b7bd0a33-fc85-4f23-84b3-91f14dc9415d subscription",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ecmfM9WCCM as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300302,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecmfM9WCCM] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300303,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecFOynNyFL] subscription.upsert: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  subscriptionId: 'sub_1SZEJYHqcH7hy1eca9giEelx',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  metadataUserId: 'b7bd0a33-fc85-4f23-84b3-91f14dc9415d',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  metadataTier: 'elite',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  customerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "  status: 'active'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300327,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecFOynNyFL] Updating user b7bd0a33-fc85-4f23-84b3-91f14dc9415d: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  status: 'active',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  stripeCustomerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  stripeSubscriptionId: 'sub_1SZEJYHqcH7hy1eca9giEelx',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  startDate: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  endDate: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  trialEndsAt: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "  tier: 'elite'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300336,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300343,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecFOynNyFL] Successfully updated user b7bd0a33-fc85-4f23-84b3-91f14dc9415d subscription",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ecFOynNyFL as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300418,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecFOynNyFL] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300419,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300532,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300533,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecvLyR4AHR] Unhandled event type: invoice.created",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ecvLyR4AHR as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300543,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecvLyR4AHR] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300544,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300545,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300545,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300545,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300545,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300627,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ec8Jm9Ss2o] Unhandled event type: invoice.finalized",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ec8Jm9Ss2o as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300636,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ec8Jm9Ss2o] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300638,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300842,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ec9L0aaWFP] Unhandled event type: invoice.paid",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ec9L0aaWFP as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300853,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ec9L0aaWFP] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300855,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "[WebhookEvents] Error checking if event processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:GetItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:GetItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "    at async Object.isProcessed (.next/server/chunks/4023.js:1:14377) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecdSTZCran] invoice.payment.succeeded: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  invoiceId: 'in_1SZEJYHqcH7hy1ec1wiNcQtg',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  customerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  customerEmail: 'acastrillo87@gmail.com',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "  subscriptionId: undefined",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300902,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecdSTZCran] Resolved invoice context: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "  userId: 'b7bd0a33-fc85-4f23-84b3-91f14dc9415d',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "  subscriptionId: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "  customerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "  tier: 'elite'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300916,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecdSTZCran] Updating user b7bd0a33-fc85-4f23-84b3-91f14dc9415d: {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "  status: 'active',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "  stripeCustomerId: 'cus_TWGr9wsJ0j9JK7',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "  stripeSubscriptionId: null,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "  tier: 'elite'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300922,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300931,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecdSTZCran] Successfully updated user b7bd0a33-fc85-4f23-84b3-91f14dc9415d subscription",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "[WebhookEvents] CRITICAL: Failed to mark event evt_1SZEJcHqcH7hy1ecdSTZCran as processed: AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300940,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "[Webhook:evt_1SZEJcHqcH7hy1ecdSTZCran] WARNING: Failed to mark event as processed (may be reprocessed on retry): AccessDeniedException: User: arn:aws:sts::920013187591:assumed-role/SpotterTaskRole/5ecee310de52431c98af52429dc4b714 is not authorized to perform: dynamodb:PutItem on resource: arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events because no identity-based policy allows the dynamodb:PutItem action",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1537)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at <unknown> (.next/server/chunks/9725.js:1:1637)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at ag (.next/server/chunks/3192.js:11:18617)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async (.next/server/chunks/9725.js:10:28771)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async (.next/server/chunks/3192.js:1:1244)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async (.next/server/chunks/9725.js:10:17175)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async (.next/server/chunks/9725.js:10:11498)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async (.next/server/chunks/3192.js:9:11254)",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "    at async Object.markProcessed (.next/server/chunks/4023.js:1:14631) {",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "  '$fault': 'client',",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "  '$response': [d],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "  '$retryable': undefined,",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "  '$metadata': [Object],",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "  __type: 'com.amazon.coral.service#AccessDeniedException'",
+            "ingestionTime": 1764523303965
+        },
+        {
+            "timestamp": 1764523300941,
+            "message": "}",
+            "ingestionTime": 1764523303965
+        }
+    ],
+    "nextForwardToken": "f/39350184531155411530709466831983969180923292766673306001/s",
+    "nextBackwardToken": "b/39350184512400484818745212769952430113626020740143775744/s"
+}

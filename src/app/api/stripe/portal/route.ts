@@ -1,25 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
-import { stripe } from '@/lib/stripe'
 import { dynamoDBUsers } from '@/lib/dynamodb'
+import { getReturnUrls, getStripe } from '@/lib/stripe-server'
 
-export async function POST(req: NextRequest) {
+export const runtime = 'nodejs'
+
+export async function POST() {
   try {
-    // SECURITY FIX: Use new auth utility
-    const auth = await getAuthenticatedUserId();
-    if ('error' in auth) return auth.error;
-    const { userId } = auth;
+    const auth = await getAuthenticatedUserId()
+    if ('error' in auth) return auth.error
+    const { userId } = auth
 
-    // Get user from DynamoDB
     const user = await dynamoDBUsers.get(userId)
     if (!user || !user.stripeCustomerId) {
       return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
     }
 
-    // Create Stripe billing portal session
+    const stripe = getStripe()
+    const { successUrl } = getReturnUrls()
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
-      return_url: `${process.env.NEXTAUTH_URL}/settings`,
+      return_url: successUrl,
     })
 
     return NextResponse.json({ url: portalSession.url })

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuthStore } from "@/store"
-import { Login } from "@/components/auth/login"
+import { Landing } from "@/components/auth/landing"
 import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,7 +120,7 @@ export default function HomePage() {
   }, [user?.id])
 
   if (!isAuthenticated) {
-    return <Login />
+    return <Landing />
   }
 
   const stats = [

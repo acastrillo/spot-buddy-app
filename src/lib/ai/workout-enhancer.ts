@@ -176,6 +176,115 @@ CRITICAL: You must respond with ONLY valid JSON. Do not include any explanatory 
 - No special structure, just straight sets
 - Set workoutType: "standard"
 
+**CRITICAL: Instagram & Social Media Workout Parsing**
+
+When parsing workouts from Instagram, social media, or coach posts, follow these EXACT rules:
+
+**Sets × Reps Notation:**
+- "4×12" or "4x12" = 4 sets of 12 reps → sets: 4, reps: 12
+- "3×8-10" or "3x8–10" = 3 sets of 8-10 reps → sets: 3, reps: "8-10"
+- "5×5" = 5 sets of 5 reps → sets: 5, reps: 5
+
+**Per-Side Exercises:**
+- "4×8/leg" = 4 sets of 8 reps PER LEG → sets: 4, reps: "8/leg", notes: "Per leg"
+- "3×10/side" = 3 sets of 10 reps PER SIDE → sets: 3, reps: "10/side", notes: "Per side"
+- "2×6/arm" = 2 sets of 6 reps PER ARM → sets: 2, reps: "6/arm", notes: "Per arm"
+
+**Intensity & Tempo Markers:**
+- "@ RPE 7" = Rate of Perceived Exertion level 7 → notes: "RPE 7"
+- "@ moderate load" → notes: "Moderate load"
+- "3s eccentric" = 3-second lowering phase → notes: "3-second eccentric"
+- "tempo 3-1-1" → notes: "Tempo 3-1-1"
+
+**Rest Periods:**
+- "60s rest" → restSeconds: 60
+- "90s" → restSeconds: 90
+- "2min rest" → restSeconds: 120
+- "Rest 90s" → restSeconds: 90
+
+**Complexes & Supersets:**
+- "Into" keyword means perform exercises back-to-back (superset/complex)
+- Example: "8 RDLs Into 20m Farmer's Carry" = 2 exercises performed as a complex
+- Mark these with notes: "Part of complex" or "Superset"
+
+**EMOM Minute Markers:**
+- "Min 1: 8 Sprawls" = Exercise for minute 1 → name: "Sprawls", reps: 8
+- "Min 2: 20s KB Hold" = Exercise for minute 2 → name: "Kettlebell Hold", duration: 20
+- Each "Min X:" is a separate exercise entry
+
+**Time-Based Exercises:**
+- "20s Hold" → duration: 20 (not reps)
+- "30s Plank" → duration: 30
+- "1min Wall Sit" → duration: 60
+
+**Section Markers & Headers (IGNORE THESE):**
+- Emoji numbers: 1️⃣, 2️⃣, 3️⃣, 4️⃣ are section dividers (NOT exercises)
+- Section labels: "Strength", "Strength Endurance Complex", "Core", "Accessory" (NOT exercises)
+- Descriptive text: "builds strength", "focuses on cardio" (NOT exercises)
+
+**Promotional Content (IGNORE THESE):**
+- "Comment X for Y" = promotional text (NOT exercise)
+- "Want all 6 weeks..." = promotional text (NOT exercise)
+- Hashtags: #hyrox, #fitness = metadata (NOT exercises)
+- Social calls-to-action = ignore completely
+
+**Complex Example Parsing:**
+
+Input: "Front-Foot Elevated Split Squat 4×8–10/leg @ RPE 7, 60s rest"
+Output:
+{
+  "name": "Front-Foot Elevated Split Squat",
+  "sets": 4,
+  "reps": "8-10/leg",
+  "restSeconds": 60,
+  "notes": "RPE 7, per leg"
+}
+
+Input: "DB Floor Press 4×12 @ moderate load, 60s rest"
+Output:
+{
+  "name": "Dumbbell Floor Press",
+  "sets": 4,
+  "reps": 12,
+  "restSeconds": 60,
+  "notes": "Moderate load"
+}
+
+Input: "8 RDLs (BB or DBs, 3s eccentric) Into 20m Farmer's Carry (heavy)"
+Output (2 exercises):
+[
+  {
+    "name": "Romanian Deadlift",
+    "sets": 1,
+    "reps": 8,
+    "notes": "3-second eccentric, part of complex"
+  },
+  {
+    "name": "Farmer's Carry",
+    "sets": 1,
+    "reps": "20m",
+    "notes": "Heavy, part of complex"
+  }
+]
+
+Input: "Min 1: 8 Sprawls"
+Output:
+{
+  "name": "Sprawls",
+  "sets": 1,
+  "reps": 8,
+  "notes": "EMOM minute 1"
+}
+
+Input: "Min 2: 20s Bottoms-Up KB Hold/side"
+Output:
+{
+  "name": "Bottoms-Up Kettlebell Hold",
+  "sets": 1,
+  "duration": 20,
+  "notes": "Per side, EMOM minute 2"
+}
+
 **CRITICAL: Output Format (FLAT STRUCTURE)**
 
 Return JSON with this EXACT structure:
@@ -290,6 +399,70 @@ Return JSON with this EXACT structure:
     "Classic CrossFit triplet focusing on bodyweight movements",
     "Pace yourself to complete as many full rounds as possible"
   ]
+}
+
+**Instagram HYROX Workout (Complex Parsing):**
+{
+  "title": "HYROX Strength A - Push & Hinge",
+  "description": "Week 1 HYROX program focusing on single-leg strength, pressing endurance, and grip",
+  "workoutType": "standard",
+  "exercises": [
+    {
+      "name": "Front-Foot Elevated Split Squat",
+      "sets": 4,
+      "reps": "8-10/leg",
+      "restSeconds": 60,
+      "notes": "RPE 7, per leg"
+    },
+    {
+      "name": "Dumbbell Floor Press",
+      "sets": 4,
+      "reps": 12,
+      "restSeconds": 60,
+      "notes": "Moderate load"
+    },
+    {
+      "name": "Romanian Deadlift",
+      "sets": 3,
+      "reps": 8,
+      "restSeconds": 90,
+      "notes": "3-second eccentric, part of complex with Farmer's Carry"
+    },
+    {
+      "name": "Farmer's Carry",
+      "sets": 3,
+      "reps": "20m",
+      "restSeconds": 90,
+      "notes": "Heavy, part of complex with RDLs"
+    },
+    {
+      "name": "Sprawls",
+      "sets": 5,
+      "reps": 8,
+      "notes": "EMOM minute 1"
+    },
+    {
+      "name": "Bottoms-Up Kettlebell Hold",
+      "sets": 5,
+      "duration": 20,
+      "notes": "Per side, EMOM minute 2"
+    },
+    {
+      "name": "Leg Raise Over Kettlebell",
+      "sets": 2,
+      "reps": "6/side",
+      "notes": "Per side"
+    }
+  ],
+  "aiNotes": [
+    "Strength section focuses on unilateral leg work and pressing endurance",
+    "Complex combines posterior chain work with grip strength",
+    "EMOM section alternates between conditioning and stability work",
+    "3 rounds of RDL + Farmer's Carry complex with 90s rest between rounds"
+  ],
+  "tags": ["hyrox", "strength", "full-body", "emom"],
+  "difficulty": "intermediate",
+  "duration": 60
 }
 
 REMEMBER: Return ONLY the JSON object. No explanations, no markdown code blocks, no additional text. Just pure JSON.`;

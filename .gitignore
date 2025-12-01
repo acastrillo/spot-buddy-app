@@ -1,6 +1,7 @@
 ﻿# Node
 node_modules/
 .next/
+.nextignore
 .vscode/
 .DS_Store
 .env
@@ -12,3 +13,12 @@ package-lock.json
 
 task-def*.json
 .env.production
+
+# Build/test artifacts to reduce watcher churn
+infrastructure_backup/
+**/cdk.out/
+playwright-report/
+test-results/
+
+# Stripe configuration scripts with live keys (but not templates)
+scripts/update-stripe-to-live.ps1

@@ -11,11 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  User,
-  Shield,
-  Bell,
-  Smartphone,
-  Download,
   Trash2,
   ChevronRight,
   HelpCircle,
@@ -36,19 +31,45 @@ function SettingsContent() {
   const { isAuthenticated, user } = useAuthStore()
   const { update: updateSession } = useSession()
   const searchParams = useSearchParams()
-  const [firstName, setFirstName] = useState(user?.firstName || "test")
-  const [lastName, setLastName] = useState(user?.lastName || "test")
-  const [email, setEmail] = useState(user?.email || "test@test.com")
+  const [firstName, setFirstName] = useState(user?.firstName || "")
+  const [lastName, setLastName] = useState(user?.lastName || "")
+  const [email, setEmail] = useState(user?.email || "")
+  const [isSaving, setIsSaving] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Sync form state with user data only when user ID changes (initial load or user switch)
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "")
+      setLastName(user.lastName || "")
+      setEmail(user.email || "")
+    }
+  }, [user?.id])
 
   // Handle checkout success/cancel redirects from Stripe
   useEffect(() => {
     const success = searchParams.get('success')
     const canceled = searchParams.get('canceled')
+    const refreshSession = searchParams.get('refresh_session')
 
     if (success === 'true') {
       // Force session refresh to get updated subscription from DynamoDB
       updateSession()
+
+      // If refresh_session param is present, do aggressive refresh
+      if (refreshSession === 'true') {
+        // Try refreshing multiple times with delays to ensure DB changes propagate
+        setTimeout(() => updateSession(), 1000)
+        setTimeout(() => updateSession(), 2000)
+        setTimeout(() => {
+          updateSession()
+          // Reload the page after session updates to ensure fresh data
+          window.location.reload()
+        }, 3000)
+      }
+
       setNotification({
         type: 'success',
         message: 'Subscription updated successfully! Your new plan is now active.'
@@ -71,6 +92,91 @@ function SettingsContent() {
       return () => clearTimeout(timer)
     }
   }, [notification])
+
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    if (isSaving) return
+
+    setIsSaving(true)
+    setNotification(null)
+
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: firstName.trim() || null,
+          lastName: lastName.trim() || null,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      // Force session refresh to update user data from server
+      await updateSession()
+
+      setNotification({
+        type: 'success',
+        message: 'Profile updated successfully!',
+      })
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update profile',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Delete account
+  const handleDeleteAccount = async () => {
+    if (isDeleting) return
+
+    setIsDeleting(true)
+    setNotification(null)
+
+    try {
+      const response = await fetch('/api/user/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account')
+      }
+
+      // Show success message briefly before redirecting
+      setNotification({
+        type: 'success',
+        message: 'Account deleted successfully. Redirecting...',
+      })
+
+      // Sign out and redirect to home page
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 2000)
+    } catch (error) {
+      console.error('Error deleting account:', error)
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete account',
+      })
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
 
   if (!isAuthenticated) {
     return <Login />
@@ -120,54 +226,15 @@ function SettingsContent() {
       ]
     },
     {
-      title: "Account",
-      items: [
-        {
-          icon: User,
-          title: "Profile Information",
-          subtitle: "Update your personal details",
-          action: "chevron"
-        },
-        {
-          icon: Shield,
-          title: "Password & Security",
-          subtitle: "Change password and security settings",
-          action: "chevron"
-        }
-      ]
-    },
-    {
-      title: "Preferences",
-      items: [
-        {
-          icon: Bell,
-          title: "Notifications",
-          subtitle: "Manage workout reminders and updates",
-          action: "chevron"
-        },
-        {
-          icon: Smartphone,
-          title: "App Settings",
-          subtitle: "Customize your app experience",
-          action: "chevron"
-        }
-      ]
-    },
-    {
       title: "Data",
       items: [
-        {
-          icon: Download,
-          title: "Export Data",
-          subtitle: "Download your workout data",
-          action: "chevron"
-        },
         {
           icon: Trash2,
           title: "Delete Account",
           subtitle: "Permanently remove your account",
-          action: "chevron",
-          destructive: true
+          action: "button",
+          destructive: true,
+          onClick: "handleDeleteAccount"
         }
       ]
     },
@@ -256,8 +323,9 @@ function SettingsContent() {
                   </label>
                   <Input
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     type="email"
+                    disabled
+                    className="bg-surface/30 cursor-not-allowed opacity-60"
                   />
                   <p className="text-xs text-text-secondary mt-2">
                     Contact support to change your email address
@@ -265,8 +333,12 @@ function SettingsContent() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button className="px-6">
-                    Save Changes
+                  <Button
+                    className="px-6"
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               </CardContent>
@@ -319,6 +391,14 @@ function SettingsContent() {
                         <Link key={itemIndex} href={(item as any).href} className={buttonClasses}>
                           {content}
                         </Link>
+                      ) : (item as any).onClick === "handleDeleteAccount" ? (
+                        <button
+                          key={itemIndex}
+                          className={buttonClasses}
+                          onClick={() => setShowDeleteConfirm(true)}
+                        >
+                          {content}
+                        </button>
                       ) : (
                         <button key={itemIndex} className={buttonClasses}>
                           {content}
@@ -344,6 +424,46 @@ function SettingsContent() {
             </div>
           </div>
         </div>
+
+        {/* Delete Account Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle className="text-destructive flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" />
+                  Delete Account
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-text-secondary">
+                  Are you sure you want to delete your account? This action cannot be undone.
+                </p>
+                <p className="text-text-secondary font-semibold">
+                  All of your data, including workouts, stats, and personal records will be permanently deleted.
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Account'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
       <MobileNav />
     </>

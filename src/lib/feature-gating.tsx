@@ -1,6 +1,6 @@
 import React from "react"
 import { useAuthStore } from "@/store"
-import { SUBSCRIPTION_TIERS, hasFeatureAccess, getQuotaLimit } from "./stripe"
+import { SUBSCRIPTION_TIERS, hasFeatureAccess, getQuotaLimit } from "./subscription-tiers"
 
 export type SubscriptionTier = 'free' | 'starter' | 'pro' | 'elite'
 

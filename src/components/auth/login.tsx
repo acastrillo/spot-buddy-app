@@ -1,22 +1,34 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dumbbell, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+
+type AuthMode = "signin" | "signup";
 
 export function Login() {
-  const { login } = useAuthStore();
-  const [loading, setLoading] = useState(false);
+  const { login, loginWithEmail, loginWithCredentials, signup, devLogin } = useAuthStore();
+  const [loadingProvider, setLoadingProvider] = useState<"google" | "facebook" | "email" | "credentials" | "dev" | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [mode, setMode] = useState<AuthMode>("signin");
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+    if (typeof window === "undefined") return;
 
     const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode");
+    if (modeParam === "signup" || modeParam === "signin") {
+      setMode(modeParam);
+    }
+
     const error = params.get("error");
     const errorDescription = params.get("error_description");
 
@@ -66,35 +78,119 @@ export function Login() {
         setAuthError(
           errorDescription
             ? `Sign-in error: ${errorDescription}`
-            : "We couldn't complete the sign-in. Please try again."
+            : "We could not complete the sign-in. Please try again."
         );
         break;
     }
   }, []);
 
-  const handleSignIn = useCallback(async () => {
-    try {
-      setLoading(true);
-      await login();
-    } finally {
-      setLoading(false);
+  const providers = useMemo(
+    () => [
+      { id: "google" as const, variant: "default" as const },
+      { id: "facebook" as const, variant: "outline" as const },
+    ],
+    []
+  );
+
+  const isSignUp = mode === "signup";
+
+  const getProviderLabel = (provider: "google" | "facebook") => {
+    const action = isSignUp ? "Sign up" : "Sign in";
+    return `${action} with ${provider.charAt(0).toUpperCase() + provider.slice(1)}`;
+  };
+
+  const handleProviderSignIn = useCallback(
+    async (provider: "google" | "facebook") => {
+      try {
+        setAuthError(null);
+        setEmailStatus(null);
+        setLoadingProvider(provider);
+        await login(provider);
+      } catch (error) {
+        console.error(`${provider} sign-in error:`, error);
+        setAuthError("We could not start the sign-in. Please try again.");
+      } finally {
+        setLoadingProvider(null);
+      }
+    },
+    [login]
+  );
+
+  const handleEmailPasswordAuth = useCallback(async () => {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+      setAuthError("Please enter a valid email address.");
+      return;
     }
-  }, [login]);
+
+    if (!trimmedPassword || trimmedPassword.length < 8) {
+      setAuthError("Password must be at least 8 characters.");
+      return;
+    }
+
+    try {
+      setAuthError(null);
+      setEmailStatus(null);
+      setLoadingProvider("credentials");
+
+      if (isSignUp) {
+        // Sign up
+        const result = await signup(trimmedEmail, trimmedPassword);
+        if (!result.success) {
+          setAuthError(result.error || "Signup failed");
+        }
+        // Auto-redirects on success
+      } else {
+        // Sign in
+        await loginWithCredentials(trimmedEmail, trimmedPassword);
+        // Auto-redirects on success
+      }
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      setAuthError(error.message || "Authentication failed. Please try again.");
+    } finally {
+      setLoadingProvider(null);
+    }
+  }, [email, password, isSignUp, signup, loginWithCredentials]);
+
+  const handleDevLogin = useCallback(async () => {
+    try {
+      setAuthError(null);
+      setEmailStatus(null);
+      setLoadingProvider("dev");
+      await devLogin("test@localhost.dev");
+    } catch (error) {
+      console.error("Dev login error:", error);
+      setAuthError("Dev login failed. Check console for details.");
+    } finally {
+      setLoadingProvider(null);
+    }
+  }, [devLogin]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
       <Card className="w-full max-w-md bg-[var(--surface)] border-[var(--border)]">
         <CardHeader className="space-y-1 text-center">
+          {/* Back button */}
+          <div className="flex justify-start mb-2">
+            <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </div>
           <div className="flex justify-center mb-4">
             <div className="p-4 rounded-full bg-[var(--primary)]/10">
               <Dumbbell className="h-12 w-12 text-[var(--primary)]" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold text-[var(--text-primary)]">
-            Welcome to Spot Buddy
+            {isSignUp ? "Create your account" : "Welcome back"}
           </CardTitle>
           <CardDescription className="text-[var(--text-secondary)] text-base">
-            Your fitness accountability partner
+            {isSignUp
+              ? "Start tracking your fitness journey"
+              : "Sign in to continue your progress"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 pt-2">
@@ -103,47 +199,111 @@ export function Login() {
               {authError}
             </div>
           )}
+          {emailStatus && (
+            <div className="rounded-lg bg-emerald-100 border border-emerald-200 p-4 text-sm text-emerald-700 text-center">
+              {emailStatus}
+            </div>
+          )}
           <div className="space-y-3 text-sm text-[var(--text-secondary)] text-center px-2">
             <p>Track workouts, monitor progress, and sync across all your devices.</p>
           </div>
 
-          {/* Sign Up Button - Primary CTA */}
-          <div className="space-y-3">
-            <Button
-              onClick={handleSignIn}
-              className="w-full bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-black font-semibold h-12 text-base transition-all shadow-lg"
-              disabled={loading}
-              size="lg"
-            >
-              {loading ? "Redirecting..." : "Sign Up with Google"}
-            </Button>
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-[var(--border)]" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[var(--surface)] px-2 text-[var(--text-tertiary)]">
-                  Already have an account?
-                </span>
-              </div>
+          {/* Dev Login - Only visible in development */}
+          {isDev && (
+            <div className="space-y-2">
+              <Button
+                onClick={handleDevLogin}
+                className="w-full h-12 text-base font-semibold bg-amber-500 hover:bg-amber-600 text-black"
+                disabled={loadingProvider !== null}
+              >
+                {loadingProvider === "dev" ? "Signing in..." : "Dev Login (test@localhost.dev)"}
+              </Button>
+              <p className="text-xs text-center text-amber-600">Development mode only - not visible in production</p>
             </div>
+          )}
 
-            {/* Sign In Button - Secondary */}
+          <div className="space-y-3">
+            {providers.map((provider) => (
+              <Button
+                key={provider.id}
+                onClick={() => handleProviderSignIn(provider.id)}
+                className="w-full h-12 text-base font-semibold transition-all shadow-lg"
+                variant={provider.variant}
+                disabled={loadingProvider !== null}
+              >
+                {loadingProvider === provider.id ? "Redirecting..." : getProviderLabel(provider.id)}
+              </Button>
+            ))}
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-[var(--border)]" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[var(--surface)] px-2 text-[var(--text-tertiary)]">
+                Or {isSignUp ? "sign up" : "sign in"} with email and password
+              </span>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleEmailPasswordAuth();
+            }}
+            className="space-y-3"
+          >
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loadingProvider === "credentials"}
+              autoComplete="email"
+            />
+            <Input
+              type="password"
+              placeholder="Password (min 8 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loadingProvider === "credentials"}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+            />
             <Button
-              onClick={handleSignIn}
-              variant="outline"
-              className="w-full border-2 border-[var(--border)] hover:bg-[var(--surface-elevated)] text-[var(--text-primary)] font-semibold h-12 text-base transition-all"
-              disabled={loading}
-              size="lg"
+              type="submit"
+              className="w-full h-12 text-base font-semibold transition-all"
+              disabled={loadingProvider === "credentials"}
             >
-              {loading ? "Redirecting..." : "Sign In with Google"}
+              {loadingProvider === "credentials"
+                ? (isSignUp ? "Creating account..." : "Signing in...")
+                : (isSignUp ? "Create account" : "Sign in")}
             </Button>
+          </form>
+
+          {/* Mode switcher */}
+          <div className="text-center pt-2">
+            <p className="text-sm text-[var(--text-secondary)]">
+              {isSignUp ? (
+                <>
+                  Already have an account?{" "}
+                  <Link href="/auth/login?mode=signin" className="text-[var(--primary)] hover:underline font-medium">
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Don&apos;t have an account?{" "}
+                  <Link href="/auth/login?mode=signup" className="text-[var(--primary)] hover:underline font-medium">
+                    Sign up
+                  </Link>
+                </>
+              )}
+            </p>
           </div>
 
           <p className="text-xs text-center text-[var(--text-tertiary)] pt-2">
-            Secured by AWS Cognito • By continuing, you agree to our Terms of Service
+            Secured by NextAuth and AWS. By continuing, you agree to our Terms of Service.
           </p>
         </CardContent>
       </Card>

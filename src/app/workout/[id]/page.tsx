@@ -155,9 +155,9 @@ export default function WorkoutViewPage() {
             <p className="text-text-secondary mb-4">
               The workout you're looking for doesn't exist or has been deleted.
             </p>
-            <Button onClick={() => router.push('/library')}>
+            <Button onClick={() => router.push('/')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Library
+              Back to Home
             </Button>
           </div>
         </main>
@@ -228,7 +228,7 @@ export default function WorkoutViewPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push('/library')}
+                onClick={() => router.back()}
                 className="flex-shrink-0 mt-1"
               >
                 <ArrowLeft className="h-4 w-4" />

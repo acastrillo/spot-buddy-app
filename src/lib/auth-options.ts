@@ -299,11 +299,29 @@ export const authOptions: NextAuthOptions = {
           console.log(`[Auth:SignIn] User created at: ${existingUser.createdAt}, last updated: ${existingUser.updatedAt}`);
 
           // Update with latest profile info from OAuth provider
+          // CRITICAL: Preserve subscription data to prevent wiping out paid tier!
           await dynamoDBUsers.upsert({
             id: existingUser.id,
             email: user.email,
             firstName: (user as any).firstName || existingUser.firstName || null,
             lastName: (user as any).lastName || existingUser.lastName || null,
+            // Preserve existing subscription data
+            subscriptionTier: existingUser.subscriptionTier,
+            subscriptionStatus: existingUser.subscriptionStatus,
+            subscriptionStartDate: existingUser.subscriptionStartDate,
+            subscriptionEndDate: existingUser.subscriptionEndDate,
+            trialEndsAt: existingUser.trialEndsAt,
+            stripeCustomerId: existingUser.stripeCustomerId,
+            stripeSubscriptionId: existingUser.stripeSubscriptionId,
+            // Preserve usage tracking
+            ocrQuotaUsed: existingUser.ocrQuotaUsed,
+            ocrQuotaLimit: existingUser.ocrQuotaLimit,
+            ocrQuotaResetDate: existingUser.ocrQuotaResetDate,
+            workoutsSaved: existingUser.workoutsSaved,
+            aiRequestsUsed: existingUser.aiRequestsUsed,
+            aiRequestsLimit: existingUser.aiRequestsLimit,
+            lastAiRequestReset: existingUser.lastAiRequestReset,
+            trainingProfile: existingUser.trainingProfile,
           });
         } else {
           // New user - create with new UUID
@@ -431,14 +449,48 @@ export const authOptions: NextAuthOptions = {
 
       // Backup sync to DynamoDB (primary sync happens in signIn callback)
       // This ensures user exists even if signIn callback failed
+      // CRITICAL: Must preserve subscription data to prevent wiping out paid tiers
       if (token.id && token.email) {
         try {
-          await dynamoDBUsers.upsert({
-            id: token.id as string,
-            email: token.email as string,
-            firstName: (token.firstName as string | null) ?? null,
-            lastName: (token.lastName as string | null) ?? null,
-          });
+          // Fetch existing user first to preserve subscription data
+          const existingUserForJWT = await dynamoDBUsers.get(token.id as string).catch(() => null);
+
+          if (existingUserForJWT) {
+            // User exists - preserve ALL subscription and usage data
+            await dynamoDBUsers.upsert({
+              id: token.id as string,
+              email: token.email as string,
+              firstName: (token.firstName as string | null) ?? null,
+              lastName: (token.lastName as string | null) ?? null,
+              // Preserve existing subscription data
+              subscriptionTier: existingUserForJWT.subscriptionTier,
+              subscriptionStatus: existingUserForJWT.subscriptionStatus,
+              subscriptionStartDate: existingUserForJWT.subscriptionStartDate,
+              subscriptionEndDate: existingUserForJWT.subscriptionEndDate,
+              trialEndsAt: existingUserForJWT.trialEndsAt,
+              stripeCustomerId: existingUserForJWT.stripeCustomerId,
+              stripeSubscriptionId: existingUserForJWT.stripeSubscriptionId,
+              // Preserve usage tracking
+              ocrQuotaUsed: existingUserForJWT.ocrQuotaUsed,
+              ocrQuotaLimit: existingUserForJWT.ocrQuotaLimit,
+              ocrQuotaResetDate: existingUserForJWT.ocrQuotaResetDate,
+              workoutsSaved: existingUserForJWT.workoutsSaved,
+              aiRequestsUsed: existingUserForJWT.aiRequestsUsed,
+              aiRequestsLimit: existingUserForJWT.aiRequestsLimit,
+              lastAiRequestReset: existingUserForJWT.lastAiRequestReset,
+              trainingProfile: existingUserForJWT.trainingProfile,
+            });
+          } else {
+            // User doesn't exist yet - create with minimal data
+            // This should rarely happen since signIn callback should have created the user
+            await dynamoDBUsers.upsert({
+              id: token.id as string,
+              email: token.email as string,
+              firstName: (token.firstName as string | null) ?? null,
+              lastName: (token.lastName as string | null) ?? null,
+            });
+          }
+
           if (isInitialSignIn) {
             console.log(`[Auth:JWT] ✓ User ${token.id} synced to DynamoDB (${maskEmail(token.email as string)})`);
           }

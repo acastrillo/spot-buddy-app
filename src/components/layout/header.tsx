@@ -23,8 +23,16 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, logout } = useAuthStore()
 
-  const handleSignOut = () => {
-    logout()
+  const handleSignOut = async () => {
+    try {
+      // Call NextAuth signOut which will clear all cookies and session
+      await logout()
+      // NextAuth will automatically redirect to callbackUrl
+    } catch (error) {
+      console.error("Sign out failed:", error)
+      // Force hard redirect to clear any cached state
+      window.location.href = "/"
+    }
   }
 
   const navigation = [
@@ -66,27 +74,25 @@ export function Header() {
 
         {/* User Menu */}
         <div className="flex items-center space-x-2">
-          {/* OCR Quota Display */}
-          {user?.ocrQuotaLimit !== undefined && (
-            <Link href="/settings">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center space-x-2 text-xs"
-                title={`OCR Credits: ${user.ocrQuotaLimit - (user.ocrQuotaUsed || 0)} remaining`}
-              >
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="hidden lg:inline text-text-secondary">
-                  {user.ocrQuotaLimit - (user.ocrQuotaUsed || 0)}/{user.ocrQuotaLimit}
+          {/* Combined User Settings Button with Quota Display */}
+          <Link href="/settings">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center space-x-2 text-xs md:text-sm"
+              title="View settings and subscription details"
+            >
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="hidden sm:inline text-text-secondary">
+                {user?.firstName || user?.email}
+              </span>
+              {user?.ocrQuotaLimit !== undefined && (
+                <span className="text-text-secondary text-xs">
+                  ({user.ocrQuotaLimit - (user.ocrQuotaUsed || 0)} scans)
                 </span>
-              </Button>
-            </Link>
-          )}
-
-          <div className="hidden sm:flex items-center space-x-2 text-sm text-text-secondary">
-            <User className="h-4 w-4" />
-            <span>{user?.firstName || user?.email}</span>
-          </div>
+              )}
+            </Button>
+          </Link>
 
           <Button
             variant="ghost"

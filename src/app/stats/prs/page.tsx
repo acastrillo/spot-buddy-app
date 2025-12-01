@@ -61,10 +61,6 @@ export default function PersonalRecordsPage() {
     return allPRs
   }, [workouts])
 
-  if (!isAuthenticated) {
-    return <Login />
-  }
-
   // PERFORMANCE FIX: Memoize derived PR calculations
   const exercisesWithPRs = useMemo(() => {
     return Array.from(
@@ -107,6 +103,20 @@ export default function PersonalRecordsPage() {
   // Scroll to cards section
   const scrollToCards = () => {
     cardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen pb-20 md:pb-8 flex justify-center">
+          <div className="w-full max-w-6xl mx-auto px-4 py-8">
+            <Login />
+          </div>
+        </main>
+        <MobileNav />
+      </>
+    )
   }
 
   return (

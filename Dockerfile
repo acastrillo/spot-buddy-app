@@ -22,6 +22,10 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
+# Prepare production SQLite database for NextAuth (schema only)
+RUN mkdir -p /tmp/prisma \
+  && DATABASE_URL="file:/tmp/prisma/prod.db" npx prisma db push --skip-generate --accept-data-loss
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -36,6 +40,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+RUN mkdir -p /tmp/prisma && chown -R nextjs:nodejs /tmp/prisma
+COPY --from=builder --chown=nextjs:nodejs /tmp/prisma/prod.db /tmp/prisma/prod.db
 
 USER nextjs
 
