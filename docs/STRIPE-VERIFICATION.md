@@ -14,7 +14,7 @@ Now that the database has been cleaned, verify these in your Stripe Dashboard:
 - `invoice.payment_succeeded` ✓
 - `invoice.payment_failed` ✓
 
-**Webhook Secret:** Currently set to `whsec_[YOUR_WEBHOOK_SECRET]`
+**Webhook Secret:** Currently set to `whsec_[YOUR_WEBHOOK_SECRET]` (stored in AWS Secrets Manager)
 
 ## 2. Products & Prices
 
@@ -54,7 +54,7 @@ stripe trigger checkout.session.completed
 
 ## 4. Current Webhook Secret
 
-Your webhook secret in `.env.local`:
+Your webhook secret in `.env.local` (retrieve from AWS Secrets Manager):
 ```
 STRIPE_WEBHOOK_SECRET=whsec_[YOUR_WEBHOOK_SECRET]
 ```
