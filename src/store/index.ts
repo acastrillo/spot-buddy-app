@@ -136,8 +136,7 @@ export const useAuthStore = (): AuthState => {
       });
     },
     logout: async () => {
-      await nextAuthSignOut({ redirect: false });
-      window.location.href = "/";
+      await nextAuthSignOut({ callbackUrl: "/" });
     },
   };
 };

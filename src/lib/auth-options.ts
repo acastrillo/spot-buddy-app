@@ -69,7 +69,13 @@ if (hasGoogle && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     GoogleProvider({
       clientId: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      authorization: { params: { prompt: "consent", access_type: "offline", response_type: "code" } },
+      authorization: {
+        params: {
+          prompt: "select_account",  // Force account selection to prevent auto-sign-in
+          access_type: "offline",
+          response_type: "code"
+        }
+      },
       profile(profile) {
         const googleProfile = profile as GoogleProfile;
         return {

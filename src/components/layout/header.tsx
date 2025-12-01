@@ -10,7 +10,6 @@ import {
   X,
   Plus,
   Calendar,
-  Settings,
   LogOut,
   User,
   Zap,
@@ -24,15 +23,8 @@ export function Header() {
   const { user, logout } = useAuthStore()
 
   const handleSignOut = async () => {
-    try {
-      // Call NextAuth signOut which will clear all cookies and session
-      await logout()
-      // NextAuth will automatically redirect to callbackUrl
-    } catch (error) {
-      console.error("Sign out failed:", error)
-      // Force hard redirect to clear any cached state
-      window.location.href = "/"
-    }
+    // Call NextAuth signOut which will clear all cookies, session, and redirect to home
+    await logout()
   }
 
   const navigation = [
@@ -41,7 +33,6 @@ export function Header() {
     { name: "AI Generator", href: "/add/generate", icon: Sparkles },
     { name: "Stats", href: "/stats", icon: BarChart3 },
     { name: "Calendar", href: "/calendar", icon: Calendar },
-    { name: "Settings", href: "/settings", icon: Settings },
   ]
 
   if (!user) {
