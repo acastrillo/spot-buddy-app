@@ -1,169 +1,128 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Settings,
-  Zap,
-  Coffee,
-} from "lucide-react"
+/**
+ * HIIT Timer Component (Refactored)
+ *
+ * Migrated to use the new useTimerRunner hook for consistent timer behavior.
+ * Maintains backward compatibility with existing HIIT presets and configuration.
+ */
+
+import { useState, useMemo } from 'react';
+import { Play, Pause, RotateCcw, Settings, Zap, Coffee, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useTimerRunner, requestNotificationPermission } from '@/lib/hooks/useTimerRunner';
+import type { IntervalWorkRestParams } from '@/timers';
 import {
   formatTime,
-  playAlert,
-  showNotification,
-  saveTimerState,
-  loadTimerState,
-  clearTimerState,
   HIIT_PRESETS,
-  type HIITState,
   type HIITConfig,
-} from "@/lib/timer-utils"
+} from '@/lib/timer-utils';
 
-const STORAGE_KEY = "hiit-timer-state";
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Convert HIIT config to timer params
+ */
+function hiitConfigToTimerParams(config: HIITConfig): IntervalWorkRestParams {
+  return {
+    kind: 'INTERVAL_WORK_REST',
+    workSeconds: config.workDuration,
+    restSeconds: config.restDuration,
+    totalRounds: config.rounds,
+    prepSeconds: config.prepTime,
+  };
+}
+
+/**
+ * Get color classes for segment kind
+ */
+function getPhaseColors(kind: string): { bg: string; text: string; border: string } {
+  switch (kind) {
+    case 'prep':
+      return { bg: 'bg-secondary/20', text: 'text-secondary', border: 'border-secondary/30' };
+    case 'work':
+      return { bg: 'bg-primary/20', text: 'text-primary', border: 'border-primary/30' };
+    case 'rest':
+      return { bg: 'bg-rest/20', text: 'text-rest', border: 'border-rest/30' };
+    default:
+      return { bg: 'bg-gray-200', text: 'text-gray-600', border: 'border-gray-300' };
+  }
+}
+
+/**
+ * Get progress bar color
+ */
+function getProgressBarColor(kind: string): string {
+  switch (kind) {
+    case 'prep':
+      return 'bg-secondary';
+    case 'work':
+      return 'bg-primary';
+    case 'rest':
+      return 'bg-rest';
+    default:
+      return 'bg-gray-400';
+  }
+}
+
+// ============================================================================
+// Component
+// ============================================================================
 
 export function HIITTimer() {
-  const [config, setConfig] = useState<HIITConfig>(HIIT_PRESETS[0].config)
-  const [currentRound, setCurrentRound] = useState(1)
-  const [isWorkPhase, setIsWorkPhase] = useState(false)
-  const [remaining, setRemaining] = useState(config.prepTime)
-  const [isRunning, setIsRunning] = useState(false)
-  const [isPrepPhase, setIsPrepPhase] = useState(true)
-  const [showSettings, setShowSettings] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  // Configuration state
+  const [config, setConfig] = useState<HIITConfig>(HIIT_PRESETS[0].config);
+  const [showSettings, setShowSettings] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  // Load saved state
-  useEffect(() => {
-    const saved = loadTimerState<HIITState>(STORAGE_KEY)
-    if (saved && saved.remaining > 0) {
-      setConfig(saved.config)
-      setCurrentRound(saved.currentRound)
-      setIsWorkPhase(saved.isWorkPhase)
-      setRemaining(saved.remaining)
-    }
-  }, [])
+  // Convert config to timer params
+  const timerParams = useMemo(() => hiitConfigToTimerParams(config), [config]);
 
-  // Save state
-  useEffect(() => {
-    const state: HIITState = {
-      duration: isWorkPhase ? config.workDuration : config.restDuration,
-      remaining,
-      isRunning,
-      isPaused: !isRunning && !isPrepPhase,
-      startedAt: isRunning ? Date.now() : null,
-      pausedAt: null,
-      currentRound,
-      isWorkPhase,
-      config,
-    }
-    saveTimerState(STORAGE_KEY, state)
-  }, [config, currentRound, isWorkPhase, remaining, isRunning, isPrepPhase])
+  // Timer hook
+  const timer = useTimerRunner({
+    params: timerParams,
+    enableSound: soundEnabled,
+    enableNotifications: notificationsEnabled,
+    persistKey: 'hiit-timer-state',
+  });
 
-  // Timer tick
-  useEffect(() => {
-    if (isRunning && remaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setRemaining((prev) => {
-          if (prev <= 1) {
-            handlePhaseComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
+  // Handle notification toggle
+  const handleToggleNotifications = async () => {
+    if (!notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      setNotificationsEnabled(granted);
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+      setNotificationsEnabled(false);
     }
+  };
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isRunning, remaining])
-
-  const handlePhaseComplete = useCallback(() => {
-    playAlert()
-
-    if (isPrepPhase) {
-      // Prep → Work phase
-      setIsPrepPhase(false)
-      setIsWorkPhase(true)
-      setRemaining(config.workDuration)
-      showNotification('WORK!', {
-        body: `Round ${currentRound}/${config.rounds} - Let's go!`,
-      })
-    } else if (isWorkPhase) {
-      // Work → Rest phase
-      setIsWorkPhase(false)
-      setRemaining(config.restDuration)
-      showNotification('REST', {
-        body: `Round ${currentRound}/${config.rounds} - Take a break`,
-      })
-    } else {
-      // Rest → Next round or complete
-      if (currentRound < config.rounds) {
-        setCurrentRound((prev) => prev + 1)
-        setIsWorkPhase(true)
-        setRemaining(config.workDuration)
-        showNotification('WORK!', {
-          body: `Round ${currentRound + 1}/${config.rounds} - Keep going!`,
-        })
-      } else {
-        // Workout complete!
-        setIsRunning(false)
-        showNotification('Workout Complete! 🎉', {
-          body: `Great job! You completed all ${config.rounds} rounds.`,
-        })
-        clearTimerState(STORAGE_KEY)
-      }
-    }
-  }, [isPrepPhase, isWorkPhase, currentRound, config])
-
-  const handleStart = () => {
-    setIsRunning(true)
-  }
-
-  const handlePause = () => {
-    setIsRunning(false)
-  }
-
-  const handleReset = () => {
-    setIsRunning(false)
-    setIsPrepPhase(true)
-    setIsWorkPhase(false)
-    setCurrentRound(1)
-    setRemaining(config.prepTime)
-    clearTimerState(STORAGE_KEY)
-  }
-
+  // Load preset
   const loadPreset = (presetName: string) => {
-    const preset = HIIT_PRESETS.find((p) => p.name === presetName)
+    const preset = HIIT_PRESETS.find((p) => p.name === presetName);
     if (preset) {
-      setConfig(preset.config)
-      setRemaining(preset.config.prepTime)
-      setIsPrepPhase(true)
-      setIsWorkPhase(false)
-      setCurrentRound(1)
-      setIsRunning(false)
-      setShowSettings(false)
+      setConfig(preset.config);
+      timer.reset();
+      setShowSettings(false);
     }
-  }
+  };
 
-  const totalDuration = config.prepTime + (config.workDuration + config.restDuration) * config.rounds
-  const elapsedDuration = isPrepPhase
-    ? config.prepTime - remaining
-    : config.prepTime + (currentRound - 1) * (config.workDuration + config.restDuration) +
-      (isWorkPhase ? config.workDuration - remaining : config.workDuration + config.restDuration - remaining)
-  const progress = (elapsedDuration / totalDuration) * 100
+  // Calculate current round from segment
+  const currentRound = timer.currentSegment?.loopIndex ?? 0;
+
+  // Calculate progress
+  const totalDuration = config.prepTime + (config.workDuration + config.restDuration) * config.rounds;
+  const elapsedDuration = timer.state.totalElapsedMs / 1000;
+  const progress = (elapsedDuration / totalDuration) * 100;
+
+  // Determine if in prep phase
+  const isPrepPhase = timer.currentSegment?.kind === 'prep';
+  const isWorkPhase = timer.currentSegment?.kind === 'work';
 
   return (
     <div className="space-y-6">
@@ -193,12 +152,18 @@ export function HIITTimer() {
 
             {/* Round Counter */}
             <div className="text-2xl font-bold text-text-primary">
-              Round {currentRound} / {config.rounds}
+              {timer.isCompleted ? (
+                <span>Complete! 🎉</span>
+              ) : isPrepPhase ? (
+                <span>Round 1 / {config.rounds}</span>
+              ) : (
+                <span>Round {currentRound} / {config.rounds}</span>
+              )}
             </div>
 
             {/* Main Time Display */}
             <div className="text-8xl font-bold text-text-primary tabular-nums">
-              {formatTime(remaining)}
+              {formatTime(Math.ceil(timer.remainingMs / 1000))}
             </div>
 
             {/* Progress Bar */}
@@ -206,9 +171,9 @@ export function HIITTimer() {
               <div className="w-full bg-surface rounded-full h-3 overflow-hidden">
                 <div
                   className={`h-3 rounded-full transition-all duration-300 ${
-                    isPrepPhase ? 'bg-secondary' : isWorkPhase ? 'bg-primary' : 'bg-rest'
+                    timer.currentSegment ? getProgressBarColor(timer.currentSegment.kind) : 'bg-gray-400'
                   }`}
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${Math.min(100, progress)}%` }}
                 />
               </div>
               <div className="flex justify-between mt-2 text-xs text-text-secondary">
@@ -219,30 +184,39 @@ export function HIITTimer() {
 
             {/* Controls */}
             <div className="flex items-center gap-3">
-              {!isRunning ? (
-                <Button
-                  size="lg"
-                  onClick={handleStart}
-                  className="w-32"
-                >
-                  <Play className="h-5 w-5 mr-2" />
-                  Start
-                </Button>
-              ) : (
+              {timer.isRunning ? (
                 <Button
                   size="lg"
                   variant="secondary"
-                  onClick={handlePause}
+                  onClick={timer.pause}
                   className="w-32"
                 >
                   <Pause className="h-5 w-5 mr-2" />
                   Pause
                 </Button>
+              ) : timer.isPaused ? (
+                <Button
+                  size="lg"
+                  onClick={timer.resume}
+                  className="w-32"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Resume
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={timer.start}
+                  className="w-32"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Start
+                </Button>
               )}
               <Button
                 size="lg"
                 variant="outline"
-                onClick={handleReset}
+                onClick={timer.reset}
                 className="w-32"
               >
                 <RotateCcw className="h-5 w-5 mr-2" />
@@ -254,6 +228,26 @@ export function HIITTimer() {
                 onClick={() => setShowSettings(!showSettings)}
               >
                 <Settings className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Sound & Notification Controls */}
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                title={soundEnabled ? 'Mute sound' : 'Enable sound'}
+              >
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleNotifications}
+                title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+              >
+                {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -276,7 +270,7 @@ export function HIITTimer() {
                     key={preset.name}
                     variant="outline"
                     onClick={() => loadPreset(preset.name)}
-                    disabled={isRunning}
+                    disabled={timer.isRunning || timer.isPaused}
                   >
                     {preset.name}
                   </Button>
@@ -295,7 +289,7 @@ export function HIITTimer() {
                   onChange={(e) =>
                     setConfig({ ...config, workDuration: Number(e.target.value) })
                   }
-                  disabled={isRunning}
+                  disabled={timer.isRunning || timer.isPaused}
                   min={5}
                   max={300}
                 />
@@ -309,7 +303,7 @@ export function HIITTimer() {
                   onChange={(e) =>
                     setConfig({ ...config, restDuration: Number(e.target.value) })
                   }
-                  disabled={isRunning}
+                  disabled={timer.isRunning || timer.isPaused}
                   min={5}
                   max={300}
                 />
@@ -323,7 +317,7 @@ export function HIITTimer() {
                   onChange={(e) =>
                     setConfig({ ...config, rounds: Number(e.target.value) })
                   }
-                  disabled={isRunning}
+                  disabled={timer.isRunning || timer.isPaused}
                   min={1}
                   max={50}
                 />
@@ -337,7 +331,7 @@ export function HIITTimer() {
                   onChange={(e) =>
                     setConfig({ ...config, prepTime: Number(e.target.value) })
                   }
-                  disabled={isRunning}
+                  disabled={timer.isRunning || timer.isPaused}
                   min={0}
                   max={60}
                 />
@@ -351,5 +345,5 @@ export function HIITTimer() {
         </Card>
       )}
     </div>
-  )
+  );
 }

@@ -24,6 +24,12 @@ import {
   validateOrganizedContent,
   estimateOrganizationCost
 } from '@/lib/ai/workout-content-organizer';
+import {
+  suggestTimerForWorkout,
+  estimateTimerSuggestionCost,
+  type WorkoutForTimerSuggestion,
+  type TimerSuggestion
+} from '@/lib/ai/timer-suggester';
 import { getAIRequestLimit } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -233,12 +239,48 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     console.log('[AI Enhance] Step 2: Structuring workout with Agent 2 (Sonnet)...');
     const result = await structureWorkout(organizationResult.organized, trainingContext);
 
-    // Calculate total cost (both agents)
+    // STEP 3: Agent 3 - Suggest Timer Configuration (Optional)
+    console.log('[AI Enhance] Step 3: Suggesting timer configuration with Agent 3 (Haiku)...');
+    let timerSuggestion: TimerSuggestion | null = null;
+    let timerSuggesterCost = 0;
+
+    try {
+      const workoutForTimer: WorkoutForTimerSuggestion = {
+        title: result.enhancedWorkout.title,
+        description: result.enhancedWorkout.description,
+        workoutType: result.enhancedWorkout.workoutType,
+        structure: result.enhancedWorkout.structure,
+        exercises: result.enhancedWorkout.exercises,
+        totalDuration: result.enhancedWorkout.duration,
+        difficulty: result.enhancedWorkout.difficulty,
+      };
+
+      const timerResult = await suggestTimerForWorkout(workoutForTimer);
+      timerSuggestion = timerResult.suggestion;
+      timerSuggesterCost = timerResult.bedrockResponse.cost?.total || 0;
+
+      console.log('[AI Enhance] Agent 3 results:');
+      console.log(`  - Workout style: ${timerSuggestion.workoutStyle}`);
+      console.log(`  - Primary goal: ${timerSuggestion.primaryGoal}`);
+      if (timerSuggestion.suggestedTimer) {
+        console.log(`  - Timer type: ${timerSuggestion.suggestedTimer.type}`);
+        console.log(`  - Reason: ${timerSuggestion.suggestedTimer.reason}`);
+      } else {
+        console.log(`  - No timer suggested (not applicable for this workout)`);
+      }
+    } catch (error) {
+      console.error('[AI Enhance] Timer suggestion failed (non-critical):', error);
+      // Timer suggestion is optional, continue without it
+    }
+
+    // Calculate total cost (all three agents)
     const totalCost = (organizationResult.bedrockResponse.cost?.total || 0) +
-                     (result.bedrockResponse.cost?.total || 0);
-    console.log('[AI Enhance] Two-step workflow complete!');
+                     (result.bedrockResponse.cost?.total || 0) +
+                     timerSuggesterCost;
+    console.log('[AI Enhance] Three-step workflow complete!');
     console.log(`  - Agent 1 cost: $${organizationResult.bedrockResponse.cost?.total.toFixed(4) || '0.0000'}`);
     console.log(`  - Agent 2 cost: $${result.bedrockResponse.cost?.total.toFixed(4) || '0.0000'}`);
+    console.log(`  - Agent 3 cost: $${timerSuggesterCost.toFixed(4)}`);
     console.log(`  - Total cost: $${totalCost.toFixed(4)}`);
 
     // Convert AI exercises format to DynamoDB format
@@ -249,6 +291,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     // Extract workout structure metadata
     const workoutType = result.enhancedWorkout.workoutType || 'standard';
     const structure = result.enhancedWorkout.structure || null;
+
+    // Build AI notes including timer suggestion
+    const aiNotes = ['AI enhanced workout with standardized exercise names and proper structure detection'];
+    if (timerSuggestion?.suggestedTimer) {
+      aiNotes.push(
+        `AI-suggested timer: ${timerSuggestion.suggestedTimer.type} - ${timerSuggestion.suggestedTimer.reason}`
+      );
+    }
+
+    // Prepare timer config if suggested (will be stored in Phase 5 when DB schema is updated)
+    const timerConfig = timerSuggestion?.suggestedTimer
+      ? {
+          params: timerSuggestion.suggestedTimer.params,
+          aiGenerated: true,
+          reason: timerSuggestion.suggestedTimer.reason,
+        }
+      : undefined;
 
     // If enhancing existing workout, merge with original
     let finalWorkout: DynamoDBWorkout;
@@ -264,7 +323,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         workoutType,
         structure,
         aiEnhanced: true,
-        aiNotes: ['AI enhanced workout with standardized exercise names and proper structure detection'],
+        aiNotes,
+        timerConfig,
         updatedAt: new Date().toISOString(),
       };
       await dynamoDBWorkouts.update(userId, workoutId!, updates);
@@ -286,7 +346,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         workoutType,
         structure,
         aiEnhanced: true,
-        aiNotes: ['AI enhanced workout with standardized exercise names and proper structure detection'],
+        aiNotes,
+        timerConfig,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

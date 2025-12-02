@@ -1,4 +1,5 @@
 import type { DynamoDBExercise, DynamoDBWorkout } from "../dynamodb";
+import type { TimerParams } from "@/timers";
 
 export interface EditableSet {
   id: string;
@@ -32,6 +33,11 @@ export interface EditableWorkoutMeta {
   scheduledDate?: string | null;
   status?: DynamoDBWorkout["status"];
   completedDate?: string | null;
+  timerConfig?: {
+    params: TimerParams;
+    aiGenerated?: boolean;
+    reason?: string;
+  } | null;
 }
 
 export interface EditableWorkoutState {
@@ -69,6 +75,11 @@ type StoredWorkout = {
   scheduledDate?: string | null;
   status?: DynamoDBWorkout["status"];
   completedDate?: string | null;
+  timerConfig?: {
+    params: TimerParams;
+    aiGenerated?: boolean;
+    reason?: string;
+  } | null;
 };
 
 const generateId = () => {
@@ -123,6 +134,7 @@ export const normaliseWorkoutForEditing = (
     scheduledDate: workout.scheduledDate ?? null,
     status: workout.status ?? null,
     completedDate: workout.completedDate ?? null,
+    timerConfig: (workout as DynamoDBWorkout).timerConfig ?? null,
   };
 
   const exercises: EditableExercise[] = (workout.exercises || []).map(
@@ -233,6 +245,7 @@ export const buildPersistableWorkout = (
     scheduledDate: state.meta.scheduledDate ?? null,
     status: state.meta.status ?? null,
     completedDate: state.meta.completedDate ?? null,
+    timerConfig: state.meta.timerConfig ?? null,
   };
 };
 
@@ -263,6 +276,7 @@ export const buildLocalWorkoutPayload = (
     scheduledDate: state.meta.scheduledDate ?? null,
     status: state.meta.status ?? null,
     completedDate: state.meta.completedDate ?? null,
+    timerConfig: state.meta.timerConfig ?? null,
   };
 };
 

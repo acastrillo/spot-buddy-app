@@ -10,6 +10,8 @@ import {
   Save,
   Trash2,
   X,
+  Timer,
+  Sparkles,
 } from "lucide-react";
 
 import { useAuthStore } from "@/store";
@@ -19,6 +21,14 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   buildLocalWorkoutPayload,
@@ -29,6 +39,7 @@ import {
   normaliseWorkoutForEditing,
   type StoredWorkout,
 } from "@/lib/workouts/types";
+import { TIMER_TEMPLATES, type TimerParams } from "@/timers";
 
 type WorkoutSource = "dynamodb" | "local";
 
@@ -47,6 +58,7 @@ const createSnapshot = (
     meta: {
       title: meta.title,
       description: meta.description,
+      timerConfig: meta.timerConfig,
     },
     exercises: exercises.map((exercise) => ({
       id: exercise.id,
@@ -602,6 +614,89 @@ export default function EditWorkoutPage() {
               rows={3}
               className="resize-none border-slate-600 bg-slate-900/80 text-sm text-white placeholder:text-slate-400 focus:border-primary focus:ring-0"
             />
+
+            {/* Timer Configuration */}
+            <div className="mt-5 border-t border-slate-700/50 pt-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Timer className="h-3.5 w-3.5" />
+                  Workout Timer
+                </label>
+                {workoutMeta.timerConfig?.aiGenerated && (
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    AI-Suggested
+                  </Badge>
+                )}
+              </div>
+
+              <Select
+                value={workoutMeta.timerConfig ? "custom" : "none"}
+                onValueChange={(value) => {
+                  if (value === "none") {
+                    setWorkoutMeta((prev) => prev ? { ...prev, timerConfig: null } : prev);
+                  } else if (value !== "custom") {
+                    // Find the template and set its params
+                    const template = TIMER_TEMPLATES.find((t) => t.id === value);
+                    if (template) {
+                      setWorkoutMeta((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              timerConfig: {
+                                params: template.defaultParams,
+                                aiGenerated: false,
+                              },
+                            }
+                          : prev
+                      );
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger className="border-slate-600 bg-slate-900/80 text-white focus:border-primary focus:ring-0">
+                  <SelectValue placeholder="No timer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No timer</SelectItem>
+                  {workoutMeta.timerConfig && (
+                    <SelectItem value="custom">
+                      {workoutMeta.timerConfig.aiGenerated ? "AI-Suggested Timer" : "Custom Timer"}
+                    </SelectItem>
+                  )}
+                  {TIMER_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {workoutMeta.timerConfig?.reason && (
+                <p className="mt-2 text-xs text-slate-400 italic">
+                  {workoutMeta.timerConfig.reason}
+                </p>
+              )}
+
+              {workoutMeta.timerConfig && (
+                <div className="mt-3 rounded-lg border border-slate-700/50 bg-slate-900/60 p-3">
+                  <p className="text-xs text-slate-400 mb-2">Timer Details:</p>
+                  <pre className="text-xs text-slate-300 overflow-x-auto">
+                    {JSON.stringify(workoutMeta.timerConfig.params, null, 2)}
+                  </pre>
+                  {!workoutMeta.timerConfig.aiGenerated && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setWorkoutMeta((prev) => prev ? { ...prev, timerConfig: null } : prev)}
+                      className="mt-2 w-full text-xs text-slate-400 hover:text-red-400"
+                    >
+                      Remove Timer
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {exercises.map((exercise, index) => (

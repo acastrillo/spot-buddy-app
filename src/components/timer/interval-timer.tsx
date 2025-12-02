@@ -1,9 +1,16 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+/**
+ * Interval Timer Component (Refactored)
+ *
+ * Simple configurable countdown timer with circular progress display.
+ * Migrated to use the new useTimerRunner hook with a single AMRAP segment.
+ */
+
+import { useState, useMemo, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Play,
   Pause,
@@ -12,18 +19,14 @@ import {
   BellOff,
   Volume2,
   VolumeX,
-} from "lucide-react"
-import {
-  formatTime,
-  calculateProgress,
-  playAlert,
-  showNotification,
-  requestNotificationPermission,
-  saveTimerState,
-  loadTimerState,
-  clearTimerState,
-  type TimerState,
-} from "@/lib/timer-utils"
+} from 'lucide-react';
+import { useTimerRunner, requestNotificationPermission } from '@/lib/hooks/useTimerRunner';
+import type { AMRAPParams } from '@/timers';
+import { formatTime } from '@/lib/timer-utils';
+
+// ============================================================================
+// Props
+// ============================================================================
 
 interface IntervalTimerProps {
   initialDuration?: number; // Initial duration in seconds
@@ -33,120 +36,67 @@ interface IntervalTimerProps {
   className?: string;
 }
 
-const STORAGE_KEY = "interval-timer-state";
+// ============================================================================
+// Component
+// ============================================================================
 
 export function IntervalTimer({
   initialDuration = 60,
   onComplete,
   autoStart = false,
   showControls = true,
-  className = "",
+  className = '',
 }: IntervalTimerProps) {
-  const [duration, setDuration] = useState(initialDuration)
-  const [remaining, setRemaining] = useState(initialDuration)
-  const [isRunning, setIsRunning] = useState(autoStart)
-  const [soundEnabled, setSoundEnabled] = useState(true)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [duration, setDuration] = useState(initialDuration);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  // Load saved state on mount
-  useEffect(() => {
-    const saved = loadTimerState<TimerState>(STORAGE_KEY)
-    if (saved && saved.remaining > 0) {
-      setDuration(saved.duration)
-      setRemaining(saved.remaining)
-      // Don't auto-resume, user must click play
-    }
-  }, [])
+  // Create timer params
+  const timerParams = useMemo<AMRAPParams>(
+    () => ({
+      kind: 'AMRAP',
+      durationSeconds: duration,
+    }),
+    [duration]
+  );
 
-  // Save state on changes
-  useEffect(() => {
-    const state: TimerState = {
-      duration,
-      remaining,
-      isRunning,
-      isPaused: !isRunning && remaining < duration,
-      startedAt: isRunning ? Date.now() : null,
-      pausedAt: !isRunning ? Date.now() : null,
-    }
-    saveTimerState(STORAGE_KEY, state)
-  }, [duration, remaining, isRunning])
+  // Timer hook
+  const timer = useTimerRunner({
+    params: timerParams,
+    autoStart,
+    enableSound: soundEnabled,
+    enableNotifications: notificationsEnabled,
+    onComplete,
+    persistKey: 'interval-timer-state',
+  });
 
-  // Timer tick
-  useEffect(() => {
-    if (isRunning && remaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setRemaining((prev) => {
-          if (prev <= 1) {
-            // Timer complete
-            setIsRunning(false)
-            handleComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isRunning, remaining])
-
-  const handleComplete = useCallback(() => {
-    if (soundEnabled) {
-      playAlert()
-    }
-    if (notificationsEnabled) {
-      showNotification('Timer Complete!', {
-        body: `Your ${formatTime(duration)} timer has finished.`,
-      })
-    }
-    onComplete?.()
-    clearTimerState(STORAGE_KEY)
-  }, [soundEnabled, notificationsEnabled, duration, onComplete])
-
-  const handleStart = () => {
-    setIsRunning(true)
-  }
-
-  const handlePause = () => {
-    setIsRunning(false)
-  }
-
-  const handleReset = () => {
-    setIsRunning(false)
-    setRemaining(duration)
-    clearTimerState(STORAGE_KEY)
-  }
-
-  const handleDurationChange = (newDuration: number) => {
-    if (newDuration > 0 && newDuration <= 3600) { // Max 1 hour
-      setDuration(newDuration)
-      setRemaining(newDuration)
-      setIsRunning(false)
-    }
-  }
-
+  // Handle notification toggle
   const toggleNotifications = async () => {
     if (!notificationsEnabled) {
-      const granted = await requestNotificationPermission()
-      setNotificationsEnabled(granted)
+      const granted = await requestNotificationPermission();
+      setNotificationsEnabled(granted);
     } else {
-      setNotificationsEnabled(false)
+      setNotificationsEnabled(false);
     }
-  }
+  };
 
-  const progress = calculateProgress(duration, remaining)
-  const circumference = 2 * Math.PI * 120 // radius of 120
-  const strokeDashoffset = circumference - (progress / 100) * circumference
+  // Handle duration change
+  const handleDurationChange = (newDuration: number) => {
+    if (newDuration > 0 && newDuration <= 3600) { // Max 1 hour
+      setDuration(newDuration);
+      // Reset timer with new duration
+      setTimeout(() => {
+        timer.reset();
+      }, 0);
+    }
+  };
+
+  // Calculate circular progress
+  const progress = timer.totalDurationMs > 0
+    ? (timer.state.totalElapsedMs / timer.totalDurationMs) * 100
+    : 0;
+  const circumference = 2 * Math.PI * 120; // radius of 120
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <Card className={className}>
@@ -183,10 +133,16 @@ export function IntervalTimer({
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl font-bold text-text-primary tabular-nums">
-                  {formatTime(remaining)}
+                  {formatTime(Math.ceil(timer.remainingMs / 1000))}
                 </div>
                 <div className="text-sm text-text-secondary mt-2">
-                  {isRunning ? 'Running' : remaining < duration ? 'Paused' : 'Ready'}
+                  {timer.isRunning
+                    ? 'Running'
+                    : timer.isPaused
+                    ? 'Paused'
+                    : timer.isCompleted
+                    ? 'Complete'
+                    : 'Ready'}
                 </div>
               </div>
             </div>
@@ -196,31 +152,40 @@ export function IntervalTimer({
           {showControls && (
             <>
               <div className="flex items-center space-x-3">
-                {!isRunning ? (
-                  <Button
-                    size="lg"
-                    onClick={handleStart}
-                    disabled={remaining === 0}
-                    className="w-24"
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Start
-                  </Button>
-                ) : (
+                {timer.isRunning ? (
                   <Button
                     size="lg"
                     variant="secondary"
-                    onClick={handlePause}
+                    onClick={timer.pause}
                     className="w-24"
                   >
                     <Pause className="h-5 w-5 mr-2" />
                     Pause
                   </Button>
+                ) : timer.isPaused ? (
+                  <Button
+                    size="lg"
+                    onClick={timer.resume}
+                    className="w-24"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Resume
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    onClick={timer.start}
+                    disabled={timer.isCompleted}
+                    className="w-24"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Start
+                  </Button>
                 )}
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={handleReset}
+                  onClick={timer.reset}
                   className="w-24"
                 >
                   <RotateCcw className="h-5 w-5 mr-2" />
@@ -237,7 +202,7 @@ export function IntervalTimer({
                   onChange={(e) => handleDurationChange(Number(e.target.value) * 60)}
                   min={1}
                   max={60}
-                  disabled={isRunning}
+                  disabled={timer.isRunning || timer.isPaused}
                   className="w-20 text-center"
                 />
                 <span className="text-sm text-text-secondary">minutes</span>
@@ -277,5 +242,5 @@ export function IntervalTimer({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

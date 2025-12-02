@@ -19,15 +19,23 @@ export async function POST(
 
     // Parse request body
     const body = await req.json().catch(() => ({}));
-    const { completedDate } = body;
+    const { completedDate, completedAt, durationSeconds } = body;
 
     // Mark the workout as completed
-    await dynamoDBWorkouts.completeWorkout(userId, id, completedDate);
+    await dynamoDBWorkouts.completeWorkout(
+      userId,
+      id,
+      completedDate,
+      completedAt,
+      durationSeconds
+    );
 
     return NextResponse.json({
       success: true,
       workoutId: id,
       completedDate: completedDate || new Date().toISOString().split("T")[0],
+      completedAt: completedAt || new Date().toISOString(),
+      durationSeconds,
       status: 'completed',
     });
   } catch (error) {

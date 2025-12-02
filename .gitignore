@@ -11,7 +11,9 @@ package-lock.json
 .claude/
 .mcp.json
 
+# AWS Task Definitions (temporary/generated)
 task-def*.json
+
 .env.production
 
 # Build/test artifacts to reduce watcher churn
@@ -19,6 +21,25 @@ infrastructure_backup/
 **/cdk.out/
 playwright-report/
 test-results/
+
+# Temporary files and logs
+tmp-*.json
+tmp-*.txt
+tmp-*.log
+*.log
+build.log
+deployment.log
+
+# Temporary config/policy files
+cert-validation.json
+key.json
+ssm-policy.json
+updated-iam-policy.json
+tmp-iam-policy.json
+
+# TypeScript build artifacts
+tsconfig.temp.json
+tsconfig.tsbuildinfo
 
 # Stripe configuration scripts with live keys (but not templates)
 scripts/update-stripe-to-live.ps1

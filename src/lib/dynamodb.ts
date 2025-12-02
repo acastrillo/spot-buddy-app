@@ -745,6 +745,20 @@ export interface DynamoDBWorkout {
     totalTime?: number; // Total workout time in seconds
     pattern?: string; // Rep pattern for ladder workouts (e.g., "21-15-9")
   } | null;
+
+  // Timer System Integration (Phase 5)
+  timerConfig?: {
+    params: any; // TimerParams from @/timers (EMOM, AMRAP, INTERVAL_WORK_REST, TABATA)
+    aiGenerated?: boolean; // Whether this timer was suggested by AI
+    reason?: string; // AI explanation for why this timer was suggested
+  } | null;
+
+  blockTimers?: Array<{
+    blockIndex: number; // Which block/section this timer applies to
+    params: any; // TimerParams from @/timers
+    aiGenerated?: boolean;
+    reason?: string;
+  }> | null;
 }
 
 // Workout operations
@@ -1086,23 +1100,38 @@ export const dynamoDBWorkouts = {
   async completeWorkout(
     userId: string,
     workoutId: string,
-    completedDate?: string
+    completedDate?: string,
+    completedAt?: string,
+    durationSeconds?: number
   ): Promise<void> {
     try {
+      const expressionValues: Record<string, any> = {
+        ":status": "completed",
+        ":completedDate": completedDate || new Date().toISOString().split("T")[0],
+        ":updatedAt": new Date().toISOString(),
+      };
+
+      let updateExpression = "SET #status = :status, completedDate = :completedDate, updatedAt = :updatedAt";
+
+      if (completedAt) {
+        updateExpression += ", completedAt = :completedAt";
+        expressionValues[":completedAt"] = completedAt;
+      }
+
+      if (durationSeconds !== undefined) {
+        updateExpression += ", durationSeconds = :durationSeconds";
+        expressionValues[":durationSeconds"] = durationSeconds;
+      }
+
       await getDynamoDb().send(
         new UpdateCommand({
           TableName: WORKOUTS_TABLE,
           Key: { userId, workoutId },
-          UpdateExpression:
-            "SET #status = :status, completedDate = :completedDate, updatedAt = :updatedAt",
+          UpdateExpression: updateExpression,
           ExpressionAttributeNames: {
             "#status": "status",
           },
-          ExpressionAttributeValues: {
-            ":status": "completed",
-            ":completedDate": completedDate || new Date().toISOString().split("T")[0],
-            ":updatedAt": new Date().toISOString(),
-          },
+          ExpressionAttributeValues: expressionValues,
         })
       );
     } catch (error) {
