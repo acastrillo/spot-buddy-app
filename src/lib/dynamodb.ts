@@ -30,6 +30,7 @@ function getDynamoDb(): DynamoDBDocumentClient {
 const USERS_TABLE = process.env.DYNAMODB_USERS_TABLE || "spotter-users";
 const WORKOUTS_TABLE = process.env.DYNAMODB_WORKOUTS_TABLE || "spotter-workouts";
 const WEBHOOK_EVENTS_TABLE = process.env.DYNAMODB_WEBHOOK_EVENTS_TABLE || "spotter-webhook-events";
+const WORKOUT_COMPLETIONS_TABLE = process.env.DYNAMODB_WORKOUT_COMPLETIONS_TABLE || "spotter-workout-completions";
 
 // User type matching Prisma schema + subscription fields
 // Note: Dates are stored as ISO strings in DynamoDB
@@ -1429,5 +1430,220 @@ export const dynamoDBWebhookEvents = {
   },
 };
 
+// Workout Completion type for tracking individual workout completions
+export interface DynamoDBWorkoutCompletion {
+  userId: string; // Partition key
+  completionId: string; // Sort key (UUID or timestamp-based)
+  workoutId: string; // Reference to the workout
+  completedAt: string; // ISO timestamp when completed
+  completedDate: string; // ISO date (YYYY-MM-DD) for easy date queries
+  durationSeconds?: number | null; // How long the workout took
+  durationMinutes?: number | null; // Convenience field
+  notes?: string | null; // Optional notes about the completion
+  createdAt: string; // ISO timestamp when record was created
+}
+
+// Workout Completion operations
+export const dynamoDBWorkoutCompletions = {
+  /**
+   * Get all completions for a user (most recent first)
+   */
+  async list(userId: string, limit?: number): Promise<DynamoDBWorkoutCompletion[]> {
+    try {
+      const result = await getDynamoDb().send(
+        new QueryCommand({
+          TableName: WORKOUT_COMPLETIONS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+          },
+          ScanIndexForward: false, // Most recent first
+          Limit: limit,
+        })
+      );
+
+      return (result.Items as DynamoDBWorkoutCompletion[]) || [];
+    } catch (error) {
+      console.error("Error listing workout completions from DynamoDB:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get all completions for a specific workout
+   */
+  async getForWorkout(
+    userId: string,
+    workoutId: string
+  ): Promise<DynamoDBWorkoutCompletion[]> {
+    try {
+      const result = await getDynamoDb().send(
+        new QueryCommand({
+          TableName: WORKOUT_COMPLETIONS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          FilterExpression: "workoutId = :workoutId",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+            ":workoutId": workoutId,
+          },
+          ScanIndexForward: false,
+        })
+      );
+
+      return (result.Items as DynamoDBWorkoutCompletion[]) || [];
+    } catch (error) {
+      console.error("Error getting workout completions:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get completions by date range
+   */
+  async getByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<DynamoDBWorkoutCompletion[]> {
+    try {
+      const result = await getDynamoDb().send(
+        new QueryCommand({
+          TableName: WORKOUT_COMPLETIONS_TABLE,
+          KeyConditionExpression: "userId = :userId",
+          FilterExpression: "completedDate BETWEEN :startDate AND :endDate",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+            ":startDate": startDate,
+            ":endDate": endDate,
+          },
+          ScanIndexForward: false,
+        })
+      );
+
+      return (result.Items as DynamoDBWorkoutCompletion[]) || [];
+    } catch (error) {
+      console.error("Error querying completions by date range:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Create a new workout completion record
+   */
+  async create(
+    userId: string,
+    completion: Omit<DynamoDBWorkoutCompletion, "userId" | "createdAt">
+  ): Promise<DynamoDBWorkoutCompletion> {
+    const now = new Date().toISOString();
+    const completionData: DynamoDBWorkoutCompletion = {
+      userId,
+      completionId: completion.completionId,
+      workoutId: completion.workoutId,
+      completedAt: completion.completedAt,
+      completedDate: completion.completedDate,
+      durationSeconds: completion.durationSeconds ?? null,
+      durationMinutes: completion.durationMinutes ?? null,
+      notes: completion.notes ?? null,
+      createdAt: now,
+    };
+
+    try {
+      await getDynamoDb().send(
+        new PutCommand({
+          TableName: WORKOUT_COMPLETIONS_TABLE,
+          Item: completionData,
+        })
+      );
+
+      return completionData;
+    } catch (error) {
+      console.error("Error creating workout completion:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a workout completion
+   */
+  async delete(userId: string, completionId: string): Promise<void> {
+    try {
+      await getDynamoDb().send(
+        new DeleteCommand({
+          TableName: WORKOUT_COMPLETIONS_TABLE,
+          Key: { userId, completionId },
+        })
+      );
+    } catch (error) {
+      console.error("Error deleting workout completion:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get stats for a user (used by dashboard/home page)
+   * Returns: thisWeek count, total count, streak, hours trained
+   */
+  async getStats(userId: string): Promise<{
+    thisWeek: number;
+    total: number;
+    streak: number;
+    hoursTrained: number;
+  }> {
+    try {
+      // Get all completions for the user
+      const completions = await this.list(userId);
+
+      // Calculate this week's completions
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfWeekIso = startOfWeek.toISOString().split("T")[0];
+
+      const thisWeekCompletions = completions.filter(
+        (c) => c.completedDate >= startOfWeekIso
+      );
+
+      // Calculate streak
+      const uniqueDates = [
+        ...new Set(completions.map((c) => c.completedDate)),
+      ].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+      let streak = 0;
+      const today = new Date().toISOString().split("T")[0];
+      let checkDate = today;
+
+      for (const date of uniqueDates) {
+        if (date === checkDate) {
+          streak++;
+          const prevDate = new Date(checkDate);
+          prevDate.setDate(prevDate.getDate() - 1);
+          checkDate = prevDate.toISOString().split("T")[0];
+        } else {
+          break;
+        }
+      }
+
+      // Calculate hours trained (estimate: avg 45min per workout)
+      const hoursTrained = Math.round(completions.length * 0.75 * 10) / 10;
+
+      return {
+        thisWeek: thisWeekCompletions.length,
+        total: completions.length,
+        streak,
+        hoursTrained,
+      };
+    } catch (error) {
+      console.error("Error calculating workout stats:", error);
+      return {
+        thisWeek: 0,
+        total: 0,
+        streak: 0,
+        hoursTrained: 0,
+      };
+    }
+  },
+};
+
 // Export DynamoDB client getter for custom queries
-export { getDynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE, WEBHOOK_EVENTS_TABLE };
+export { getDynamoDb, USERS_TABLE, WORKOUTS_TABLE, BODY_METRICS_TABLE, WEBHOOK_EVENTS_TABLE, WORKOUT_COMPLETIONS_TABLE };

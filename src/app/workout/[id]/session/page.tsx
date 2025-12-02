@@ -6,8 +6,9 @@ import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import {
   Dialog,
   DialogContent,
@@ -16,35 +17,46 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { TIMER_TEMPLATES, type TimerParams } from "@/timers"
 import { WorkoutTimer } from "@/components/timer/workout-timer"
 import {
   ArrowLeft,
   Timer,
   Sparkles,
   CheckCircle,
-  Edit2,
+  Circle,
   Clock,
   Trophy,
-  Loader2
+  Loader2,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface Exercise {
+  id: string
+  name: string
+  sets: number
+  reps: string | number
+  weight?: string
+  restSeconds?: number
+  notes?: string
+  setDetails?: Array<{
+    id?: string
+    reps?: string | number
+    weight?: string
+  }>
+}
 
 interface Workout {
   id: string
   title: string
   description: string
-  exercises: any[]
+  exercises: Exercise[]
   totalDuration: number
   difficulty: string
   timerConfig?: {
-    params: TimerParams
+    params: any
     aiGenerated?: boolean
     reason?: string
   }
@@ -57,15 +69,15 @@ export default function WorkoutSessionPage() {
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
-  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
-  const [showEditTimer, setShowEditTimer] = useState(false)
-  const [selectedTimerConfig, setSelectedTimerConfig] = useState<{
-    params: TimerParams
-    aiGenerated?: boolean
-    reason?: string
-  } | null>(null)
   const [sessionDuration, setSessionDuration] = useState(0)
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
+  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
+  const [showRestTimer, setShowRestTimer] = useState(false)
+  const [restTimeRemaining, setRestTimeRemaining] = useState(0)
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [showEndDialog, setShowEndDialog] = useState(false)
   const sessionIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const restIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const workoutId = params?.id as string
@@ -75,16 +87,14 @@ export default function WorkoutSessionPage() {
       const startTime = Date.now()
       setSessionStartTime(startTime)
 
-      // Update session duration every second
       sessionIntervalRef.current = setInterval(() => {
         setSessionDuration(Math.floor((Date.now() - startTime) / 1000))
       }, 1000)
     }
 
     return () => {
-      if (sessionIntervalRef.current) {
-        clearInterval(sessionIntervalRef.current)
-      }
+      if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
+      if (restIntervalRef.current) clearInterval(restIntervalRef.current)
     }
   }, [params?.id, user?.id])
 
@@ -104,30 +114,69 @@ export default function WorkoutSessionPage() {
           timerConfig: dbWorkout.timerConfig,
         }
         setWorkout(transformedWorkout)
-        setSelectedTimerConfig(dbWorkout.timerConfig || null)
       } else {
-        // Fallback to localStorage
         const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
         const found = workouts.find((w: Workout) => w.id === workoutId)
         setWorkout(found || null)
-        setSelectedTimerConfig(found?.timerConfig || null)
       }
     } catch (error) {
       console.error('Error loading workout:', error)
       const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
       const found = workouts.find((w: Workout) => w.id === workoutId)
       setWorkout(found || null)
-      setSelectedTimerConfig(found?.timerConfig || null)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDone = () => {
-    if (sessionIntervalRef.current) {
-      clearInterval(sessionIntervalRef.current)
+  const handleCompleteExercise = () => {
+    if (!workout) return
+
+    const currentExercise = workout.exercises[currentExerciseIndex]
+    const newCompleted = new Set(completedExercises)
+    newCompleted.add(currentExercise.id)
+    setCompletedExercises(newCompleted)
+
+    // Check if this was the last exercise
+    if (currentExerciseIndex === workout.exercises.length - 1) {
+      // Show completion dialog
+      if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
+      setShowCompletionDialog(true)
+      return
     }
-    setShowCompletionDialog(true)
+
+    // Show rest timer if exercise has rest configured
+    if (currentExercise.restSeconds && currentExercise.restSeconds > 0) {
+      startRestTimer(currentExercise.restSeconds)
+    } else {
+      // Move to next exercise immediately
+      setCurrentExerciseIndex(prev => prev + 1)
+    }
+  }
+
+  const startRestTimer = (seconds: number) => {
+    setRestTimeRemaining(seconds)
+    setShowRestTimer(true)
+
+    restIntervalRef.current = setInterval(() => {
+      setRestTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Timer finished, auto-advance
+          if (restIntervalRef.current) clearInterval(restIntervalRef.current)
+          setShowRestTimer(false)
+          setCurrentExerciseIndex(prevIndex => prevIndex + 1)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const skipRest = () => {
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current)
+    setShowRestTimer(false)
+    setRestTimeRemaining(0)
+    setCurrentExerciseIndex(prev => prev + 1)
   }
 
   const handleMarkCompleted = async () => {
@@ -150,34 +199,47 @@ export default function WorkoutSessionPage() {
     const updated = [...existing, newEntry]
     localStorage.setItem('completedWorkouts', JSON.stringify(updated))
 
-    // Save to DynamoDB if user is authenticated
+    // Save to DynamoDB
     if (user?.id) {
       try {
+        await fetch('/api/workouts/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workoutId: workout.id,
+            completedAt,
+            completedDate: todayIso,
+            durationSeconds: sessionDuration,
+            durationMinutes,
+          }),
+        })
+
         await fetch(`/api/workouts/${workout.id}/complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             completedAt,
+            completedDate: todayIso,
             durationSeconds: sessionDuration,
           }),
         })
       } catch (error) {
-        console.error('Error saving completion to DynamoDB:', error)
+        console.error('Error saving completion:', error)
       }
     }
 
-    // Dispatch events for updates
     window.dispatchEvent(new Event('workoutsUpdated'))
     window.dispatchEvent(new Event('calendarUpdated'))
-
-    // Navigate back to workout detail page
     router.push(`/workout/${workout.id}`)
   }
 
-  const handleEndWithoutCompletion = () => {
-    if (sessionIntervalRef.current) {
-      clearInterval(sessionIntervalRef.current)
-    }
+  const handleEndWorkout = () => {
+    setShowEndDialog(true)
+  }
+
+  const handleDiscardWorkout = () => {
+    if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current)
     router.push(`/workout/${workout!.id}`)
   }
 
@@ -191,21 +253,8 @@ export default function WorkoutSessionPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleSelectTimer = (templateId: string) => {
-    if (templateId === 'none') {
-      setSelectedTimerConfig(null)
-    } else if (templateId === 'custom') {
-      // Keep current configuration
-    } else {
-      const template = TIMER_TEMPLATES.find((t) => t.id === templateId)
-      if (template) {
-        setSelectedTimerConfig({
-          params: template.defaultParams,
-          aiGenerated: false,
-        })
-      }
-    }
-    setShowEditTimer(false)
+  const navigateToExercise = (index: number) => {
+    setCurrentExerciseIndex(index)
   }
 
   if (!isAuthenticated) {
@@ -216,7 +265,7 @@ export default function WorkoutSessionPage() {
     return (
       <>
         <Header />
-        <main className="min-h-screen flex items-center justify-center">
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
           <div className="text-center">
             <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
             <p className="text-text-secondary">Loading workout session...</p>
@@ -240,189 +289,390 @@ export default function WorkoutSessionPage() {
     )
   }
 
+  const currentExercise = workout.exercises[currentExerciseIndex]
+  const progress = ((completedExercises.size) / workout.exercises.length) * 100
+
   return (
     <>
       <Header />
-      <main className="min-h-screen pb-20">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
+      <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pb-32">
+        {/* Top Bar */}
+        <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-4 py-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/workout/${workout.id}`)}
+                onClick={handleEndWorkout}
+                className="text-text-secondary hover:text-white"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Workout
+                <X className="h-5 w-5 mr-2" />
+                End
               </Button>
-              <Button
-                onClick={handleDone}
-                size="lg"
-                className="bg-green-600 hover:bg-green-700"
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-text-secondary">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm font-mono tabular-nums">{formatTime(sessionDuration)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {workout.exercises.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "h-2 w-2 rounded-full transition-colors",
+                        completedExercises.has(workout.exercises[idx].id)
+                          ? "bg-green-500"
+                          : idx === currentExerciseIndex
+                          ? "bg-primary"
+                          : "bg-slate-700"
+                      )}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-text-secondary">
+                  {completedExercises.size}/{workout.exercises.length}
+                </span>
+              </div>
+            </div>
+            <Progress value={progress} className="h-1" />
+          </div>
+        </div>
+
+        {/* Card Carousel */}
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="relative">
+            {/* Previous Card (smaller, faded) */}
+            {currentExerciseIndex > 0 && (
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-64 opacity-30 scale-75 transition-all cursor-pointer hover:opacity-50"
+                onClick={() => navigateToExercise(currentExerciseIndex - 1)}
               >
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Done
-              </Button>
+                <ExerciseCard
+                  exercise={workout.exercises[currentExerciseIndex - 1]}
+                  exerciseNumber={currentExerciseIndex}
+                  isCompleted={completedExercises.has(workout.exercises[currentExerciseIndex - 1].id)}
+                  isActive={false}
+                  onComplete={() => {}}
+                />
+              </div>
+            )}
+
+            {/* Current Card (large, centered) */}
+            <div className="mx-auto max-w-md">
+              <ExerciseCard
+                exercise={currentExercise}
+                exerciseNumber={currentExerciseIndex + 1}
+                isCompleted={completedExercises.has(currentExercise.id)}
+                isActive={true}
+                onComplete={handleCompleteExercise}
+              />
             </div>
 
-            <h1 className="text-2xl font-bold text-text-primary mb-2">
-              {workout.title}
-            </h1>
+            {/* Next Card (smaller, faded) */}
+            {currentExerciseIndex < workout.exercises.length - 1 && (
+              <div
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-64 opacity-30 scale-75 transition-all cursor-pointer hover:opacity-50"
+                onClick={() => navigateToExercise(currentExerciseIndex + 1)}
+              >
+                <ExerciseCard
+                  exercise={workout.exercises[currentExerciseIndex + 1]}
+                  exerciseNumber={currentExerciseIndex + 2}
+                  isCompleted={completedExercises.has(workout.exercises[currentExerciseIndex + 1].id)}
+                  isActive={false}
+                  onComplete={() => {}}
+                />
+              </div>
+            )}
+          </div>
 
-            {/* Session Duration */}
-            <Card className="mb-6">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-text-secondary">
-                    <Clock className="h-5 w-5" />
-                    <span className="text-sm">Session Time:</span>
-                  </div>
-                  <div className="text-3xl font-bold text-primary tabular-nums">
-                    {formatTime(sessionDuration)}
-                  </div>
+          {/* Navigation Hints */}
+          <div className="flex items-center justify-center gap-8 mt-8">
+            {currentExerciseIndex > 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => navigateToExercise(currentExerciseIndex - 1)}
+                className="text-text-secondary"
+              >
+                <ChevronLeft className="h-5 w-5 mr-2" />
+                Previous
+              </Button>
+            )}
+            {currentExerciseIndex < workout.exercises.length - 1 && !completedExercises.has(currentExercise.id) && (
+              <Button
+                variant="ghost"
+                onClick={() => navigateToExercise(currentExerciseIndex + 1)}
+                className="text-text-secondary"
+              >
+                Next
+                <ChevronRight className="h-5 w-5 ml-2" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Rest Timer Overlay */}
+        {showRestTimer && (
+          <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+            <Card className="w-80 bg-slate-800 border-slate-700">
+              <CardContent className="pt-8 pb-6 text-center">
+                <div className="mb-4">
+                  <Timer className="h-16 w-16 text-primary mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-white mb-2">Rest Time</h3>
+                  <p className="text-text-secondary text-sm">Take a breather before the next exercise</p>
                 </div>
+                <div className="text-6xl font-bold text-primary tabular-nums mb-6">
+                  {formatTime(restTimeRemaining)}
+                </div>
+                <Button
+                  onClick={skipRest}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Skip Rest
+                </Button>
               </CardContent>
             </Card>
           </div>
+        )}
 
-          {/* Timer Section */}
-          <Card>
-            <CardHeader>
+        {/* Workout Timer Bottom Bar */}
+        {workout.timerConfig && (
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800">
+            <div className="max-w-4xl mx-auto px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Timer className="h-5 w-5" />
-                  <CardTitle>Workout Timer</CardTitle>
-                  {selectedTimerConfig?.aiGenerated && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      AI-Suggested
+                  <Timer className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-white">
+                    Workout Timer
+                  </span>
+                  {workout.timerConfig.aiGenerated && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI
                     </Badge>
                   )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowEditTimer(!showEditTimer)}
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Timer
-                </Button>
-              </div>
-              {selectedTimerConfig?.reason && (
-                <p className="text-sm text-text-secondary mt-2">
-                  {selectedTimerConfig.reason}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent>
-              {showEditTimer && (
-                <div className="mb-6 p-4 border border-border rounded-lg bg-surface">
-                  <label className="block text-sm font-medium mb-2">
-                    Select Timer Configuration
-                  </label>
-                  <Select
-                    value={selectedTimerConfig ? "custom" : "none"}
-                    onValueChange={handleSelectTimer}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="No timer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No timer</SelectItem>
-                      {selectedTimerConfig && (
-                        <SelectItem value="custom">
-                          {selectedTimerConfig.aiGenerated
-                            ? "AI-Suggested Timer"
-                            : "Custom Timer"}
-                        </SelectItem>
-                      )}
-                      {TIMER_TEMPLATES.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {selectedTimerConfig ? (
                 <WorkoutTimer
-                  params={selectedTimerConfig.params}
+                  params={workout.timerConfig.params}
                   persistKey={`workout-${workout.id}-session-timer`}
                 />
-              ) : (
-                <div className="text-center py-12">
-                  <Timer className="h-12 w-12 text-text-secondary mx-auto mb-4" />
-                  <p className="text-text-secondary mb-4">
-                    No timer configured for this workout
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowEditTimer(true)}
-                  >
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Add Timer
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Completion Dialog */}
       <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-green-100 rounded-full p-4">
+              <div className="bg-green-100 rounded-full p-4 animate-bounce">
                 <Trophy className="h-12 w-12 text-green-600" />
               </div>
             </div>
             <DialogTitle className="text-center text-2xl">
-              Great Work!
+              Workout Complete! 🎉
             </DialogTitle>
             <DialogDescription className="text-center text-lg">
-              You completed this workout in <span className="font-bold text-primary">{formatTime(sessionDuration)}</span>
+              Amazing work! You crushed it in{' '}
+              <span className="font-bold text-primary">{formatTime(sessionDuration)}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="my-4 p-4 bg-surface rounded-lg">
-            <div className="flex items-center justify-between">
+          <div className="my-4 space-y-3">
+            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
               <span className="text-text-secondary">Workout:</span>
               <span className="font-medium">{workout.title}</span>
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
+              <span className="text-text-secondary">Exercises:</span>
+              <span className="font-medium">{completedExercises.size} completed</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
               <span className="text-text-secondary">Duration:</span>
-              <span className="font-medium">{Math.floor(sessionDuration / 60)} minutes</span>
+              <span className="font-medium">{Math.floor(sessionDuration / 60)} min</span>
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
-              onClick={handleEndWithoutCompletion}
+              onClick={handleDiscardWorkout}
               className="w-full sm:w-auto"
             >
-              End Without Saving
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCompletionDialog(false)}
-              className="w-full sm:w-auto"
-            >
-              Cancel
+              Don't Save
             </Button>
             <Button
               onClick={handleMarkCompleted}
               className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              Mark as Completed
+              Save Workout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* End Workout Dialog */}
+      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End Workout?</DialogTitle>
+            <DialogDescription>
+              You've completed {completedExercises.size} out of {workout.exercises.length} exercises.
+              Do you want to save your progress?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDiscardWorkout}
+              className="w-full sm:w-auto"
+            >
+              End Without Saving
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Continue Workout
+            </Button>
+            <Button
+              onClick={handleMarkCompleted}
+              className="w-full sm:w-auto"
+            >
+              Save & End
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+interface ExerciseCardProps {
+  exercise: Exercise
+  exerciseNumber: number
+  isCompleted: boolean
+  isActive: boolean
+  onComplete: () => void
+}
+
+function ExerciseCard({
+  exercise,
+  exerciseNumber,
+  isCompleted,
+  isActive,
+  onComplete,
+}: ExerciseCardProps) {
+  return (
+    <Card
+      className={cn(
+        "transition-all duration-300",
+        isActive ? "bg-slate-800 border-slate-700 shadow-2xl" : "bg-slate-900 border-slate-800",
+        isCompleted && "border-green-500/50"
+      )}
+    >
+      <CardContent className="pt-8 pb-6">
+        {/* Exercise Number Badge */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+            {exerciseNumber}
+          </div>
+          {isCompleted && (
+            <div className="flex items-center gap-2 text-green-500">
+              <CheckCircle className="h-6 w-6" />
+              <span className="text-sm font-medium">Complete</span>
+            </div>
+          )}
+        </div>
+
+        {/* Exercise Name */}
+        <h2 className="text-3xl font-bold text-white mb-4 capitalize">
+          {exercise.name}
+        </h2>
+
+        {/* Exercise Details */}
+        {exercise.setDetails && exercise.setDetails.length > 0 ? (
+          <div className="space-y-3 mb-6">
+            {exercise.setDetails.map((set, idx) => (
+              <div
+                key={set.id || idx}
+                className="flex items-center justify-between p-4 bg-slate-900/60 rounded-lg"
+              >
+                <span className="text-sm text-text-secondary">Set {idx + 1}</span>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-white">
+                      {set.reps || exercise.reps} <span className="text-sm text-text-secondary">reps</span>
+                    </div>
+                  </div>
+                  {(set.weight || exercise.weight) && (
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-white">
+                        {set.weight || exercise.weight}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {exercise.sets > 1 && (
+              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+                <div className="text-3xl font-bold text-white">{exercise.sets}</div>
+                <div className="text-sm text-text-secondary">sets</div>
+              </div>
+            )}
+            {exercise.reps && (
+              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+                <div className="text-3xl font-bold text-white">{exercise.reps}</div>
+                <div className="text-sm text-text-secondary">reps</div>
+              </div>
+            )}
+            {exercise.weight && (
+              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+                <div className="text-3xl font-bold text-white">{exercise.weight}</div>
+                <div className="text-sm text-text-secondary">weight</div>
+              </div>
+            )}
+            {exercise.restSeconds && exercise.restSeconds > 0 && (
+              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+                <div className="text-3xl font-bold text-white">{exercise.restSeconds}s</div>
+                <div className="text-sm text-text-secondary">rest</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Notes */}
+        {exercise.notes && (
+          <p className="text-sm text-text-secondary mb-6 italic">
+            {exercise.notes}
+          </p>
+        )}
+
+        {/* Complete Button */}
+        {isActive && !isCompleted && (
+          <Button
+            onClick={onComplete}
+            className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
+            size="lg"
+          >
+            <CheckCircle className="h-6 w-6 mr-2" />
+            Complete Exercise
+          </Button>
+        )}
+
+        {isActive && isCompleted && (
+          <div className="w-full h-14 flex items-center justify-center bg-green-500/20 border border-green-500/50 rounded-lg">
+            <CheckCircle className="h-6 w-6 text-green-500 mr-2" />
+            <span className="text-lg font-semibold text-green-500">Completed</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

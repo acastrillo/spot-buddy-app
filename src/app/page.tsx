@@ -50,38 +50,60 @@ export default function HomePage() {
 
           setRecentWorkouts(sorted)
 
-          // Update stats based on saved workouts
-          const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
-          const now = new Date()
-          const sow = new Date(now)
-          sow.setDate(now.getDate() - now.getDay())
-          sow.setHours(0, 0, 0, 0)
-          const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
-
-          // Streak calculation
-          const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
-            .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
-          let streak = 0
-          const today = new Date().toISOString().split('T')[0]
-          let checkDate = today
-          for (const date of sortedDates) {
-            if (date === checkDate) {
-              streak++
-              const prevDate = new Date(checkDate)
-              prevDate.setDate(prevDate.getDate() - 1)
-              checkDate = prevDate.toISOString().split('T')[0]
+          // Fetch stats from DynamoDB completions API
+          try {
+            const statsResponse = await fetch('/api/workouts/completions/stats')
+            if (statsResponse.ok) {
+              const { stats } = await statsResponse.json()
+              setWorkoutStats({
+                thisWeek: stats.thisWeek,
+                total: workouts.length,
+                hoursTrained: stats.hoursTrained,
+                streak: stats.streak,
+              })
             } else {
-              break
-            }
-          }
+              // Fallback to localStorage calculation
+              const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+              const now = new Date()
+              const sow = new Date(now)
+              sow.setDate(now.getDate() - now.getDay())
+              sow.setHours(0, 0, 0, 0)
+              const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
 
-          const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
-          setWorkoutStats({
-            thisWeek: thisWeekCompletions.length,
-            total: workouts.length,
-            hoursTrained,
-            streak,
-          })
+              const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
+                .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
+              let streak = 0
+              const today = new Date().toISOString().split('T')[0]
+              let checkDate = today
+              for (const date of sortedDates) {
+                if (date === checkDate) {
+                  streak++
+                  const prevDate = new Date(checkDate)
+                  prevDate.setDate(prevDate.getDate() - 1)
+                  checkDate = prevDate.toISOString().split('T')[0]
+                } else {
+                  break
+                }
+              }
+
+              const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
+              setWorkoutStats({
+                thisWeek: thisWeekCompletions.length,
+                total: workouts.length,
+                hoursTrained,
+                streak,
+              })
+            }
+          } catch (statsError) {
+            console.error('Error fetching stats:', statsError)
+            // Use empty stats on error
+            setWorkoutStats({
+              thisWeek: 0,
+              total: workouts.length,
+              hoursTrained: 0,
+              streak: 0,
+            })
+          }
         } else {
           // Fallback to localStorage
           const savedWorkouts = JSON.parse(localStorage.getItem('workouts') || '[]')

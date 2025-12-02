@@ -3,6 +3,8 @@
  * Helpers for workout timers, interval timers, and rest timers
  */
 
+import { setCachedItem, getCachedItem, TTL } from './cache-utils';
+
 export interface TimerState {
   duration: number; // Total duration in seconds
   remaining: number; // Remaining time in seconds
@@ -58,11 +60,12 @@ export function calculateProgress(total: number, remaining: number): number {
 }
 
 /**
- * Save timer state to localStorage
+ * Save timer state to localStorage with timestamp
+ * Timers have a 24-hour TTL (users might resume workouts the next day)
  */
 export function saveTimerState(key: string, state: TimerState | HIITState): void {
   try {
-    localStorage.setItem(key, JSON.stringify(state));
+    setCachedItem(key, state);
   } catch (error) {
     console.error('Failed to save timer state:', error);
   }
@@ -70,12 +73,13 @@ export function saveTimerState(key: string, state: TimerState | HIITState): void
 
 /**
  * Load timer state from localStorage
+ * Automatically invalidates if older than 24 hours
  */
 export function loadTimerState<T extends TimerState>(key: string): T | null {
   try {
-    const saved = localStorage.getItem(key);
-    if (!saved) return null;
-    return JSON.parse(saved) as T;
+    // Use 24-hour TTL for timer states
+    const state = getCachedItem<T>(key, TTL.ONE_DAY);
+    return state;
   } catch (error) {
     console.error('Failed to load timer state:', error);
     return null;

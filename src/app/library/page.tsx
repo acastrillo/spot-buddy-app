@@ -54,15 +54,43 @@ export default function LibraryPage() {
         if (response.ok) {
           const { workouts: apiWorkouts } = await response.json()
 
-          // Get completion counts from localStorage
-          const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+          // Fetch completion counts from DynamoDB
+          let completionCountMap: Record<string, number> = {}
+          try {
+            const completionsResponse = await fetch('/api/workouts/completions')
+            if (completionsResponse.ok) {
+              const { completions } = await completionsResponse.json()
+
+              // Build a map of workoutId -> count
+              completionCountMap = completions.reduce((acc: Record<string, number>, completion: any) => {
+                const workoutId = completion.workoutId
+                acc[workoutId] = (acc[workoutId] || 0) + 1
+                return acc
+              }, {})
+            } else {
+              // Fallback to localStorage
+              const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+              completionCountMap = completedWorkouts.reduce((acc: Record<string, number>, completion: any) => {
+                const workoutId = completion.workoutId
+                acc[workoutId] = (acc[workoutId] || 0) + 1
+                return acc
+              }, {})
+            }
+          } catch (completionsError) {
+            console.error('Error fetching completions:', completionsError)
+            // Fallback to localStorage
+            const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+            completionCountMap = completedWorkouts.reduce((acc: Record<string, number>, completion: any) => {
+              const workoutId = completion.workoutId
+              acc[workoutId] = (acc[workoutId] || 0) + 1
+              return acc
+            }, {})
+          }
 
           // Map workouts and add completion counts
           const workoutsWithStats = apiWorkouts.map((workout: any) => {
             const workoutId = workout.workoutId || workout.id
-            const completionCount = completedWorkouts.filter(
-              (c: any) => c.workoutId === workoutId
-            ).length
+            const completionCount = completionCountMap[workoutId] || 0
 
             return {
               id: workoutId,
