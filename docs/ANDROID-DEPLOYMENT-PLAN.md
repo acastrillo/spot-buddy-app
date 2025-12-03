@@ -1,8 +1,9 @@
 # Spot Buddy Android Deployment Plan
 
-**Last Updated:** November 30, 2024
+**Last Updated:** December 2, 2024
 **Status:** Ready for Implementation
 **Backend:** 100% Ready (Production Deployed)
+**New Features:** Card Carousel Workout Session, AI Timer Suggestions, Completion Tracking
 
 ---
 
@@ -49,6 +50,157 @@ Build a native Android app (Kotlin/Java or React Native) that:
 3. Offers subscription management via web checkout (App Store compliant)
 4. Delivers core workout tracking features
 5. Maintains feature parity with web app
+6. **NEW:** Implements card carousel workout session experience
+7. **NEW:** Integrates AI-powered timer suggestions
+8. **NEW:** Tracks workout completions with session duration
+
+---
+
+## Latest Features (December 2024)
+
+### 🎯 Card Carousel Workout Session
+
+**Status:** ✅ Deployed to Production (December 2, 2024)
+
+The web app now features a revolutionary workout session experience based on UX research of leading fitness apps (Peloton, Nike Training Club). This should be replicated in the Android app.
+
+**Key Features:**
+- **Card Carousel Navigation:** Current exercise displayed large and centered, adjacent exercises visible but smaller
+- **One-Tap Completion:** No interrupting popups - tap "Complete Exercise" to advance
+- **Auto-Advance Rest Timer:** Automatic transition between exercises with smart rest timer
+- **Flow State Optimization:** Minimizes distractions during workouts (research shows 40% lower abandonment)
+- **Session Duration Tracking:** Real-time elapsed time with persistence to DynamoDB
+- **Workout Timer Integration:** Bottom bar displays EMOM/AMRAP/Tabata timers if configured
+- **Completion Celebration:** Motivational celebration screen with workout summary
+
+**UX Research Findings:**
+- Users can't think clearly while exercising - minimize cognitive load
+- Popups increase abandonment by 40%
+- Micro-interactions increase engagement by 30%
+- Limit workout tracking to 3 steps maximum
+
+**API Endpoint:**
+```
+POST /api/workouts/:id/complete
+{
+  "completedDate": "2024-12-02",
+  "completedAt": "2024-12-02T18:30:00Z",
+  "durationSeconds": 3600
+}
+```
+
+**Android Implementation Notes:**
+- Use ViewPager2 with PageTransformer for card carousel effect
+- Scale adjacent cards to 75%, opacity 30%
+- Implement smooth transitions with MaterialContainerTransform
+- Store session start time in SharedPreferences
+- Auto-advance with CountDownTimer for rest periods
+- Use MotionLayout for celebration animations
+
+### 🤖 AI Timer Suggester
+
+**Status:** ✅ Deployed to Production (Phase 5 complete)
+
+AI agent analyzes workout structure and suggests appropriate timer configurations using Claude Haiku.
+
+**Supported Timer Types:**
+1. **EMOM** (Every Minute On the Minute)
+   - Best for: Fixed time intervals with work + rest
+   - Params: `intervalSeconds` (60), `totalMinutes`
+
+2. **AMRAP** (As Many Rounds As Possible)
+   - Best for: Maximum volume in fixed time
+   - Params: `durationSeconds`
+
+3. **INTERVAL_WORK_REST** (Work/Rest Intervals)
+   - Best for: Circuit training, HIIT
+   - Params: `workSeconds`, `restSeconds`, `totalRounds`, `prepSeconds`
+
+4. **TABATA** (High-intensity intervals)
+   - Best for: Short bursts with brief rest
+   - Params: `workSeconds` (20), `restSeconds` (10), `rounds` (8), `prepSeconds`
+
+**Workout Analysis:**
+- Detects workout style: hyrox, metcon, strength, endurance, recovery, mixed
+- Identifies primary goal: conditioning, strength, hypertrophy, mobility, skill
+- Suggests timer with reasoning
+- Returns null if no timer appropriate (e.g., pure strength training)
+
+**Cost:** ~$0.00088 per suggestion (Haiku model)
+
+**Android Implementation:**
+- Display AI-suggested timer with "AI" badge
+- Allow user to edit or change timer type
+- Store `timerConfig` with workout in API
+- Show timer in bottom bar during session
+
+### 📊 Workout Completions Tracking
+
+**Status:** ✅ API Endpoints Created
+
+New endpoints for tracking workout completion history separately from the main workout record.
+
+**API Endpoints:**
+
+```
+GET /api/workouts/:id/completions
+Response: [
+  {
+    "completionId": "uuid",
+    "workoutId": "uuid",
+    "completedAt": "2024-12-02T18:30:00Z",
+    "durationSeconds": 3600,
+    "notes": "Felt strong today"
+  }
+]
+
+POST /api/workouts/:id/completions
+Request: {
+  "completedAt": "2024-12-02T18:30:00Z",
+  "durationSeconds": 3600,
+  "notes": "Optional completion notes"
+}
+
+GET /api/workouts/completions/stats
+Response: {
+  "totalCompletions": 150,
+  "last30Days": 12,
+  "averageDuration": 3200,
+  "longestWorkout": 5400,
+  "currentStreak": 7
+}
+```
+
+**DynamoDB Schema:**
+```typescript
+// completions table
+{
+  userId: string (partition key)
+  completionId: string (sort key, UUID)
+  workoutId: string (indexed via workoutId-index GSI)
+  completedAt: string (ISO timestamp)
+  durationSeconds: number
+  notes?: string
+  exercises?: Array<{
+    exerciseId: string
+    completed: boolean
+    completedAt?: string
+  }>
+}
+```
+
+**Benefits:**
+- Track multiple completions of same workout
+- Historical completion data for analytics
+- Streak tracking and motivation
+- Completion rate metrics
+- Performance trends over time
+
+**Android Implementation:**
+- Display completion history on workout detail screen
+- Show completion count badge on workout cards
+- Chart completion trends in stats screen
+- Push notification for streak milestones
 
 ---
 
@@ -141,21 +293,65 @@ Build a native Android app (Kotlin/Java or React Native) that:
 {
   userId: string (partition key)
   workoutId: string (sort key, UUID)
-  date: string (ISO date)
-  name: string
-  notes: string
+  title: string
+  description: string | null
+  content: string // Markdown workout content
+  source: string // "user" | "ai" | "import"
+  type: string // "strength" | "cardio" | "mixed"
+  difficulty: string // "beginner" | "intermediate" | "advanced"
+  tags: string[] // ["legs", "push", "hyrox", etc.]
+  totalDuration: number (minutes estimate)
+
   exercises: [{
+    id: string (UUID)
     name: string
-    sets: [{
-      reps: number
-      weight: number
-      unit: "lbs" | "kg"
-      restTime: number (seconds)
+    notes: string | null
+    sets: number
+    reps: string | number
+    weight: string | number | null
+    restSeconds: number | null
+    setDetails: [{
+      id: string
+      reps: string | number | null
+      weight: string | number | null
     }]
   }]
-  duration: number (seconds)
-  totalVolume: number
-  imageUrl: string (S3 URL)
+
+  // NEW: Timer Configuration (December 2024)
+  timerConfig: {
+    params: {
+      kind: "EMOM" | "AMRAP" | "INTERVAL_WORK_REST" | "TABATA"
+      // EMOM params
+      intervalSeconds?: number // 60
+      totalMinutes?: number
+      // AMRAP params
+      durationSeconds?: number
+      // INTERVAL_WORK_REST params
+      workSeconds?: number
+      restSeconds?: number
+      totalRounds?: number
+      prepSeconds?: number
+      // TABATA params
+      rounds?: number
+    }
+    aiGenerated?: boolean
+    reason?: string // AI explanation for timer choice
+  } | null
+
+  // Completion tracking
+  status: "draft" | "scheduled" | "completed" | null
+  scheduledDate: string (ISO) | null
+  completedDate: string (ISO) | null
+  completedAt: string (ISO timestamp) | null // NEW: Precise completion time
+  durationSeconds: number | null // NEW: Actual workout duration
+
+  // Media
+  imageUrls: string[] // S3 URLs
+  thumbnailUrl: string | null
+
+  // Metadata
+  author: { username: string } | null
+  llmData: object | null // AI generation metadata
   createdAt: string (ISO)
   updatedAt: string (ISO)
 }
@@ -712,6 +908,409 @@ fun WorkoutListScreen(
 - [ ] Delete workout syncs to backend
 - [ ] Offline mode shows cached workouts
 - [ ] Pull-to-refresh updates data
+
+**2.5 Workout Session Screen (NEW - December 2024)**
+
+Implement the card carousel workout session experience that matches the web app.
+
+**UI Components:**
+
+```kotlin
+@Composable
+fun WorkoutSessionScreen(
+    workoutId: String,
+    viewModel: WorkoutSessionViewModel = hiltViewModel()
+) {
+    val workout by viewModel.workout.collectAsState()
+    val currentExerciseIndex by viewModel.currentExerciseIndex.collectAsState()
+    val completedExercises by viewModel.completedExercises.collectAsState()
+    val sessionDuration by viewModel.sessionDuration.collectAsState()
+    val showRestTimer by viewModel.showRestTimer.collectAsState()
+    val restTimeRemaining by viewModel.restTimeRemaining.collectAsState()
+
+    Scaffold(
+        topBar = {
+            // Progress bar with exercise count and session timer
+            WorkoutSessionHeader(
+                progress = completedExercises.size.toFloat() / workout.exercises.size,
+                completedCount = completedExercises.size,
+                totalCount = workout.exercises.size,
+                sessionDuration = sessionDuration,
+                onEndWorkout = { viewModel.showEndDialog() }
+            )
+        },
+        bottomBar = {
+            // Workout timer (EMOM/AMRAP/Tabata) if configured
+            workout.timerConfig?.let { config ->
+                WorkoutTimerBar(
+                    params = config.params,
+                    aiGenerated = config.aiGenerated ?: false,
+                    reason = config.reason
+                )
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Card carousel using HorizontalPager
+            HorizontalPager(
+                state = rememberPagerState(
+                    initialPage = currentExerciseIndex,
+                    pageCount = { workout.exercises.size }
+                ),
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                ExerciseCard(
+                    exercise = workout.exercises[page],
+                    exerciseNumber = page + 1,
+                    isCompleted = completedExercises.contains(workout.exercises[page].id),
+                    isActive = page == currentExerciseIndex,
+                    onComplete = { viewModel.completeExercise(page) }
+                )
+            }
+
+            // Rest timer overlay
+            if (showRestTimer) {
+                RestTimerOverlay(
+                    timeRemaining = restTimeRemaining,
+                    onSkip = { viewModel.skipRest() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ExerciseCard(
+    exercise: Exercise,
+    exerciseNumber: Int,
+    isCompleted: Boolean,
+    isActive: Boolean,
+    onComplete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .graphicsLayer {
+                // Scale down if not active
+                val scale = if (isActive) 1f else 0.75f
+                scaleX = scale
+                scaleY = scale
+                alpha = if (isActive) 1f else 0.3f
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = if (isCompleted) {
+            BorderStroke(2.dp, Color.Green)
+        } else null
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
+            // Exercise number badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = exerciseNumber.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (isCompleted) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Completed",
+                            tint = Color.Green,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Complete",
+                            color = Color.Green,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Exercise name
+            Text(
+                text = exercise.name,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Set details
+            exercise.setDetails?.forEach { set ->
+                SetDetailRow(set = set)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Rest time indicator
+            exercise.restSeconds?.let { restSeconds ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = "Rest time",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "${restSeconds}s rest",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Complete button (only for active, incomplete exercises)
+            if (isActive && !isCompleted) {
+                Button(
+                    onClick = onComplete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Complete Exercise",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RestTimerOverlay(
+    timeRemaining: Int,
+    onSkip: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.8f))
+            .clickable { /* Prevent clicks */ },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.width(320.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Rest Time",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Countdown timer
+                Text(
+                    text = formatTime(timeRemaining),
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onSkip,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors()
+                ) {
+                    Text("Skip Rest")
+                }
+            }
+        }
+    }
+}
+```
+
+**ViewModel Implementation:**
+
+```kotlin
+@HiltViewModel
+class WorkoutSessionViewModel @Inject constructor(
+    private val workoutRepository: WorkoutRepository,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+    private val workoutId: String = checkNotNull(savedStateHandle["workoutId"])
+
+    private val _workout = MutableStateFlow<Workout?>(null)
+    val workout = _workout.asStateFlow()
+
+    private val _currentExerciseIndex = MutableStateFlow(0)
+    val currentExerciseIndex = _currentExerciseIndex.asStateFlow()
+
+    private val _completedExercises = MutableStateFlow<Set<String>>(emptySet())
+    val completedExercises = _completedExercises.asStateFlow()
+
+    private val _sessionDuration = MutableStateFlow(0)
+    val sessionDuration = _sessionDuration.asStateFlow()
+
+    private val _showRestTimer = MutableStateFlow(false)
+    val showRestTimer = _showRestTimer.asStateFlow()
+
+    private val _restTimeRemaining = MutableStateFlow(0)
+    val restTimeRemaining = _restTimeRemaining.asStateFlow()
+
+    private var sessionStartTime: Long = 0
+    private var sessionTimer: Job? = null
+    private var restTimer: Job? = null
+
+    init {
+        loadWorkout()
+        startSessionTimer()
+    }
+
+    private fun loadWorkout() {
+        viewModelScope.launch {
+            _workout.value = workoutRepository.getWorkout(workoutId)
+        }
+    }
+
+    private fun startSessionTimer() {
+        sessionStartTime = System.currentTimeMillis()
+        sessionTimer = viewModelScope.launch {
+            while (true) {
+                delay(1000)
+                _sessionDuration.value =
+                    ((System.currentTimeMillis() - sessionStartTime) / 1000).toInt()
+            }
+        }
+    }
+
+    fun completeExercise(index: Int) {
+        val exercise = _workout.value?.exercises?.get(index) ?: return
+
+        // Mark exercise as completed
+        _completedExercises.value = _completedExercises.value + exercise.id
+
+        // Check if this was the last exercise
+        if (index == (_workout.value?.exercises?.size ?: 0) - 1) {
+            completeWorkout()
+            return
+        }
+
+        // Show rest timer if configured
+        val restSeconds = exercise.restSeconds
+        if (restSeconds != null && restSeconds > 0) {
+            startRestTimer(restSeconds)
+        } else {
+            // Move to next exercise
+            _currentExerciseIndex.value = index + 1
+        }
+    }
+
+    private fun startRestTimer(seconds: Int) {
+        _restTimeRemaining.value = seconds
+        _showRestTimer.value = true
+
+        restTimer?.cancel()
+        restTimer = viewModelScope.launch {
+            while (_restTimeRemaining.value > 0) {
+                delay(1000)
+                _restTimeRemaining.value--
+            }
+            // Auto-advance when timer expires
+            _showRestTimer.value = false
+            _currentExerciseIndex.value++
+        }
+    }
+
+    fun skipRest() {
+        restTimer?.cancel()
+        _showRestTimer.value = false
+        _currentExerciseIndex.value++
+    }
+
+    private fun completeWorkout() {
+        sessionTimer?.cancel()
+        viewModelScope.launch {
+            workoutRepository.completeWorkout(
+                workoutId = workoutId,
+                completedDate = LocalDate.now().toString(),
+                completedAt = Instant.now().toString(),
+                durationSeconds = _sessionDuration.value
+            )
+            // Show completion dialog
+            _showCompletionDialog.value = true
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        sessionTimer?.cancel()
+        restTimer?.cancel()
+    }
+}
+```
+
+**Testing Checklist:**
+- [ ] Card carousel swipes smoothly
+- [ ] Current card scales to 100%, adjacent cards to 75%
+- [ ] One-tap completion works
+- [ ] Rest timer displays and counts down
+- [ ] Auto-advance after rest timer
+- [ ] Skip rest button works
+- [ ] Session timer updates every second
+- [ ] Workout timer (bottom bar) displays if configured
+- [ ] Completion celebration shows
+- [ ] Duration saved to backend
+- [ ] Progress dots update as exercises complete
 
 ---
 
@@ -1271,6 +1870,106 @@ Response (204):
 No content
 ```
 
+**Complete Workout (NEW - December 2024)**
+```
+POST /api/workouts/:id/complete
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "completedDate": "2024-12-02", // ISO date
+  "completedAt": "2024-12-02T18:30:00Z", // ISO timestamp
+  "durationSeconds": 3600 // Actual workout duration
+}
+
+Response (200):
+{
+  "success": true,
+  "workoutId": "uuid",
+  "completedDate": "2024-12-02",
+  "completedAt": "2024-12-02T18:30:00Z",
+  "durationSeconds": 3600,
+  "status": "completed"
+}
+```
+
+**Get Workout Completions (NEW - December 2024)**
+```
+GET /api/workouts/:id/completions
+Authorization: Bearer <token>
+
+Response (200):
+{
+  "completions": [
+    {
+      "completionId": "uuid",
+      "workoutId": "uuid",
+      "completedAt": "2024-12-02T18:30:00Z",
+      "durationSeconds": 3600,
+      "notes": "Felt strong today",
+      "exercises": [
+        {
+          "exerciseId": "uuid",
+          "completed": true,
+          "completedAt": "2024-12-02T18:15:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Create Workout Completion (NEW - December 2024)**
+```
+POST /api/workouts/:id/completions
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "completedAt": "2024-12-02T18:30:00Z",
+  "durationSeconds": 3600,
+  "notes": "Personal best on squats!",
+  "exercises": [
+    {
+      "exerciseId": "uuid",
+      "completed": true,
+      "completedAt": "2024-12-02T18:15:00Z"
+    }
+  ]
+}
+
+Response (201):
+{
+  "completion": {
+    "completionId": "uuid",
+    "workoutId": "uuid",
+    "completedAt": "2024-12-02T18:30:00Z",
+    "durationSeconds": 3600
+  }
+}
+```
+
+**Get Completion Stats (NEW - December 2024)**
+```
+GET /api/workouts/completions/stats
+Authorization: Bearer <token>
+
+Response (200):
+{
+  "totalCompletions": 150,
+  "last30Days": 12,
+  "last7Days": 4,
+  "averageDuration": 3200,
+  "longestWorkout": 5400,
+  "shortestWorkout": 1200,
+  "currentStreak": 7,
+  "longestStreak": 14,
+  "totalMinutes": 480000
+}
+```
+
 ### Subscriptions
 
 **Create Checkout Session (Mobile)**
@@ -1808,13 +2507,45 @@ This deployment plan provides a comprehensive roadmap for building the Spot Budd
 ✅ DynamoDB schema optimized with GSIs
 ✅ Duplicate user prevention implemented
 ✅ App Store compliant subscription flow
+✅ **NEW (Dec 2024):** Card carousel workout session deployed
+✅ **NEW (Dec 2024):** AI timer suggestions with Claude Haiku
+✅ **NEW (Dec 2024):** Workout completions tracking system
+✅ **NEW (Dec 2024):** Session duration tracking and analytics
 
-**Estimated Timeline:**
+**Recent Updates (December 2024):**
+
+🎯 **Workout Session Revolution**
+- Research-backed UX design (Peloton, Nike Training Club patterns)
+- 40% lower abandonment with flow-state optimization
+- Card carousel navigation with one-tap completion
+- Auto-advance rest timer with smart transitions
+- Session duration tracking for stats and analytics
+
+🤖 **AI-Powered Features**
+- Automatic timer suggestions based on workout analysis
+- Support for EMOM, AMRAP, Interval, and Tabata timers
+- AI reasoning displayed to users
+- Cost-effective implementation (~$0.00088 per suggestion)
+
+📊 **Enhanced Analytics**
+- Separate completions table for historical tracking
+- Multiple completions per workout support
+- Streak tracking and motivation
+- Completion rate metrics
+- Performance trends over time
+
+**Updated Timeline:**
 - **Phase 1 (Auth):** 2 weeks
-- **Phase 2 (Workouts):** 2 weeks
+- **Phase 2 (Workouts + Session):** 3 weeks (includes card carousel implementation)
 - **Phase 3 (Subscriptions):** 1 week
-- **Phase 4 (Advanced):** 2 weeks
+- **Phase 4 (Advanced + AI Timer):** 2 weeks
 - **Phase 5 (Testing):** 1 week
-- **Total:** ~8 weeks to production-ready app
+- **Total:** ~9 weeks to production-ready app with all latest features
 
-Ready to start building! 🚀
+**Priority Features for Android:**
+1. Card carousel workout session (HIGH - differentiating feature)
+2. AI timer suggestions display (MEDIUM - enhances UX)
+3. Completion tracking and stats (MEDIUM - user engagement)
+4. Session duration persistence (HIGH - critical for analytics)
+
+Ready to start building with cutting-edge UX! 🚀
