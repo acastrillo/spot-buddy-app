@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,20 @@ interface Exercise {
   }>
 }
 
+interface WorkoutCard {
+  id: string
+  exerciseId: string
+  exerciseName: string
+  exerciseNumber: number
+  setNumber: number
+  totalSets: number
+  reps: string | number
+  weight?: string
+  restSeconds?: number
+  notes?: string
+  isLastSetOfExercise: boolean
+}
+
 interface Workout {
   id: string
   title: string
@@ -62,20 +77,71 @@ interface Workout {
   }
 }
 
+// Helper function to flatten exercises into workout cards (circuit/round-based)
+// For workouts with multiple sets, this creates cards in round order:
+// Round 1: Exercise 1, Exercise 2, Exercise 3, Exercise 4
+// Round 2: Exercise 1, Exercise 2, Exercise 3, Exercise 4
+// etc.
+function flattenExercisesToCards(exercises: Exercise[]): WorkoutCard[] {
+  const cards: WorkoutCard[] = []
+
+  if (exercises.length === 0) return cards
+
+  // Find the maximum number of sets across all exercises
+  const maxSets = Math.max(
+    ...exercises.map(ex =>
+      ex.setDetails && ex.setDetails.length > 0 ? ex.setDetails.length : ex.sets
+    )
+  )
+
+  // Build cards by round (set number) first, then by exercise
+  for (let setIdx = 0; setIdx < maxSets; setIdx++) {
+    exercises.forEach((exercise, exerciseIdx) => {
+      const numSets = exercise.setDetails && exercise.setDetails.length > 0
+        ? exercise.setDetails.length
+        : exercise.sets
+
+      // Only add card if this exercise has this many sets
+      if (setIdx < numSets) {
+        const setDetail = exercise.setDetails?.[setIdx]
+        const isLastExerciseInRound = exerciseIdx === exercises.length - 1
+
+        cards.push({
+          id: `${exercise.id}-set-${setIdx + 1}`,
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          exerciseNumber: exerciseIdx + 1,
+          setNumber: setIdx + 1,
+          totalSets: numSets,
+          reps: setDetail?.reps || exercise.reps,
+          weight: setDetail?.weight || exercise.weight,
+          restSeconds: exercise.restSeconds,
+          notes: exercise.notes,
+          isLastSetOfExercise: isLastExerciseInRound,
+        })
+      }
+    })
+  }
+
+  return cards
+}
+
 export default function WorkoutSessionPage() {
   const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
   const params = useParams()
   const [workout, setWorkout] = useState<Workout | null>(null)
+  const [workoutCards, setWorkoutCards] = useState<WorkoutCard[]>([])
   const [loading, setLoading] = useState(true)
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
   const [sessionDuration, setSessionDuration] = useState(0)
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
+  const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  const [completedCards, setCompletedCards] = useState<Set<string>>(new Set())
   const [showRestTimer, setShowRestTimer] = useState(false)
   const [restTimeRemaining, setRestTimeRemaining] = useState(0)
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const [showEndDialog, setShowEndDialog] = useState(false)
+  const [workoutNotes, setWorkoutNotes] = useState("")
   const sessionIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const restIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -114,43 +180,56 @@ export default function WorkoutSessionPage() {
           timerConfig: dbWorkout.timerConfig,
         }
         setWorkout(transformedWorkout)
+        setWorkoutCards(flattenExercisesToCards(transformedWorkout.exercises))
       } else {
         const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
         const found = workouts.find((w: Workout) => w.id === workoutId)
-        setWorkout(found || null)
+        if (found) {
+          setWorkout(found)
+          setWorkoutCards(flattenExercisesToCards(found.exercises))
+        } else {
+          setWorkout(null)
+          setWorkoutCards([])
+        }
       }
     } catch (error) {
       console.error('Error loading workout:', error)
       const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
       const found = workouts.find((w: Workout) => w.id === workoutId)
-      setWorkout(found || null)
+      if (found) {
+        setWorkout(found)
+        setWorkoutCards(flattenExercisesToCards(found.exercises))
+      } else {
+        setWorkout(null)
+        setWorkoutCards([])
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCompleteExercise = () => {
-    if (!workout) return
+  const handleCompleteCard = () => {
+    if (workoutCards.length === 0) return
 
-    const currentExercise = workout.exercises[currentExerciseIndex]
-    const newCompleted = new Set(completedExercises)
-    newCompleted.add(currentExercise.id)
-    setCompletedExercises(newCompleted)
+    const currentCard = workoutCards[currentCardIndex]
+    const newCompleted = new Set(completedCards)
+    newCompleted.add(currentCard.id)
+    setCompletedCards(newCompleted)
 
-    // Check if this was the last exercise
-    if (currentExerciseIndex === workout.exercises.length - 1) {
+    // Check if this was the last card
+    if (currentCardIndex === workoutCards.length - 1) {
       // Show completion dialog
       if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
       setShowCompletionDialog(true)
       return
     }
 
-    // Show rest timer if exercise has rest configured
-    if (currentExercise.restSeconds && currentExercise.restSeconds > 0) {
-      startRestTimer(currentExercise.restSeconds)
+    // Show rest timer if card has rest configured and it's the last set of the exercise
+    if (currentCard.isLastSetOfExercise && currentCard.restSeconds && currentCard.restSeconds > 0) {
+      startRestTimer(currentCard.restSeconds)
     } else {
-      // Move to next exercise immediately
-      setCurrentExerciseIndex(prev => prev + 1)
+      // Move to next card immediately
+      setCurrentCardIndex(prev => prev + 1)
     }
   }
 
@@ -164,7 +243,7 @@ export default function WorkoutSessionPage() {
           // Timer finished, auto-advance
           if (restIntervalRef.current) clearInterval(restIntervalRef.current)
           setShowRestTimer(false)
-          setCurrentExerciseIndex(prevIndex => prevIndex + 1)
+          setCurrentCardIndex(prevIndex => prevIndex + 1)
           return 0
         }
         return prev - 1
@@ -176,7 +255,7 @@ export default function WorkoutSessionPage() {
     if (restIntervalRef.current) clearInterval(restIntervalRef.current)
     setShowRestTimer(false)
     setRestTimeRemaining(0)
-    setCurrentExerciseIndex(prev => prev + 1)
+    setCurrentCardIndex(prev => prev + 1)
   }
 
   const handleMarkCompleted = async () => {
@@ -195,6 +274,7 @@ export default function WorkoutSessionPage() {
       completedDate: todayIso,
       durationSeconds: sessionDuration,
       durationMinutes,
+      notes: workoutNotes || null,
     }
     const updated = [...existing, newEntry]
     localStorage.setItem('completedWorkouts', JSON.stringify(updated))
@@ -211,6 +291,7 @@ export default function WorkoutSessionPage() {
             completedDate: todayIso,
             durationSeconds: sessionDuration,
             durationMinutes,
+            notes: workoutNotes || null,
           }),
         })
 
@@ -253,8 +334,8 @@ export default function WorkoutSessionPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const navigateToExercise = (index: number) => {
-    setCurrentExerciseIndex(index)
+  const navigateToCard = (index: number) => {
+    setCurrentCardIndex(index)
   }
 
   if (!isAuthenticated) {
@@ -289,8 +370,8 @@ export default function WorkoutSessionPage() {
     )
   }
 
-  const currentExercise = workout.exercises[currentExerciseIndex]
-  const progress = ((completedExercises.size) / workout.exercises.length) * 100
+  const currentCard = workoutCards[currentCardIndex]
+  const progress = workoutCards.length > 0 ? ((completedCards.size) / workoutCards.length) * 100 : 0
 
   return (
     <>
@@ -314,23 +395,8 @@ export default function WorkoutSessionPage() {
                   <Clock className="h-4 w-4" />
                   <span className="text-sm font-mono tabular-nums">{formatTime(sessionDuration)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {workout.exercises.map((_, idx) => (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "h-2 w-2 rounded-full transition-colors",
-                        completedExercises.has(workout.exercises[idx].id)
-                          ? "bg-green-500"
-                          : idx === currentExerciseIndex
-                          ? "bg-primary"
-                          : "bg-slate-700"
-                      )}
-                    />
-                  ))}
-                </div>
                 <span className="text-sm text-text-secondary">
-                  {completedExercises.size}/{workout.exercises.length}
+                  {completedCards.size}/{workoutCards.length} exercises
                 </span>
               </div>
             </div>
@@ -342,15 +408,14 @@ export default function WorkoutSessionPage() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="relative">
             {/* Previous Card (smaller, faded) */}
-            {currentExerciseIndex > 0 && (
+            {currentCardIndex > 0 && (
               <div
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-64 opacity-30 scale-75 transition-all cursor-pointer hover:opacity-50"
-                onClick={() => navigateToExercise(currentExerciseIndex - 1)}
+                onClick={() => navigateToCard(currentCardIndex - 1)}
               >
-                <ExerciseCard
-                  exercise={workout.exercises[currentExerciseIndex - 1]}
-                  exerciseNumber={currentExerciseIndex}
-                  isCompleted={completedExercises.has(workout.exercises[currentExerciseIndex - 1].id)}
+                <WorkoutSetCard
+                  card={workoutCards[currentCardIndex - 1]}
+                  isCompleted={completedCards.has(workoutCards[currentCardIndex - 1].id)}
                   isActive={false}
                   onComplete={() => {}}
                 />
@@ -359,25 +424,23 @@ export default function WorkoutSessionPage() {
 
             {/* Current Card (large, centered) */}
             <div className="mx-auto max-w-md">
-              <ExerciseCard
-                exercise={currentExercise}
-                exerciseNumber={currentExerciseIndex + 1}
-                isCompleted={completedExercises.has(currentExercise.id)}
+              <WorkoutSetCard
+                card={currentCard}
+                isCompleted={completedCards.has(currentCard.id)}
                 isActive={true}
-                onComplete={handleCompleteExercise}
+                onComplete={handleCompleteCard}
               />
             </div>
 
             {/* Next Card (smaller, faded) */}
-            {currentExerciseIndex < workout.exercises.length - 1 && (
+            {currentCardIndex < workoutCards.length - 1 && (
               <div
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-64 opacity-30 scale-75 transition-all cursor-pointer hover:opacity-50"
-                onClick={() => navigateToExercise(currentExerciseIndex + 1)}
+                onClick={() => navigateToCard(currentCardIndex + 1)}
               >
-                <ExerciseCard
-                  exercise={workout.exercises[currentExerciseIndex + 1]}
-                  exerciseNumber={currentExerciseIndex + 2}
-                  isCompleted={completedExercises.has(workout.exercises[currentExerciseIndex + 1].id)}
+                <WorkoutSetCard
+                  card={workoutCards[currentCardIndex + 1]}
+                  isCompleted={completedCards.has(workoutCards[currentCardIndex + 1].id)}
                   isActive={false}
                   onComplete={() => {}}
                 />
@@ -387,20 +450,20 @@ export default function WorkoutSessionPage() {
 
           {/* Navigation Hints */}
           <div className="flex items-center justify-center gap-8 mt-8">
-            {currentExerciseIndex > 0 && (
+            {currentCardIndex > 0 && (
               <Button
                 variant="ghost"
-                onClick={() => navigateToExercise(currentExerciseIndex - 1)}
+                onClick={() => navigateToCard(currentCardIndex - 1)}
                 className="text-text-secondary"
               >
                 <ChevronLeft className="h-5 w-5 mr-2" />
                 Previous
               </Button>
             )}
-            {currentExerciseIndex < workout.exercises.length - 1 && !completedExercises.has(currentExercise.id) && (
+            {currentCardIndex < workoutCards.length - 1 && !completedCards.has(currentCard.id) && (
               <Button
                 variant="ghost"
-                onClick={() => navigateToExercise(currentExerciseIndex + 1)}
+                onClick={() => navigateToCard(currentCardIndex + 1)}
                 className="text-text-secondary"
               >
                 Next
@@ -486,11 +549,23 @@ export default function WorkoutSessionPage() {
             </div>
             <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
               <span className="text-text-secondary">Exercises:</span>
-              <span className="font-medium">{completedExercises.size} completed</span>
+              <span className="font-medium">{completedCards.size} completed</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
               <span className="text-text-secondary">Duration:</span>
               <span className="font-medium">{Math.floor(sessionDuration / 60)} min</span>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="workout-notes" className="text-sm font-medium text-text-secondary">
+                Notes (optional)
+              </label>
+              <Textarea
+                id="workout-notes"
+                placeholder="How did it feel? Any PRs or observations..."
+                value={workoutNotes}
+                onChange={(e) => setWorkoutNotes(e.target.value)}
+                className="min-h-[100px] resize-none"
+              />
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -518,10 +593,22 @@ export default function WorkoutSessionPage() {
           <DialogHeader>
             <DialogTitle>End Workout?</DialogTitle>
             <DialogDescription>
-              You've completed {completedExercises.size} out of {workout.exercises.length} exercises.
+              You've completed {completedCards.size} out of {workoutCards.length} exercises.
               Do you want to save your progress?
             </DialogDescription>
           </DialogHeader>
+          <div className="my-4 space-y-2">
+            <label htmlFor="end-workout-notes" className="text-sm font-medium text-text-secondary">
+              Notes (optional)
+            </label>
+            <Textarea
+              id="end-workout-notes"
+              placeholder="How did it feel? Any PRs or observations..."
+              value={workoutNotes}
+              onChange={(e) => setWorkoutNotes(e.target.value)}
+              className="min-h-[100px] resize-none"
+            />
+          </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
@@ -550,21 +637,19 @@ export default function WorkoutSessionPage() {
   )
 }
 
-interface ExerciseCardProps {
-  exercise: Exercise
-  exerciseNumber: number
+interface WorkoutSetCardProps {
+  card: WorkoutCard
   isCompleted: boolean
   isActive: boolean
   onComplete: () => void
 }
 
-function ExerciseCard({
-  exercise,
-  exerciseNumber,
+function WorkoutSetCard({
+  card,
   isCompleted,
   isActive,
   onComplete,
-}: ExerciseCardProps) {
+}: WorkoutSetCardProps) {
   return (
     <Card
       className={cn(
@@ -577,7 +662,7 @@ function ExerciseCard({
         {/* Exercise Number Badge */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
-            {exerciseNumber}
+            {card.exerciseNumber}
           </div>
           {isCompleted && (
             <div className="flex items-center gap-2 text-green-500">
@@ -588,69 +673,46 @@ function ExerciseCard({
         </div>
 
         {/* Exercise Name */}
-        <h2 className="text-3xl font-bold text-white mb-4 capitalize">
-          {exercise.name}
+        <h2 className="text-3xl font-bold text-white mb-2 capitalize">
+          {card.exerciseName}
         </h2>
 
+        {/* Set Information */}
+        <div className="mb-6">
+          <Badge variant="secondary" className="text-sm">
+            Round {card.setNumber} of {card.totalSets}
+          </Badge>
+        </div>
+
         {/* Exercise Details */}
-        {exercise.setDetails && exercise.setDetails.length > 0 ? (
-          <div className="space-y-3 mb-6">
-            {exercise.setDetails.map((set, idx) => (
-              <div
-                key={set.id || idx}
-                className="flex items-center justify-between p-4 bg-slate-900/60 rounded-lg"
-              >
-                <span className="text-sm text-text-secondary">Set {idx + 1}</span>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-white">
-                      {set.reps || exercise.reps} <span className="text-sm text-text-secondary">reps</span>
-                    </div>
-                  </div>
-                  {(set.weight || exercise.weight) && (
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-white">
-                        {set.weight || exercise.weight}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {exercise.sets > 1 && (
-              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
-                <div className="text-3xl font-bold text-white">{exercise.sets}</div>
-                <div className="text-sm text-text-secondary">sets</div>
-              </div>
-            )}
-            {exercise.reps && (
-              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
-                <div className="text-3xl font-bold text-white">{exercise.reps}</div>
-                <div className="text-sm text-text-secondary">reps</div>
-              </div>
-            )}
-            {exercise.weight && (
-              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
-                <div className="text-3xl font-bold text-white">{exercise.weight}</div>
-                <div className="text-sm text-text-secondary">weight</div>
-              </div>
-            )}
-            {exercise.restSeconds && exercise.restSeconds > 0 && (
-              <div className="p-4 bg-slate-900/60 rounded-lg text-center">
-                <div className="text-3xl font-bold text-white">{exercise.restSeconds}s</div>
-                <div className="text-sm text-text-secondary">rest</div>
-              </div>
-            )}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {card.reps && (
+            <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+              <div className="text-3xl font-bold text-white">{card.reps}</div>
+              <div className="text-sm text-text-secondary">reps</div>
+            </div>
+          )}
+          {card.weight && (
+            <div className="p-4 bg-slate-900/60 rounded-lg text-center">
+              <div className="text-3xl font-bold text-white">{card.weight}</div>
+              <div className="text-sm text-text-secondary">weight</div>
+            </div>
+          )}
+        </div>
+
+        {/* Rest indicator (only shown on last set) */}
+        {card.isLastSetOfExercise && card.restSeconds && card.restSeconds > 0 && (
+          <div className="mb-6 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-center">
+            <div className="text-sm text-blue-400">
+              {card.restSeconds}s rest after this set
+            </div>
           </div>
         )}
 
         {/* Notes */}
-        {exercise.notes && (
+        {card.notes && (
           <p className="text-sm text-text-secondary mb-6 italic">
-            {exercise.notes}
+            {card.notes}
           </p>
         )}
 
