@@ -551,6 +551,15 @@ export default function EditWorkoutPage() {
       <Header />
       <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pb-40 text-white">
         <div className="mx-auto w-full max-w-2xl px-4 pt-8">
+          <div className="mb-4 text-center">
+            <h1 className="text-2xl font-bold text-white">
+              Edit Existing Workout
+            </h1>
+            <p className="text-sm text-white/60 mt-1">
+              Update your workout details and exercises
+            </p>
+          </div>
+
           <div className="mb-6 flex items-center justify-between">
             <Button
               variant="ghost"

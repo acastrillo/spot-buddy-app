@@ -1,9 +1,10 @@
 import Stripe from 'stripe'
 
 const API_VERSION: Stripe.LatestApiVersion = '2024-12-18.acacia'
-const PAID_TIERS = ['starter', 'pro', 'elite'] as const
+const PAID_TIERS = ['core', 'pro', 'elite'] as const
 
 export type PaidTier = (typeof PAID_TIERS)[number]
+export type BillingPeriod = 'monthly' | 'annual'
 
 let stripeInstance: Stripe | null = null
 
@@ -101,19 +102,28 @@ export function assertPaidTier(tier: string): PaidTier {
   return tier as PaidTier
 }
 
-export function getPriceIdForTier(tier: PaidTier): string {
-  const envKeys: Record<PaidTier, (keyof NodeJS.ProcessEnv)[]> = {
-    starter: ['STRIPE_PRICE_STARTER', 'NEXT_PUBLIC_STRIPE_PRICE_STARTER'],
-    pro: ['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
-    elite: ['STRIPE_PRICE_ELITE', 'NEXT_PUBLIC_STRIPE_PRICE_ELITE'],
+export function getPriceIdForTier(tier: PaidTier, billingPeriod: BillingPeriod = 'monthly'): string {
+  const envKeys: Record<PaidTier, Record<BillingPeriod, (keyof NodeJS.ProcessEnv)[]>> = {
+    core: {
+      monthly: ['STRIPE_PRICE_CORE', 'NEXT_PUBLIC_STRIPE_PRICE_CORE'],
+      annual: ['STRIPE_PRICE_CORE_ANNUAL', 'NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL'],
+    },
+    pro: {
+      monthly: ['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
+      annual: ['STRIPE_PRICE_PRO_ANNUAL', 'NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL'],
+    },
+    elite: {
+      monthly: ['STRIPE_PRICE_ELITE', 'NEXT_PUBLIC_STRIPE_PRICE_ELITE'],
+      annual: ['STRIPE_PRICE_ELITE_ANNUAL', 'NEXT_PUBLIC_STRIPE_PRICE_ELITE_ANNUAL'],
+    },
   }
 
-  for (const key of envKeys[tier]) {
+  for (const key of envKeys[tier][billingPeriod]) {
     const value = process.env[key]
     if (value) return value
   }
 
-  throw new Error(`Price ID for tier "${tier}" is not configured`)
+  throw new Error(`Price ID for tier "${tier}" with billing period "${billingPeriod}" is not configured`)
 }
 
 export function getReturnUrls() {
@@ -123,8 +133,8 @@ export function getReturnUrls() {
   }
 
   return {
-    successUrl: `${appUrl}/settings?session_id={CHECKOUT_SESSION_ID}&success=true&refresh_session=true`,
-    cancelUrl: `${appUrl}/settings?canceled=true`,
+    successUrl: `${appUrl}/subscription?success=true`,
+    cancelUrl: `${appUrl}/subscription?canceled=true`,
   }
 }
 

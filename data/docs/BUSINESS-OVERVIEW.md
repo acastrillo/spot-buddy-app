@@ -1,5 +1,10 @@
 # Spot Buddy - Business & Monetization Overview
 
+> **⚠️ PRICING OUTDATED - December 9, 2024**: This document contains historical pricing analysis. For current pricing strategy based on comprehensive market research, see:
+> - **Current Pricing**: [`docs/PRICING.md`](../../docs/PRICING.md) - Official pricing guide
+> - **Market Research**: Plan file with competitive analysis and updated strategy
+> - **Implementation**: 3-tier structure (Core/Pro/Elite) with annual billing emphasis
+
 **Version**: 1.5 (MVP Complete + Monetization)
 **Last Updated**: January 2025
 **Status**: Production-ready, awaiting AI features

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { WorkoutTimer } from "@/components/timer/workout-timer"
+import AMRAPSessionView from "./amrap-session-view"
 import {
   ArrowLeft,
   Timer,
@@ -70,6 +71,14 @@ interface Workout {
   exercises: Exercise[]
   totalDuration: number
   difficulty: string
+  workoutType?: string
+  structure?: {
+    timeLimit?: number
+    rounds?: number
+    timePerRound?: number
+    totalTime?: number
+    pattern?: string
+  }
   timerConfig?: {
     params: any
     aiGenerated?: boolean
@@ -142,6 +151,9 @@ export default function WorkoutSessionPage() {
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const [showEndDialog, setShowEndDialog] = useState(false)
   const [workoutNotes, setWorkoutNotes] = useState("")
+  const [showNotesInput, setShowNotesInput] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const sessionIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const restIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -163,6 +175,55 @@ export default function WorkoutSessionPage() {
       if (restIntervalRef.current) clearInterval(restIntervalRef.current)
     }
   }, [params?.id, user?.id])
+
+  // Reset save success state when dialog closes
+  useEffect(() => {
+    if (!showCompletionDialog) {
+      setSaveSuccess(false)
+      setIsSaving(false)
+    }
+  }, [showCompletionDialog])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keyboard shortcuts if user is typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      // Escape key - close dialogs
+      if (e.key === 'Escape') {
+        if (showCompletionDialog && !saveSuccess) {
+          setShowCompletionDialog(false)
+        } else if (showEndDialog) {
+          setShowEndDialog(false)
+        }
+        return
+      }
+
+      // Don't handle navigation if dialog is open
+      if (showCompletionDialog || showEndDialog) {
+        return
+      }
+
+      // Arrow keys - navigate between cards
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (currentCardIndex > 0) {
+          setCurrentCardIndex(currentCardIndex - 1)
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (currentCardIndex < workoutCards.length - 1 && completedCards.has(workoutCards[currentCardIndex].id)) {
+          setCurrentCardIndex(currentCardIndex + 1)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentCardIndex, workoutCards, completedCards, showCompletionDialog, showEndDialog, saveSuccess])
 
   const loadWorkout = async (workoutId: string) => {
     setLoading(true)
@@ -220,6 +281,8 @@ export default function WorkoutSessionPage() {
     if (currentCardIndex === workoutCards.length - 1) {
       // Show completion dialog
       if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
+      setShowNotesInput(false) // Reset notes input visibility
+      setWorkoutNotes("") // Clear previous notes
       setShowCompletionDialog(true)
       return
     }
@@ -258,60 +321,80 @@ export default function WorkoutSessionPage() {
     setCurrentCardIndex(prev => prev + 1)
   }
 
-  const handleMarkCompleted = async () => {
+  const handleMarkCompleted = async (notes?: string) => {
     if (!workout || sessionStartTime === null) return
 
-    const completedAt = new Date().toISOString()
-    const todayIso = completedAt.split('T')[0]
-    const durationMinutes = Math.floor(sessionDuration / 60)
+    setIsSaving(true)
 
-    // Save to localStorage
-    const existing = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
-    const newEntry = {
-      id: Date.now().toString(),
-      workoutId: workout.id,
-      completedAt,
-      completedDate: todayIso,
-      durationSeconds: sessionDuration,
-      durationMinutes,
-      notes: workoutNotes || null,
-    }
-    const updated = [...existing, newEntry]
-    localStorage.setItem('completedWorkouts', JSON.stringify(updated))
+    try {
+      const completedAt = new Date().toISOString()
+      const todayIso = completedAt.split('T')[0]
+      const durationMinutes = Math.floor(sessionDuration / 60)
 
-    // Save to DynamoDB
-    if (user?.id) {
-      try {
-        await fetch('/api/workouts/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            workoutId: workout.id,
-            completedAt,
-            completedDate: todayIso,
-            durationSeconds: sessionDuration,
-            durationMinutes,
-            notes: workoutNotes || null,
-          }),
-        })
+      // Use provided notes or fall back to workoutNotes state
+      const completionNotes = notes !== undefined ? notes : workoutNotes
 
-        await fetch(`/api/workouts/${workout.id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            completedAt,
-            completedDate: todayIso,
-            durationSeconds: sessionDuration,
-          }),
-        })
-      } catch (error) {
-        console.error('Error saving completion:', error)
+      // Save to localStorage
+      const existing = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+      const newEntry = {
+        id: Date.now().toString(),
+        workoutId: workout.id,
+        completedAt,
+        completedDate: todayIso,
+        durationSeconds: sessionDuration,
+        durationMinutes,
+        notes: completionNotes || null,
       }
-    }
+      const updated = [...existing, newEntry]
+      localStorage.setItem('completedWorkouts', JSON.stringify(updated))
 
-    window.dispatchEvent(new Event('workoutsUpdated'))
-    window.dispatchEvent(new Event('calendarUpdated'))
-    router.push(`/workout/${workout.id}`)
+      // Save to DynamoDB
+      if (user?.id) {
+        try {
+          await fetch('/api/workouts/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workoutId: workout.id,
+              completedAt,
+              completedDate: todayIso,
+              durationSeconds: sessionDuration,
+              durationMinutes,
+              notes: completionNotes || null,
+            }),
+          })
+
+          await fetch(`/api/workouts/${workout.id}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              completedAt,
+              completedDate: todayIso,
+              durationSeconds: sessionDuration,
+            }),
+          })
+        } catch (error) {
+          console.error('Error saving completion:', error)
+        }
+      }
+
+      window.dispatchEvent(new Event('workoutsUpdated'))
+      window.dispatchEvent(new Event('calendarUpdated'))
+
+      // Show success state
+      setSaveSuccess(true)
+      setIsSaving(false)
+
+      // Wait 1.5 seconds to show success celebration, then navigate to dashboard
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1500)
+
+    } catch (error) {
+      console.error('Error saving workout:', error)
+      setIsSaving(false)
+      alert('Failed to save workout. Please try again.')
+    }
   }
 
   const handleEndWorkout = () => {
@@ -373,6 +456,15 @@ export default function WorkoutSessionPage() {
   const currentCard = workoutCards[currentCardIndex]
   const progress = workoutCards.length > 0 ? ((completedCards.size) / workoutCards.length) * 100 : 0
 
+  // Check if this is an AMRAP workout
+  const isAMRAP = workout.workoutType === 'amrap'
+
+  // Extract time limit for AMRAP
+  const amrapTimeLimit =
+    workout.structure?.timeLimit ||
+    (workout.timerConfig?.params?.durationSeconds) ||
+    720 // Default 12 minutes
+
   return (
     <>
       <Header />
@@ -390,21 +482,42 @@ export default function WorkoutSessionPage() {
                 <X className="h-5 w-5 mr-2" />
                 End
               </Button>
-              <div className="flex items-center gap-4">
+              {!isAMRAP && (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-text-secondary">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm font-mono tabular-nums">{formatTime(sessionDuration)}</span>
+                  </div>
+                  <span className="text-sm text-text-secondary">
+                    {completedCards.size}/{workoutCards.length} exercises
+                  </span>
+                </div>
+              )}
+              {isAMRAP && (
                 <div className="flex items-center gap-2 text-text-secondary">
                   <Clock className="h-4 w-4" />
                   <span className="text-sm font-mono tabular-nums">{formatTime(sessionDuration)}</span>
                 </div>
-                <span className="text-sm text-text-secondary">
-                  {completedCards.size}/{workoutCards.length} exercises
-                </span>
-              </div>
+              )}
             </div>
-            <Progress value={progress} className="h-1" />
+            {!isAMRAP && <Progress value={progress} className="h-1" />}
           </div>
         </div>
 
-        {/* Card Carousel */}
+        {/* AMRAP Session View */}
+        {isAMRAP ? (
+          <AMRAPSessionView
+            workout={workout}
+            exercises={workout.exercises}
+            timeLimit={amrapTimeLimit}
+            onComplete={(notes) => {
+              handleMarkCompleted(notes)
+            }}
+            onEnd={handleEndWorkout}
+          />
+        ) : (
+          /* Card Carousel */
+          <>
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="relative">
             {/* Previous Card (smaller, faded) */}
@@ -432,11 +545,10 @@ export default function WorkoutSessionPage() {
               />
             </div>
 
-            {/* Next Card (smaller, faded) */}
+            {/* Next Card (smaller, faded) - Preview only, not clickable */}
             {currentCardIndex < workoutCards.length - 1 && (
               <div
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-64 opacity-30 scale-75 transition-all cursor-pointer hover:opacity-50"
-                onClick={() => navigateToCard(currentCardIndex + 1)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-64 opacity-30 scale-75 transition-all pointer-events-none"
               >
                 <WorkoutSetCard
                   card={workoutCards[currentCardIndex + 1]}
@@ -448,28 +560,23 @@ export default function WorkoutSessionPage() {
             )}
           </div>
 
-          {/* Navigation Hints */}
-          <div className="flex items-center justify-center gap-8 mt-8">
-            {currentCardIndex > 0 && (
-              <Button
-                variant="ghost"
-                onClick={() => navigateToCard(currentCardIndex - 1)}
-                className="text-text-secondary"
-              >
-                <ChevronLeft className="h-5 w-5 mr-2" />
-                Previous
-              </Button>
-            )}
-            {currentCardIndex < workoutCards.length - 1 && !completedCards.has(currentCard.id) && (
-              <Button
-                variant="ghost"
-                onClick={() => navigateToCard(currentCardIndex + 1)}
-                className="text-text-secondary"
-              >
-                Next
-                <ChevronRight className="h-5 w-5 ml-2" />
-              </Button>
-            )}
+          {/* Navigation Hints - Only allow backward navigation */}
+          <div className="flex flex-col items-center gap-2 mt-8">
+            <div className="flex items-center justify-center gap-8">
+              {currentCardIndex > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => navigateToCard(currentCardIndex - 1)}
+                  className="text-text-secondary"
+                >
+                  <ChevronLeft className="h-5 w-5 mr-2" />
+                  Review Previous
+                </Button>
+              )}
+            </div>
+            <div className="text-xs text-text-secondary/60 text-center">
+              Use ← → arrow keys to navigate • Esc to close dialogs
+            </div>
           </div>
         </div>
 
@@ -498,8 +605,8 @@ export default function WorkoutSessionPage() {
           </div>
         )}
 
-        {/* Workout Timer Bottom Bar */}
-        {workout.timerConfig && (
+        {/* Workout Timer Bottom Bar - Only for non-AMRAP workouts */}
+        {!isAMRAP && workout.timerConfig && (
           <div className="fixed bottom-0 left-0 right-0 z-20 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800">
             <div className="max-w-4xl mx-auto px-4 py-3">
               <div className="flex items-center justify-between">
@@ -523,67 +630,134 @@ export default function WorkoutSessionPage() {
             </div>
           </div>
         )}
+          </>
+        )}
       </main>
 
       {/* Completion Dialog */}
-      <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+      <Dialog
+        open={showCompletionDialog}
+        onOpenChange={(open) => {
+          // Prevent closing during save
+          if (!isSaving && !saveSuccess) {
+            setShowCompletionDialog(open)
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center justify-center mb-4">
-              <div className="bg-green-100 rounded-full p-4 animate-bounce">
-                <Trophy className="h-12 w-12 text-green-600" />
+          {saveSuccess ? (
+            // Success State
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-center mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
+                    <div className="relative bg-green-500 rounded-full p-6">
+                      <CheckCircle className="h-16 w-16 text-white" />
+                    </div>
+                  </div>
+                </div>
+                <DialogTitle className="text-center text-3xl font-bold">
+                  Saved! 🎉
+                </DialogTitle>
+                <DialogDescription className="text-center text-lg mt-2">
+                  Your workout has been saved successfully
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 text-center text-text-secondary">
+                Taking you to your dashboard...
               </div>
-            </div>
-            <DialogTitle className="text-center text-2xl">
-              Workout Complete! 🎉
-            </DialogTitle>
-            <DialogDescription className="text-center text-lg">
-              Amazing work! You crushed it in{' '}
-              <span className="font-bold text-primary">{formatTime(sessionDuration)}</span>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="my-4 space-y-3">
-            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
-              <span className="text-text-secondary">Workout:</span>
-              <span className="font-medium">{workout.title}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
-              <span className="text-text-secondary">Exercises:</span>
-              <span className="font-medium">{completedCards.size} completed</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
-              <span className="text-text-secondary">Duration:</span>
-              <span className="font-medium">{Math.floor(sessionDuration / 60)} min</span>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="workout-notes" className="text-sm font-medium text-text-secondary">
-                Notes (optional)
-              </label>
-              <Textarea
-                id="workout-notes"
-                placeholder="How did it feel? Any PRs or observations..."
-                value={workoutNotes}
-                onChange={(e) => setWorkoutNotes(e.target.value)}
-                className="min-h-[100px] resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={handleDiscardWorkout}
-              className="w-full sm:w-auto"
-            >
-              Don't Save
-            </Button>
-            <Button
-              onClick={handleMarkCompleted}
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Save Workout
-            </Button>
-          </DialogFooter>
+            </>
+          ) : (
+            // Normal/Saving State
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="bg-green-100 rounded-full p-4 animate-bounce">
+                    <Trophy className="h-12 w-12 text-green-600" />
+                  </div>
+                </div>
+                <DialogTitle className="text-center text-2xl">
+                  Workout Complete! 🎉
+                </DialogTitle>
+                <DialogDescription className="text-center text-lg">
+                  Amazing work! You crushed it in{' '}
+                  <span className="font-bold text-primary">{formatTime(sessionDuration)}</span>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="my-4 space-y-3">
+                <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
+                  <span className="text-text-secondary">Workout:</span>
+                  <span className="font-medium">{workout.title}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
+                  <span className="text-text-secondary">Exercises:</span>
+                  <span className="font-medium">{completedCards.size} completed</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
+                  <span className="text-text-secondary">Duration:</span>
+                  <span className="font-medium">{Math.floor(sessionDuration / 60)} min</span>
+                </div>
+
+                {/* Optional Notes Section */}
+                {!showNotesInput ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowNotesInput(true)}
+                    className="w-full text-text-secondary hover:text-primary"
+                    disabled={isSaving}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Add Notes (Optional)
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <label htmlFor="workout-notes" className="text-sm font-medium text-text-secondary">
+                      Workout Notes
+                    </label>
+                    <Textarea
+                      id="workout-notes"
+                      placeholder="How did it feel? Any PRs or observations..."
+                      value={workoutNotes}
+                      onChange={(e) => setWorkoutNotes(e.target.value)}
+                      className="min-h-[100px] resize-none"
+                      autoFocus
+                      disabled={isSaving}
+                    />
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button
+                  onClick={handleMarkCompleted}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Save Workout
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleDiscardWorkout}
+                  className="w-full sm:w-auto text-text-secondary"
+                  size="sm"
+                  disabled={isSaving}
+                >
+                  Discard
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

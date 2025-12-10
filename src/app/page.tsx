@@ -33,6 +33,52 @@ export default function HomePage() {
     const loadWorkouts = async () => {
       if (!user?.id) return
 
+      const computeLocalStats = (workoutCount: number) => {
+        const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+        const now = new Date()
+        const startOfWeekUtc = new Date(Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() - now.getUTCDay(),
+          0, 0, 0, 0
+        ))
+        const startOfWeekIso = startOfWeekUtc.toISOString().split('T')[0]
+
+        const thisWeekCompletions = completedWorkouts.filter((c: any) => {
+          const completionDate = (c.completedDate || c.completedAt || '').split('T')[0]
+          return completionDate && completionDate >= startOfWeekIso
+        })
+
+        const sortedDates = [...new Set(
+          completedWorkouts
+            .map((c: any) => (c.completedDate || c.completedAt || '').split('T')[0])
+            .filter(Boolean)
+        )].sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
+
+        let streak = 0
+        const today = new Date().toISOString().split('T')[0]
+        let checkDate = today
+        for (const date of sortedDates) {
+          if (date === checkDate) {
+            streak++
+            const prevDate = new Date(checkDate)
+            prevDate.setDate(prevDate.getDate() - 1)
+            checkDate = prevDate.toISOString().split('T')[0]
+          } else {
+            break
+          }
+        }
+
+        const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
+
+        return {
+          thisWeek: thisWeekCompletions.length,
+          total: workoutCount,
+          hoursTrained,
+          streak,
+        }
+      }
+
       try {
         // Try to load from API first
         const response = await fetch('/api/workouts')
@@ -55,54 +101,21 @@ export default function HomePage() {
             const statsResponse = await fetch('/api/workouts/completions/stats')
             if (statsResponse.ok) {
               const { stats } = await statsResponse.json()
+              const localStats = computeLocalStats(workouts.length)
               setWorkoutStats({
-                thisWeek: stats.thisWeek,
+                thisWeek: Math.max(stats.thisWeek, localStats.thisWeek),
                 total: workouts.length,
-                hoursTrained: stats.hoursTrained,
-                streak: stats.streak,
+                hoursTrained: Math.max(stats.hoursTrained, localStats.hoursTrained),
+                streak: Math.max(stats.streak, localStats.streak),
               })
             } else {
               // Fallback to localStorage calculation
-              const completedWorkouts = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
-              const now = new Date()
-              const sow = new Date(now)
-              sow.setDate(now.getDate() - now.getDay())
-              sow.setHours(0, 0, 0, 0)
-              const thisWeekCompletions = completedWorkouts.filter((c: any) => new Date(c.completedDate) >= sow)
-
-              const sortedDates = [...new Set(completedWorkouts.map((c: any) => c.completedDate))]
-                .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())
-              let streak = 0
-              const today = new Date().toISOString().split('T')[0]
-              let checkDate = today
-              for (const date of sortedDates) {
-                if (date === checkDate) {
-                  streak++
-                  const prevDate = new Date(checkDate)
-                  prevDate.setDate(prevDate.getDate() - 1)
-                  checkDate = prevDate.toISOString().split('T')[0]
-                } else {
-                  break
-                }
-              }
-
-              const hoursTrained = Math.round((completedWorkouts.length * 0.75) * 10) / 10
-              setWorkoutStats({
-                thisWeek: thisWeekCompletions.length,
-                total: workouts.length,
-                hoursTrained,
-                streak,
-              })
+              setWorkoutStats(computeLocalStats(workouts.length))
             }
           } catch (statsError) {
             console.error('Error fetching stats:', statsError)
             // Use empty stats on error
-            setWorkoutStats({
-              thisWeek: 0,
-              total: workouts.length,
-              hoursTrained: 0,
-              streak: 0,
-            })
+            setWorkoutStats(computeLocalStats(workouts.length))
           }
         } else {
           // Fallback to localStorage
@@ -110,12 +123,7 @@ export default function HomePage() {
           const sorted = savedWorkouts.slice().reverse().slice(0, 5)
           setRecentWorkouts(sorted)
 
-          setWorkoutStats({
-            thisWeek: 0,
-            total: savedWorkouts.length,
-            hoursTrained: 0,
-            streak: 0,
-          })
+          setWorkoutStats(computeLocalStats(savedWorkouts.length))
         }
       } catch (error) {
         console.error('Error loading workouts:', error)
@@ -124,12 +132,7 @@ export default function HomePage() {
         const sorted = savedWorkouts.slice().reverse().slice(0, 5)
         setRecentWorkouts(sorted)
 
-        setWorkoutStats({
-          thisWeek: 0,
-          total: savedWorkouts.length,
-          hoursTrained: 0,
-          streak: 0,
-        })
+        setWorkoutStats(computeLocalStats(savedWorkouts.length))
       }
     }
 

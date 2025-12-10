@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { dynamoDBUsers, dynamoDBWebhookEvents } from '@/lib/dynamodb'
 import { PaidTier, assertPaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
+import { AppMetrics } from '@/lib/metrics'
+import { SUBSCRIPTION_TIERS } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 
@@ -101,6 +103,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
 
   console.log(`[Webhook:${eventId}] Updating user ${userId} to tier=${tier}, status=active, subscriptionId=${subscriptionId}`)
 
+  // Determine billing period and price from session
+  const tierData = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS]
+  const amountTotal = session.amount_total ? session.amount_total / 100 : 0 // Convert cents to dollars
+  const billingPeriod = amountTotal === tierData.annualPrice ? 'annual' : 'monthly'
+
   await dynamoDBUsers.updateSubscription(userId, {
     tier,
     status: 'active',
@@ -109,6 +116,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
     startDate: new Date(),
     endDate: null,
   })
+
+  // Track successful checkout completion for conversion analytics
+  AppMetrics.subscriptionCheckoutCompleted(userId, tier, billingPeriod, amountTotal)
 
   console.log(`[Webhook:${eventId}] Successfully updated user ${userId} subscription`)
 }
@@ -158,6 +168,8 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eventId: string) {
   const userId = subscription.metadata?.userId
+  const tier = subscription.metadata?.tier as PaidTier | undefined
+
   if (!userId) {
     console.warn(`[Webhook:${eventId}] Subscription cancellation missing userId; skipping`)
     return
@@ -172,6 +184,12 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eve
     stripeSubscriptionId: subscription.id,
     endDate: new Date(),
   })
+
+  // Track subscription cancellation for churn analysis
+  if (tier) {
+    const cancelReason = subscription.cancellation_details?.reason || 'unknown'
+    AppMetrics.subscriptionCanceled(userId, tier, cancelReason)
+  }
 }
 
 async function handleInvoicePayment(invoice: Stripe.Invoice, result: 'succeeded' | 'failed', eventId: string) {

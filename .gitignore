@@ -7,12 +7,14 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env*.backup
 package-lock.json
 .claude/
 .mcp.json
 
 # AWS Task Definitions (temporary/generated)
 task-def*.json
+aws-task-definition.json
 
 .env.production
 

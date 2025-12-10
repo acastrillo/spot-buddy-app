@@ -173,6 +173,54 @@ export const AppMetrics = {
     metrics.increment("user.logout", { userId });
   },
 
+  userSignup: (userId: string, provider: string) => {
+    metrics.increment("user.signup", { userId, provider });
+  },
+
+  // Subscription & Conversion metrics
+  subscriptionCheckoutStarted: (userId: string, tier: string, billingPeriod: string) => {
+    metrics.increment("subscription.checkout_started", { userId, tier, billingPeriod });
+  },
+
+  subscriptionCheckoutCompleted: (userId: string, tier: string, billingPeriod: string, priceAmount: number) => {
+    metrics.increment("subscription.checkout_completed", { userId, tier, billingPeriod });
+    metrics.record("subscription.revenue", priceAmount, "count", { tier, billingPeriod });
+  },
+
+  subscriptionCanceled: (userId: string, tier: string, reason?: string) => {
+    metrics.increment("subscription.canceled", { userId, tier, reason: reason || "unknown" });
+  },
+
+  subscriptionUpgraded: (userId: string, fromTier: string, toTier: string) => {
+    metrics.increment("subscription.upgraded", { userId, fromTier, toTier });
+  },
+
+  subscriptionDowngraded: (userId: string, fromTier: string, toTier: string) => {
+    metrics.increment("subscription.downgraded", { userId, fromTier, toTier });
+  },
+
+  subscriptionRenewed: (userId: string, tier: string, billingPeriod: string) => {
+    metrics.increment("subscription.renewed", { userId, tier, billingPeriod });
+  },
+
+  // Feature usage metrics (for conversion analysis)
+  instagramImportUsed: (userId: string, tier: string, success: boolean) => {
+    metrics.increment("feature.instagram_import", { userId, tier, success: success.toString() });
+  },
+
+  aiRequestUsed: (userId: string, tier: string, requestType: "generation" | "enhancement") => {
+    metrics.increment("feature.ai_request", { userId, tier, requestType });
+  },
+
+  quotaLimitReached: (userId: string, tier: string, quotaType: string) => {
+    metrics.increment("quota.limit_reached", { userId, tier, quotaType });
+  },
+
+  // Retention metrics (called on user activity)
+  userRetentionActivity: (userId: string, tier: string, daysActive: number) => {
+    metrics.increment("retention.activity", { userId, tier, daysActive: daysActive.toString() });
+  },
+
   // Error metrics
   error: (errorType: string, component: string) => {
     metrics.increment("error", { errorType, component });

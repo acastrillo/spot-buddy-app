@@ -1,27 +1,92 @@
-export function buildRefIndex(glossary: any) {
-  const index: any = {};
+import glossary from "../../data/spotter_glossary.json";
+
+export function buildRefIndex(glossaryData: any) {
+  const index: Record<string, string> = {};
+  const lower = (s: string) => s.toLowerCase();
+
+  const add = (canonical: string, alias: string) => {
+    index[lower(alias)] = canonical;
+  };
   
-  // Build reference index from glossary for quick lookups
-  Object.entries(glossary.movements || {}).forEach(([canonical, aliases]) => {
-    index[canonical] = canonical;
-    (aliases as string[]).forEach(alias => {
-      index[alias.toLowerCase()] = canonical;
-    });
+  Object.entries(glossaryData.movements || {}).forEach(([canonical, aliases]) => {
+    add(canonical, canonical);
+    (aliases as string[]).forEach(alias => add(canonical, alias));
   });
   
-  Object.entries(glossary.equipment || {}).forEach(([canonical, aliases]) => {
-    index[canonical] = canonical;
-    (aliases as string[]).forEach(alias => {
-      index[alias.toLowerCase()] = canonical;
-    });
+  Object.entries(glossaryData.equipment || {}).forEach(([canonical, aliases]) => {
+    add(canonical, canonical);
+    (aliases as string[]).forEach(alias => add(canonical, alias));
   });
   
   return index;
 }
 
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findMovement(line: string, refIndex: Record<string, string>) {
+  const lowerLine = line.toLowerCase();
+  for (const alias of Object.keys(refIndex)) {
+    const regex = new RegExp(`\\b${escapeRegExp(alias)}\\b`, 'i');
+    if (regex.test(lowerLine)) return refIndex[alias];
+  }
+  return null;
+}
+
+function extractRepDetails(line: string) {
+  const lower = line.toLowerCase();
+  const result: { reps?: string; sets?: number; values?: number[] } = {};
+
+  const ladderMatch = lower.match(/\b(\d+(?:-\d+)+)\b/);
+  if (ladderMatch) {
+    const values = ladderMatch[1].split('-').map(Number).filter(Boolean);
+    result.values = values;
+    result.reps = values.join('-');
+    result.sets = values.length;
+    return result;
+  }
+
+  const setRepMatch = lower.match(/(\d+)\s*[xX]\s*(\d+)/);
+  if (setRepMatch) {
+    result.sets = parseInt(setRepMatch[1]);
+    result.reps = setRepMatch[2];
+    return result;
+  }
+
+  const roundsMatch = lower.match(/(\d+)\s*(?:rounds?|sets?)/);
+  if (roundsMatch) {
+    result.sets = parseInt(roundsMatch[1]);
+  }
+
+  const unitNumber = lower.match(/(\d+)\s*(calories?|cals?|cal|meters?|metres?|m\b|km|reps?|rep\b|sec|secs|seconds?|minutes?|mins?|min)\b/);
+  if (unitNumber) {
+    result.reps = `${unitNumber[1]} ${unitNumber[2]}`.replace(/\s+/g, ' ').trim();
+    return result;
+  }
+
+  const attachedUnit = lower.match(/(\d+)(m|km|cal|cals|reps?|sec|secs|min|mins)/);
+  if (attachedUnit) {
+    result.reps = `${attachedUnit[1]} ${attachedUnit[2]}`;
+    return result;
+  }
+
+  const genericNumber = lower.match(/(\d+)/);
+  if (genericNumber) {
+    result.reps = genericNumber[1];
+  }
+
+  return result;
+}
+
 export function parseInstagramCaption(caption: string, refIndex: any, options?: any) {
-  // Mock deterministic parser - in real implementation this would be much more sophisticated
-  const lines = caption.toLowerCase().split('\n').filter(line => line.trim());
+  // Movement-gated parser - only create cards when a known movement is matched
+  const index = refIndex || buildRefIndex(glossary);
+  const lines = caption
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .filter(line => !line.startsWith('#') && !line.startsWith('@'));
   
   const ast: any = {
     blocks: [],
@@ -63,41 +128,19 @@ export function parseInstagramCaption(caption: string, refIndex: any, options?: 
       block.mode = { type: 'For Time' };
     }
     
-    // Extract movements (basic pattern matching)
+    // Extract movements (only when a known movement is present)
     lines.forEach(line => {
-      const repMatch = line.match(/(\d+)\s*(.+)/);
-      if (repMatch) {
-        const reps = parseInt(repMatch[1]);
-        const movement = repMatch[2].trim();
-        
-        // Try to canonicalize movement name
-        const canonical = refIndex[movement] || movement;
-        
-        block.sequence.push({
-          name: canonical,
-          reps: reps,
-          sets: 1
-        });
-      } else {
-        // Look for exercise names without reps (like emoji lists)
-        const exerciseMatch = line.match(/[🔥💪🏋️➡️✅⚡🎯🔢\d️⃣]*\s*(.+)/);
-        if (exerciseMatch) {
-          const movement = exerciseMatch[1].trim();
-          if (movement && movement.length > 2) {
-            const canonical = refIndex[movement.toLowerCase()] || movement;
-            
-            // Avoid duplicates and non-exercise words
-            if (!block.sequence.find((ex: any) => ex.name === canonical) && 
-                !['work', 'rest', 'seconds', 'complete', 'sets'].includes(canonical.toLowerCase())) {
-              block.sequence.push({
-                name: canonical,
-                reps: null,
-                sets: 1
-              });
-            }
-          }
-        }
-      }
+      const canonical = findMovement(line, index);
+      if (!canonical) return;
+
+      const repsInfo = extractRepDetails(line);
+
+      block.sequence.push({
+        name: canonical,
+        reps: repsInfo.reps || null,
+        sets: repsInfo.sets || 1,
+        values: repsInfo.values || undefined
+      });
     });
     
     if (block.sequence.length > 0) {

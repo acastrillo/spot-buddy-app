@@ -491,12 +491,14 @@ dependencies {
 
 ### Subscription Tiers
 
-| Tier | Price | Features | Limits |
-|------|-------|----------|--------|
-| **Free** | $0/month | - 1 OCR scan/month<br>- 3 Instagram saves/week<br>- 31 workouts max<br>- Basic tracking | - No AI features<br>- No advanced analytics |
-| **Starter** | $7.99/month | - 3 OCR scans/week<br>- 5 Instagram saves/week<br>- Unlimited workouts<br>- 10 AI requests/month | - Basic analytics<br>- PRs tracking |
-| **Pro** | $14.99/month | - 5 OCR scans/week<br>- 7 Instagram saves/week<br>- Unlimited workouts<br>- 30 AI requests/month | - AI workout features<br>- Crew features<br>- Advanced analytics |
-| **Elite** | $34.99/month | - 10 OCR scans/week<br>- 12 Instagram saves/week<br>- Unlimited workouts<br>- 100 AI requests/month | - Priority support<br>- Social features |
+> **⚠️ Updated December 9, 2024**: Pricing revised based on comprehensive market research. See [`docs/PRICING.md`](./PRICING.md) for full details.
+
+| Tier | Monthly | Annual | Features | Limits |
+|------|---------|--------|----------|--------|
+| **Free** | $0 | $0 | - 3 workouts/week<br>- 1 Instagram import/month<br>- 1 AI request/month<br>- 90-day history | - Limited features<br>- No advanced analytics |
+| **Core** | $8.99/month | $69.99/year<br>($5.83/mo) | - Unlimited workouts<br>- 3 Instagram imports/week<br>- 10 AI requests/month<br>- Unlimited history | - PR tracking<br>- Body metrics<br>- Basic analytics |
+| **Pro** | $13.99/month | $109.99/year<br>($9.17/mo) | - Everything in Core<br>- Unlimited Instagram imports<br>- 30 AI requests/month | - Advanced analytics<br>- Workout templates<br>- Data export |
+| **Elite** | $24.99/month | $199.99/year<br>($16.67/mo) | - Everything in Pro<br>- 100 AI requests/month<br>- Priority support | - Early access<br>- Custom templates<br>- API access (soon) |
 
 ### Stripe Configuration
 

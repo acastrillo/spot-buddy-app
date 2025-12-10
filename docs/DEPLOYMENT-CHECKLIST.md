@@ -4,21 +4,36 @@
 
 ### 1. Create Stripe Products
 - [ ] Go to https://dashboard.stripe.com/test/products
-- [ ] Create "Spot Buddy Starter" - $7.99/month
-- [ ] Create "Spot Buddy Pro" - $14.99/month
-- [ ] Create "Spot Buddy Elite" - $34.99/month
+- [ ] Create "Spot Buddy Core" with two prices:
+  - [ ] Monthly: $8.99/month
+  - [ ] Annual: $69.99/year
+- [ ] Create "Spot Buddy Pro" with two prices:
+  - [ ] Monthly: $13.99/month
+  - [ ] Annual: $109.99/year
+- [ ] Create "Spot Buddy Elite" with two prices:
+  - [ ] Monthly: $24.99/month
+  - [ ] Annual: $199.99/year
 - [ ] **IMPORTANT:** Copy the PRICE IDs (start with `price_`), NOT product IDs (start with `prod_`)
 
 ### 2. Update Local Environment
 - [ ] Open `.env.local`
-- [ ] Replace these 6 lines with your PRICE IDs from Stripe:
+- [ ] Replace these 12 lines with your PRICE IDs from Stripe:
   ```env
-  STRIPE_PRICE_STARTER=price_xxxxx
+  # Monthly prices
+  STRIPE_PRICE_CORE=price_xxxxx
   STRIPE_PRICE_PRO=price_xxxxx
   STRIPE_PRICE_ELITE=price_xxxxx
-  NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_xxxxx
+  NEXT_PUBLIC_STRIPE_PRICE_CORE=price_xxxxx
   NEXT_PUBLIC_STRIPE_PRICE_PRO=price_xxxxx
   NEXT_PUBLIC_STRIPE_PRICE_ELITE=price_xxxxx
+
+  # Annual prices
+  STRIPE_PRICE_CORE_ANNUAL=price_xxxxx
+  STRIPE_PRICE_PRO_ANNUAL=price_xxxxx
+  STRIPE_PRICE_ELITE_ANNUAL=price_xxxxx
+  NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL=price_xxxxx
+  NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL=price_xxxxx
+  NEXT_PUBLIC_STRIPE_PRICE_ELITE_ANNUAL=price_xxxxx
   ```
 
 ### 3. Setup Stripe Webhook for Production
@@ -103,11 +118,12 @@ aws logs tail /ecs/spotter-app --follow --region us-east-1
 - [ ] Visit https://spotter.cannashieldct.com
 - [ ] Sign up with Google or Facebook
 - [ ] Navigate to `/subscription`
-- [ ] Click "Subscribe to Starter"
+- [ ] Toggle between Monthly and Annual billing
+- [ ] Click "Upgrade" on Core tier (annual recommended)
 - [ ] Use test card: `4242 4242 4242 4242`
 - [ ] Complete checkout
-- [ ] Verify you're redirected back to settings
-- [ ] Check that your tier updated (refresh if needed)
+- [ ] Verify you're redirected back to /subscription with success message
+- [ ] Check that your tier updated (should show "Current Plan" badge)
 
 ### 10. Verify Webhook
 - [ ] Go to https://dashboard.stripe.com/test/webhooks
@@ -118,10 +134,11 @@ aws logs tail /ecs/spotter-app --follow --region us-east-1
 - [ ] Check that webhook logs show success
 
 ### 11. Test Subscription Flow
-- [ ] Test upgrading from Starter to Pro
-- [ ] Test accessing billing portal from `/settings`
+- [ ] Test upgrading from Core to Pro
+- [ ] Test switching between monthly and annual billing
+- [ ] Test accessing billing portal from "Manage Subscription" button
 - [ ] Test canceling subscription
-- [ ] Verify OCR quotas match subscription tier
+- [ ] Verify Instagram import quotas match subscription tier
 
 ## Troubleshooting
 

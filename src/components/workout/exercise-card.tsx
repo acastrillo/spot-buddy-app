@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Dumbbell, Check, X } from "lucide-react"
+import { Dumbbell, Check, X, Edit2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,7 +19,9 @@ interface ExerciseCardProps {
  *
  * Displays a single exercise with conditional field visibility.
  * - Display mode: Show only populated fields
- * - Edit mode (long-press): Show all fields with inputs
+ * - Edit mode: Show all fields with inputs
+ *   - Click edit button (always visible)
+ *   - OR long-press card (500ms - power user shortcut)
  * - Re-hide empty fields after save
  */
 export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
@@ -131,18 +133,32 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
               <Dumbbell className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">{card.name || "Unnamed Exercise"}</CardTitle>
             </div>
-            {onDelete && (
+            <div className="flex items-center gap-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  handleDelete()
+                  setIsEditing(true)
                 }}
-                className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                aria-label="Delete exercise"
+                className="p-1.5 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                aria-label="Edit exercise"
+                title="Edit exercise"
               >
-                <X className="h-4 w-4" />
+                <Edit2 className="h-4 w-4" />
               </button>
-            )}
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete()
+                  }}
+                  className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Delete exercise"
+                  title="Delete exercise"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -214,7 +230,7 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
 
           {/* Long-press hint */}
           {isPressing && (
-            <div className="text-xs text-primary text-center pt-2">
+            <div className="text-xs text-primary text-center pt-2 animate-pulse">
               Hold to edit...
             </div>
           )}

@@ -7,8 +7,8 @@ import {
   Plus,
   Calendar,
   Home,
-  Timer,
-  Target
+  Library,
+  BarChart3
 } from "lucide-react"
 
 export function MobileNav() {
@@ -16,10 +16,10 @@ export function MobileNav() {
 
   const navigation = [
     { name: "Home", href: "/", icon: Home },
+    { name: "Library", href: "/library", icon: Library },
     { name: "Add", href: "/add", icon: Plus },
-    { name: "Timer", href: "/timer", icon: Timer },
+    { name: "Stats", href: "/stats", icon: BarChart3 },
     { name: "Calendar", href: "/calendar", icon: Calendar },
-    { name: "Profile", href: "/settings/training-profile", icon: Target },
   ]
 
   return (

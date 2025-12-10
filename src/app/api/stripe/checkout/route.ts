@@ -10,11 +10,13 @@ import {
   getReturnUrls,
   getStripe,
 } from '@/lib/stripe-server'
+import { AppMetrics } from '@/lib/metrics'
 
 export const runtime = 'nodejs'
 
 const requestSchema = z.object({
-  tier: z.enum(['starter', 'pro', 'elite']),
+  tier: z.enum(['core', 'pro', 'elite']),
+  billingPeriod: z.enum(['monthly', 'annual']).optional().default('monthly'),
 })
 
 export async function POST(req: NextRequest) {
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     const tier = assertPaidTier(parsed.data.tier)
+    const billingPeriod = parsed.data.billingPeriod
     const stripe = getStripe()
 
     const user = await dynamoDBUsers.get(userId)
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
       await dynamoDBUsers.upsert({ id: userId, email: user.email, stripeCustomerId: customerId })
     }
 
-    const priceId = getPriceIdForTier(tier)
+    const priceId = getPriceIdForTier(tier, billingPeriod)
 
     if (!priceId) {
       return NextResponse.json({ error: 'Price ID not configured for this tier' }, { status: 500 })
@@ -90,6 +93,9 @@ export async function POST(req: NextRequest) {
       },
       { idempotencyKey }
     )
+
+    // Track checkout started for conversion analytics
+    AppMetrics.subscriptionCheckoutStarted(userId, tier, billingPeriod)
 
     return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {

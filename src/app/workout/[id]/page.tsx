@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button"
 import { EnhanceWithAIButton } from "@/components/ai/enhance-button"
 import { Badge } from "@/components/ui/badge"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   ArrowLeft,
   Clock,
   Target,
@@ -22,7 +30,8 @@ import {
   AlertCircle,
   Loader2,
   Timer,
-  Sparkles
+  Sparkles,
+  Trash2
 } from "lucide-react"
 
 interface Exercise {
@@ -71,6 +80,8 @@ export default function WorkoutViewPage() {
   const params = useParams()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const workoutId = params?.id as string
@@ -123,6 +134,39 @@ export default function WorkoutViewPage() {
       setWorkout(found || null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!workout || !user?.id) return
+
+    setIsDeleting(true)
+    try {
+      // Delete from API (DynamoDB)
+      const response = await fetch(`/api/workouts/${workout.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete workout from server')
+      }
+
+      // Delete from localStorage
+      const workouts = JSON.parse(localStorage.getItem('workouts') || '[]')
+      const updatedWorkouts = workouts.filter((w: Workout) => w.id !== workout.id)
+      localStorage.setItem('workouts', JSON.stringify(updatedWorkouts))
+
+      // Trigger refresh event for lists
+      window.dispatchEvent(new Event('workoutsUpdated'))
+
+      // Navigate to library
+      router.push('/library')
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete workout. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteDialog(false)
     }
   }
 
@@ -243,6 +287,15 @@ export default function WorkoutViewPage() {
                   <span className="hidden sm:inline">Edit</span>
                 </Button>
               </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                className="w-full md:w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 md:mr-2" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
             </div>
 
             {/* Workout Meta */}
@@ -423,6 +476,46 @@ export default function WorkoutViewPage() {
         </div>
       </main>
       <MobileNav />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Workout?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{workout.title}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="w-full sm:w-auto"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Workout
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

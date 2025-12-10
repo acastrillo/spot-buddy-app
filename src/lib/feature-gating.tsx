@@ -2,7 +2,7 @@ import React from "react"
 import { useAuthStore } from "@/store"
 import { SUBSCRIPTION_TIERS, hasFeatureAccess, getQuotaLimit } from "./subscription-tiers"
 
-export type SubscriptionTier = 'free' | 'starter' | 'pro' | 'elite'
+export type SubscriptionTier = 'free' | 'core' | 'pro' | 'elite'
 
 export interface FeatureGateResult {
   allowed: boolean
@@ -70,7 +70,7 @@ export function useQuotaCheck(quotaType: 'ocrQuotaWeekly' | 'workoutsMax' | 'aiR
  * Get the minimum tier required for a feature
  */
 function getMinimumTierForFeature(feature: string): string {
-  const tiers: SubscriptionTier[] = ['free', 'starter', 'pro', 'elite']
+  const tiers: SubscriptionTier[] = ['free', 'core', 'pro', 'elite']
 
   for (const tier of tiers) {
     if (hasFeatureAccess(tier, feature)) {
@@ -110,7 +110,7 @@ export function getTierColor(tier: SubscriptionTier): string {
   switch (tier) {
     case 'free':
       return 'text-text-secondary'
-    case 'starter':
+    case 'core':
       return 'text-secondary'
     case 'pro':
       return 'text-primary'
@@ -135,7 +135,7 @@ export function getTierBadge(tier: SubscriptionTier): {
     label: config.name,
     color: getTierColor(tier),
     bgColor: tier === 'free' ? 'bg-surface' :
-             tier === 'starter' ? 'bg-secondary/10' :
+             tier === 'core' ? 'bg-secondary/10' :
              tier === 'pro' ? 'bg-primary/10' : 'bg-rest/10',
   }
 }

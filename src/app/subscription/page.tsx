@@ -20,6 +20,7 @@ function SubscriptionContent() {
   const [loading, setLoading] = useState<string | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual') // Default to annual
 
   // Force refresh subscription data from server
   const refreshSubscription = useCallback(async () => {
@@ -75,7 +76,7 @@ function SubscriptionContent() {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, billingPeriod }),
       })
 
       const data = await response.json()
@@ -124,11 +125,11 @@ function SubscriptionContent() {
       ...SUBSCRIPTION_TIERS.free,
     },
     {
-      key: 'starter',
+      key: 'core',
       icon: Sparkles,
       color: 'text-secondary',
       bgColor: 'bg-secondary/10',
-      ...SUBSCRIPTION_TIERS.starter,
+      ...SUBSCRIPTION_TIERS.core,
     },
     {
       key: 'pro',
@@ -178,9 +179,36 @@ function SubscriptionContent() {
             <h1 className="text-4xl font-bold text-text-primary mb-4">
               Choose Your Plan
             </h1>
-            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-6">
               Upgrade your fitness journey with advanced features, unlimited tracking, and AI-powered insights
             </p>
+
+            {/* Billing Period Toggle */}
+            <div className="inline-flex items-center bg-surface rounded-lg p-1 gap-1">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  billingPeriod === 'monthly'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingPeriod('annual')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                  billingPeriod === 'annual'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Annual
+                <span className="absolute -top-2 -right-2 bg-success text-white text-xs px-2 py-0.5 rounded-full">
+                  Save 20%
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Current Subscription Banner */}
@@ -231,8 +259,19 @@ function SubscriptionContent() {
             {tiers.map((tier) => {
               const Icon = tier.icon
               const isCurrent = currentTier === tier.key
-              const isUpgrade = ['free', 'starter', 'pro', 'elite'].indexOf(tier.key) >
-                ['free', 'starter', 'pro', 'elite'].indexOf(currentTier)
+              const isUpgrade = ['free', 'core', 'pro', 'elite'].indexOf(tier.key) >
+                ['free', 'core', 'pro', 'elite'].indexOf(currentTier)
+
+              // Calculate price based on billing period
+              const displayPrice = billingPeriod === 'annual' && tier.annualPrice
+                ? tier.annualPrice
+                : tier.price
+              const monthlyEquivalent = billingPeriod === 'annual' && tier.annualPrice
+                ? (tier.annualPrice / 12).toFixed(2)
+                : null
+              const savingsPercent = tier.price > 0 && tier.annualPrice
+                ? Math.round((1 - (tier.annualPrice / 12) / tier.price) * 100)
+                : 0
 
               return (
                 <Card
@@ -262,9 +301,24 @@ function SubscriptionContent() {
                     </div>
                     <CardTitle className="text-2xl">{tier.name}</CardTitle>
                     <CardDescription className="text-3xl font-bold text-text-primary mt-2">
-                      {tier.price === 0 ? 'Free' : `$${tier.price}`}
-                      {tier.price > 0 && <span className="text-sm text-text-secondary font-normal">/month</span>}
+                      {displayPrice === 0 ? (
+                        'Free'
+                      ) : (
+                        <>
+                          ${displayPrice}
+                          {billingPeriod === 'annual' ? (
+                            <span className="text-sm text-text-secondary font-normal">/year</span>
+                          ) : (
+                            <span className="text-sm text-text-secondary font-normal">/month</span>
+                          )}
+                        </>
+                      )}
                     </CardDescription>
+                    {billingPeriod === 'annual' && monthlyEquivalent && (
+                      <p className="text-sm text-success mt-1">
+                        ${monthlyEquivalent}/month • Save {savingsPercent}%
+                      </p>
+                    )}
                   </CardHeader>
 
                   <CardContent>
@@ -318,6 +372,12 @@ function SubscriptionContent() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
+                <h4 className="font-semibold text-text-primary mb-2">Why choose annual billing?</h4>
+                <p className="text-sm text-text-secondary">
+                  Annual plans save you 20-22% compared to monthly billing. Plus, you'll stay committed to your fitness goals for a full year!
+                </p>
+              </div>
+              <div>
                 <h4 className="font-semibold text-text-primary mb-2">Can I cancel anytime?</h4>
                 <p className="text-sm text-text-secondary">
                   Yes! You can cancel your subscription at any time. You'll retain access to paid features until the end of your billing period.
@@ -333,6 +393,12 @@ function SubscriptionContent() {
                 <h4 className="font-semibold text-text-primary mb-2">Can I upgrade or downgrade my plan?</h4>
                 <p className="text-sm text-text-secondary">
                   Yes! You can upgrade at any time and you'll be prorated for the remaining time. Downgrades take effect at the end of your billing period.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-text-primary mb-2">Can I switch from monthly to annual billing?</h4>
+                <p className="text-sm text-text-secondary">
+                  Absolutely! You can switch your billing period through the billing portal. You'll receive a prorated credit for your remaining time.
                 </p>
               </div>
             </CardContent>

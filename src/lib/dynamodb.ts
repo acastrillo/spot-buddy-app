@@ -1465,7 +1465,7 @@ export const dynamoDBWorkoutCompletions = {
       return (result.Items as DynamoDBWorkoutCompletion[]) || [];
     } catch (error) {
       console.error("Error listing workout completions from DynamoDB:", error);
-      return [];
+      throw error;
     }
   },
 
@@ -1493,7 +1493,7 @@ export const dynamoDBWorkoutCompletions = {
       return (result.Items as DynamoDBWorkoutCompletion[]) || [];
     } catch (error) {
       console.error("Error getting workout completions:", error);
-      return [];
+      throw error;
     }
   },
 
@@ -1523,7 +1523,7 @@ export const dynamoDBWorkoutCompletions = {
       return (result.Items as DynamoDBWorkoutCompletion[]) || [];
     } catch (error) {
       console.error("Error querying completions by date range:", error);
-      return [];
+      throw error;
     }
   },
 
@@ -1593,20 +1593,41 @@ export const dynamoDBWorkoutCompletions = {
       // Get all completions for the user
       const completions = await this.list(userId);
 
+      // Normalize completion dates so stats work even if only completedAt is present
+      const getCompletionDate = (completion: DynamoDBWorkoutCompletion): string | null => {
+        const dateSource = completion.completedDate || completion.completedAt;
+        return dateSource ? dateSource.split("T")[0] : null;
+      };
+
       // Calculate this week's completions
       const now = new Date();
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      const startOfWeekIso = startOfWeek.toISOString().split("T")[0];
+      const startOfWeekUtc = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() - now.getUTCDay(),
+          0,
+          0,
+          0,
+          0
+        )
+      );
+      const startOfWeekIso = startOfWeekUtc.toISOString().split("T")[0];
 
       const thisWeekCompletions = completions.filter(
-        (c) => c.completedDate >= startOfWeekIso
+        (c) => {
+          const completionDate = getCompletionDate(c);
+          return completionDate ? completionDate >= startOfWeekIso : false;
+        }
       );
 
       // Calculate streak
       const uniqueDates = [
-        ...new Set(completions.map((c) => c.completedDate)),
+        ...new Set(
+          completions
+            .map(getCompletionDate)
+            .filter((date): date is string => Boolean(date))
+        ),
       ].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
       let streak = 0;
@@ -1635,12 +1656,7 @@ export const dynamoDBWorkoutCompletions = {
       };
     } catch (error) {
       console.error("Error calculating workout stats:", error);
-      return {
-        thisWeek: 0,
-        total: 0,
-        streak: 0,
-        hoursTrained: 0,
-      };
+      throw error;
     }
   },
 };

@@ -31,7 +31,7 @@ Spot Buddy is a modern fitness tracking application that lets users save Instagr
 - **Calendar View**: Schedule and track workouts by date (Phase 2)
 - **Smart Timers**: Interval timers for workouts with audio alerts (Phase 3)
 - **Social Features**: Connect with workout crews, share routines (Phase 5)
-- **Subscription Plans**: Free, Starter, Pro, and Elite tiers with Stripe (Phase 5)
+- **Subscription Plans**: Free, Core, Pro, and Elite tiers with Stripe (Phase 5)
 - **AI Analysis**: Workout recommendations with Amazon Bedrock (Phase 6+)
 - **Apple Health Integration**: Sync with health data and wearables (Phase 8+)
 - **Mobile App**: React Native app for iOS/Android (Phase 7+)

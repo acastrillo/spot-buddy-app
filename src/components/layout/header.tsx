@@ -15,7 +15,9 @@ import {
   Zap,
   BarChart3,
   Scale,
-  Library
+  Library,
+  Timer,
+  Settings
 } from "lucide-react"
 
 export function Header() {
@@ -27,12 +29,20 @@ export function Header() {
     await logout()
   }
 
+  // Desktop navigation - full primary nav
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
     { name: "Add Workout", href: "/add", icon: Plus },
     { name: "Library", href: "/library", icon: Library },
     { name: "Stats", href: "/stats", icon: BarChart3 },
     { name: "Calendar", href: "/calendar", icon: Calendar },
+  ]
+
+  // Mobile hamburger - secondary features only (primary nav is in bottom nav)
+  const mobileNavigation = [
+    { name: "Timer", href: "/timer", icon: Timer },
+    { name: "Body Metrics", href: "/stats/metrics", icon: Scale },
+    { name: "Settings", href: "/settings", icon: Settings },
   ]
 
   if (!user) {
@@ -90,6 +100,7 @@ export function Header() {
             size="sm"
             onClick={handleSignOut}
             className="flex items-center space-x-2"
+            aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Sign Out</span>
@@ -101,26 +112,28 @@ export function Header() {
             size="icon"
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation - Secondary features only */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-surface/95 backdrop-blur-sm">
           <nav className="w-full max-w-4xl mx-auto px-4 py-4 space-y-2">
-            {navigation.map((item) => {
+            {mobileNavigation.map((item) => {
               const Icon = item.icon
               return (
-                <Link 
-                  key={item.name} 
+                <Link
+                  key={item.name}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start flex items-center space-x-3"
                   >
                     <Icon className="h-5 w-5" />

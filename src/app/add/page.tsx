@@ -19,7 +19,8 @@ import {
   Sparkles,
   Image as ImageIcon,
   X,
-  Crown
+  Crown,
+  ChevronRight
 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { getQuotaLimit } from "@/lib/stripe"
@@ -262,7 +263,9 @@ export default function ImportWorkoutPage() {
           type: 'image'
         }
         sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-        router.push('/add/edit')
+        setWorkoutData(workoutResult)
+        setWorkoutTitle('OCR Extracted Workout')
+        // User can now click "Continue to Edit" button to proceed
       }
 
     } catch (error) {
@@ -326,7 +329,7 @@ export default function ImportWorkoutPage() {
       setWorkoutData(workoutResult)
       setWorkoutTitle(fetchData.title || 'Imported Workout')
 
-      // Automatically navigate to edit page
+      // Store workout data for edit page (but don't auto-navigate)
       const workoutForEdit = {
         id: Date.now().toString(),
         title: fetchData.title || 'Imported Workout',
@@ -338,7 +341,7 @@ export default function ImportWorkoutPage() {
         type: 'url'
       }
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-      router.push('/add/edit')
+      // User can now click "Continue to Edit" button to proceed
 
     } catch (error) {
       console.error('Process error:', error)
@@ -565,9 +568,51 @@ export default function ImportWorkoutPage() {
                 <TabsContent value="image">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-2">
-                        Upload Workout Screenshot
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-text-primary">
+                          Upload Workout Screenshot
+                        </label>
+                        {user && (() => {
+                          const tier = (user as any).subscriptionTier || 'free'
+                          const quotaLimit = getQuotaLimit(tier, 'ocrQuotaWeekly')
+                          const quotaUsed = (user as any).ocrQuotaUsed || 0
+                          const quotaRemaining = quotaLimit === null ? 'Unlimited' : `${quotaLimit - quotaUsed}/${quotaLimit}`
+                          const isLow = quotaLimit !== null && (quotaLimit - quotaUsed) <= 1
+                          const isExhausted = quotaLimit !== null && (quotaLimit - quotaUsed) <= 0
+
+                          return (
+                            <div className={`text-xs ${isExhausted ? 'text-red-500 font-semibold' : isLow ? 'text-amber-500 font-medium' : 'text-text-secondary'}`}>
+                              OCR: {quotaRemaining} {quotaLimit !== null && 'remaining'}
+                            </div>
+                          )
+                        })()}
+                      </div>
+
+                      {user && (() => {
+                        const tier = (user as any).subscriptionTier || 'free'
+                        const quotaLimit = getQuotaLimit(tier, 'ocrQuotaWeekly')
+                        const quotaUsed = (user as any).ocrQuotaUsed || 0
+                        const isExhausted = quotaLimit !== null && (quotaLimit - quotaUsed) <= 0
+
+                        if (isExhausted) {
+                          return (
+                            <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                              <p className="text-sm text-red-500 mb-2">
+                                You've used all your OCR scans this week. {tier === 'free' ? 'Upgrade to get more!' : 'Your quota resets weekly.'}
+                              </p>
+                              {tier === 'free' && (
+                                <Link href="/subscription">
+                                  <Button variant="outline" size="sm" className="w-full">
+                                    <Crown className="h-3 w-3 mr-2" />
+                                    Upgrade for Unlimited Scans
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
 
                       {/* Drag and Drop Zone */}
                       <div
@@ -642,7 +687,12 @@ export default function ImportWorkoutPage() {
                             <Button
                               className="w-full"
                               onClick={processImageWithOCR}
-                              disabled={isProcessingOCR}
+                              disabled={isProcessingOCR || (user && (() => {
+                                const tier = (user as any).subscriptionTier || 'free'
+                                const quotaLimit = getQuotaLimit(tier, 'ocrQuotaWeekly')
+                                const quotaUsed = (user as any).ocrQuotaUsed || 0
+                                return quotaLimit !== null && (quotaLimit - quotaUsed) <= 0
+                              })())}
                             >
                               {isProcessingOCR ? (
                                 <LoadingSpinner size="sm" text="Processing OCR" />
@@ -731,21 +781,21 @@ export default function ImportWorkoutPage() {
               </Tabs>
 
               <div className="flex justify-center mt-8">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="px-8"
                   onClick={handleParseWorkout}
                   disabled={!workoutTitle || !workoutContent}
                 >
                   {workoutData ? (
                     <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Edit Workout
+                      Continue to Edit
+                      <ChevronRight className="h-4 w-4 ml-2" />
                     </>
                   ) : (
                     <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Create Workout
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Process & Edit
                     </>
                   )}
                 </Button>

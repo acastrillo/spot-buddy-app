@@ -38,7 +38,7 @@ export default function EditWorkoutPage() {
   const router = useRouter()
   const [workoutData, setWorkoutData] = useState<WorkoutData | null>(null)
   const [workoutTitle, setWorkoutTitle] = useState("")
-  const [workoutNotes, setWorkoutNotes] = useState("")  // Renamed from workoutDescription
+  const [workoutDescription, setWorkoutDescription] = useState("")
   const [cards, setCards] = useState<WorkoutCard[]>([])  // Changed from exercises
   const [isSaving, setIsSaving] = useState(false)
   const [workoutType, setWorkoutType] = useState<string>('standard')
@@ -66,7 +66,7 @@ export default function EditWorkoutPage() {
             : `**AI Insights:**\n${aiNotesText}`
         }
       }
-      setWorkoutNotes(notesContent)
+      setWorkoutDescription(notesContent)
 
       // Convert parsed exercises to card format
       let exerciseData = []
@@ -165,7 +165,7 @@ export default function EditWorkoutPage() {
       const workoutToSave = {
         workoutId: workoutData.id,
         title: workoutTitle,
-        description: workoutNotes,  // Changed from workoutDescription
+        description: workoutDescription,
         exercises: exercises,
         content: workoutData.content,
         author: workoutData.author,
@@ -179,7 +179,7 @@ export default function EditWorkoutPage() {
         workoutType: workoutType,
         structure: workoutStructure,
         aiNotes: null,  // AI notes now merged into description
-        aiEnhanced: workoutNotes.includes('**AI Insights:**'), // Mark as AI enhanced if notes contain AI insights
+        aiEnhanced: workoutDescription.includes('**AI Insights:**'), // Mark as AI enhanced if description contains AI insights
       }
 
       // Save to DynamoDB via API route
@@ -234,9 +234,9 @@ export default function EditWorkoutPage() {
     }
 
     // Merge AI notes into description field
-    let updatedNotes = workoutNotes
+    let updatedDescription = workoutDescription
     if (enhancedWorkout.description) {
-      updatedNotes = String(enhancedWorkout.description)
+      updatedDescription = String(enhancedWorkout.description)
     }
 
     // Append AI notes to description
@@ -247,12 +247,12 @@ export default function EditWorkoutPage() {
         .join('\n')
 
       if (aiNotesText) {
-        updatedNotes = updatedNotes
-          ? `${updatedNotes}\n\n**AI Insights:**\n${aiNotesText}`
+        updatedDescription = updatedDescription
+          ? `${updatedDescription}\n\n**AI Insights:**\n${aiNotesText}`
           : `**AI Insights:**\n${aiNotesText}`
       }
     }
-    setWorkoutNotes(updatedNotes)
+    setWorkoutDescription(updatedDescription)
 
     // Update workout type and structure
     if (enhancedWorkout.workoutType) {
@@ -319,10 +319,10 @@ export default function EditWorkoutPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-text-primary">
-                  Edit Workout
+                  Create New Workout
                 </h1>
                 <p className="text-sm text-text-secondary">
-                  Review and customize your imported workout
+                  Review and save your imported workout
                 </p>
               </div>
             </div>
@@ -411,12 +411,12 @@ export default function EditWorkoutPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-text-primary mb-2">
-                      Notes
+                      Description
                     </label>
                     <Textarea
-                      value={workoutNotes}
-                      onChange={(e) => setWorkoutNotes(e.target.value)}
-                      placeholder="Workout description, AI insights, form cues..."
+                      value={workoutDescription}
+                      onChange={(e) => setWorkoutDescription(e.target.value)}
+                      placeholder="Describe this workout (goals, intensity, focus areas...)"
                       rows={5}
                     />
                   </div>
@@ -440,11 +440,11 @@ export default function EditWorkoutPage() {
                     disabled={!workoutTitle || typeof workoutTitle !== 'string' || !workoutTitle.trim() || cards.length === 0 || isSaving}
                   >
                     {isSaving ? (
-                      <>Saving...</>
+                      <>Creating Workout...</>
                     ) : (
                       <>
                         <Save className="h-4 w-4 mr-2" />
-                        Save Workout
+                        Save New Workout
                       </>
                     )}
                   </Button>
