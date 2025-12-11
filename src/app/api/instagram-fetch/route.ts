@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { parseWorkoutContent } from '@/lib/smartWorkoutParser'
 
 interface ApifyInstagramResult {
   url?: string
@@ -112,7 +113,6 @@ export async function POST(request: NextRequest) {
 
 
       if (!apifyResponse.ok) {
-        const errorText = await apifyResponse.text()
         // SECURITY FIX: Don't log full error (may contain token)
         console.error('[Instagram] Apify API error:', apifyResponse.status)
         return NextResponse.json(
@@ -203,6 +203,9 @@ export async function POST(request: NextRequest) {
           const postUrl = post.url || url
           const timestamp = post.timestamp || new Date().toISOString()
 
+          // Use smart workout parser for better accuracy
+          const parsedWorkout = parseWorkoutContent(caption);
+
           const workoutData = {
             url: postUrl,
             title: `Instagram Workout - ${new Date(timestamp).toLocaleDateString()}`,
@@ -217,7 +220,18 @@ export async function POST(request: NextRequest) {
             },
             image: post.displayUrl || '',
             timestamp: timestamp,
-            parsedWorkout: parseWorkoutFromCaption(caption),
+            parsedWorkout: {
+              exercises: parsedWorkout.exercises.map(ex => ({
+                name: ex.name,
+                sets: ex.sets,
+                reps: ex.reps,
+                weight: ex.weight,
+                time: ex.unit === 'time' ? ex.reps : undefined,
+              })),
+              rawText: caption,
+              totalExercises: parsedWorkout.exercises.length,
+              workoutInstructions: parsedWorkout.summary,
+            },
           }
 
           return NextResponse.json(workoutData)
@@ -259,89 +273,5 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     )
-  }
-}
-
-function parseWorkoutFromCaption(caption: string) {
-  // Basic workout parsing logic
-  const lines = caption.split('\n').filter(line => line.trim())
-  const exercises: Array<{ name: string; sets?: string; reps?: string; weight?: string; time?: string }> = []
-  let workoutInstructions = ''
-
-  // Look for common workout patterns
-  lines.forEach(line => {
-    const trimmedLine = line.trim()
-
-    // Pattern: Emoji numbered exercises like "1️⃣ DUMBBELL HOPS" or "2️⃣ SINGLE ARM OH LUNGE"
-    const emojiNumberMatch = trimmedLine.match(/^[0-9]️⃣\s+(.+)$/i)
-    if (emojiNumberMatch) {
-      exercises.push({
-        name: emojiNumberMatch[1].trim(),
-      })
-      return
-    }
-
-    // Pattern: "Exercise: 3x10" or "Exercise - 3 sets x 10 reps"
-    const setRepMatch = trimmedLine.match(/(.+?)[-:]?\s*(\d+)\s*x\s*(\d+)/i)
-    if (setRepMatch) {
-      exercises.push({
-        name: setRepMatch[1].trim().replace(/^\d+\.\s*/, ''), // Remove number prefix
-        sets: setRepMatch[2],
-        reps: setRepMatch[3],
-      })
-      return
-    }
-
-    // Pattern: "Exercise: 30 seconds" or "Exercise - 2 minutes"
-    const timeMatch = trimmedLine.match(/(.+?)[-:]?\s*(\d+)\s*(sec|second|min|minute)s?/i)
-    if (timeMatch) {
-      exercises.push({
-        name: timeMatch[1].trim().replace(/^\d+\.\s*/, ''),
-        time: `${timeMatch[2]} ${timeMatch[3]}`,
-      })
-      return
-    }
-
-    // Pattern: "Exercise with weight: 50lbs" or "Exercise @ 25kg"
-    const weightMatch = trimmedLine.match(/(.+?)[@:\-]?\s*(\d+)\s*(lbs?|kg|pounds?)/i)
-    if (weightMatch) {
-      exercises.push({
-        name: weightMatch[1].trim().replace(/^\d+\.\s*/, ''),
-        weight: `${weightMatch[2]}${weightMatch[3]}`,
-      })
-      return
-    }
-
-    // Look for workout instructions (time/rest patterns)
-    if (trimmedLine.match(/✅.*\d+\s*(sec|second|min|minute)s?/i) ||
-        trimmedLine.match(/work.*rest/i) ||
-        trimmedLine.match(/\d+\s*sets?/i)) {
-      workoutInstructions += (workoutInstructions ? ' | ' : '') + trimmedLine
-      return
-    }
-
-    // Simple exercise name (if it looks like an exercise)
-    if (trimmedLine.match(/^\d+\.\s*/) ||
-        trimmedLine.toLowerCase().includes('squat') ||
-        trimmedLine.toLowerCase().includes('push') ||
-        trimmedLine.toLowerCase().includes('pull') ||
-        trimmedLine.toLowerCase().includes('press') ||
-        trimmedLine.toLowerCase().includes('curl') ||
-        trimmedLine.toLowerCase().includes('row') ||
-        trimmedLine.toLowerCase().includes('lunge') ||
-        trimmedLine.toLowerCase().includes('burpee') ||
-        trimmedLine.toLowerCase().includes('hop') ||
-        trimmedLine.toLowerCase().includes('drag')) {
-      exercises.push({
-        name: trimmedLine.trim().replace(/^\d+\.\s*/, ''),
-      })
-    }
-  })
-
-  return {
-    exercises,
-    rawText: caption,
-    totalExercises: exercises.length,
-    workoutInstructions: workoutInstructions || undefined,
   }
 }

@@ -238,23 +238,38 @@ function extractRepDetails(text: string): RepDetails {
     repDetails.sets = parseInt(roundsMatch[1]);
   }
 
-  const unitNumber = lower.match(/(\d+)\s*(calories?|cals?|cal|meters?|metres?|m\b|km|reps?|rep\b|sec|secs|seconds?|minutes?|mins?|min)\b/);
+  // IMPORTANT: Match numbers with units, but exclude "Min" when it's part of "Min 1." or "Min 2." pattern (EMOM format)
+  // This regex looks for a number followed by a unit, but uses a negative lookbehind to avoid matching "min" in "Min 1."
+  const unitNumber = lower.match(/(?<!^min\s+\d+\.\s+)(\d+)\s*(calories?|cals?|cal|meters?|metres?|m\b|km|reps?|rep\b|sec|secs|seconds?)\b/);
   if (unitNumber) {
     repDetails.repsText = `${unitNumber[1]} ${unitNumber[2]}`.replace(/\s+/g, ' ').trim();
     repDetails.primaryUnit = unitNumber[2].toLowerCase();
     return repDetails;
   }
 
-  const attachedUnit = lower.match(/(\d+)(m|km|cal|cals|reps?|sec|secs|min|mins)/);
+  const attachedUnit = lower.match(/(\d+)(m|km|cal|cals|reps?|sec|secs)/);
   if (attachedUnit) {
     repDetails.repsText = `${attachedUnit[1]} ${attachedUnit[2]}`;
     repDetails.primaryUnit = attachedUnit[2].toLowerCase();
     return repDetails;
   }
 
-  const genericNumber = lower.match(/(\d+)/);
-  if (genericNumber) {
-    repDetails.repsText = genericNumber[1];
+  // Extract the main number - prioritize larger numbers (12 over 1 in "Min 1. 12 Squats")
+  // First try to match a number that comes after a period (common in EMOM format: "Min 1. 12 Squats")
+  const numberAfterPeriod = lower.match(/\.\s*(\d+)/);
+  if (numberAfterPeriod) {
+    repDetails.repsText = numberAfterPeriod[1];
+    return repDetails;
+  }
+
+  // Otherwise, get the last/largest number in the text (likely to be the rep count)
+  const allNumbers = text.match(/\d+/g);
+  if (allNumbers && allNumbers.length > 0) {
+    // For EMOM format "Min 1. 12 Squats", we want 12, not 1
+    // Take the last number that's >= 5 (more likely to be reps), otherwise take the last number
+    const largeNumbers = allNumbers.filter(n => parseInt(n) >= 5);
+    const bestNumber = largeNumbers.length > 0 ? largeNumbers[largeNumbers.length - 1] : allNumbers[allNumbers.length - 1];
+    repDetails.repsText = bestNumber;
   }
 
   return repDetails;
@@ -303,7 +318,7 @@ export function parseWorkoutContent(caption: string): {
 
     // Determine unit based on exercise info and text content
     let unit = matchedExercise.info.defaultUnit || 'reps';
-    let weight = matchedExercise.info.defaultWeight || '';
+    const weight = matchedExercise.info.defaultWeight || '';
     let reps = repDetails.repsText || '';
     let sets = repDetails.sets || 1;
 

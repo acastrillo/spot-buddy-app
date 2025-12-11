@@ -348,10 +348,22 @@ export default function EditWorkoutPage() {
                 </div>
 
                 {workoutData.llmData.breakdown && (
-                  <div className="text-xs text-text-secondary space-y-1">
+                  <div className="text-xs text-text-secondary space-y-1 mb-3">
                     {workoutData.llmData.breakdown.map((item: string, idx: number) => (
                       <div key={idx}>• {item}</div>
                     ))}
+                  </div>
+                )}
+
+                {/* Full Caption Display */}
+                {workoutData.content && (
+                  <div className="mt-3 pt-3 border-t border-primary/20">
+                    <h4 className="text-xs font-medium text-primary mb-2">
+                      Original Caption:
+                    </h4>
+                    <div className="text-xs text-text-secondary whitespace-pre-wrap bg-surface/50 rounded p-2 max-h-32 overflow-y-auto">
+                      {workoutData.content}
+                    </div>
                   </div>
                 )}
               </div>
