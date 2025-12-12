@@ -46,11 +46,9 @@ interface AMRAPSessionViewProps {
 }
 
 export default function AMRAPSessionView({
-  workout,
   exercises,
   timeLimit,
   onComplete,
-  onEnd,
 }: AMRAPSessionViewProps) {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [checkedExercises, setCheckedExercises] = useState<Set<string>>(new Set())
@@ -139,7 +137,7 @@ export default function AMRAPSessionView({
               {countdownValue}
             </div>
             <p className="text-xl text-text-secondary">
-              Time's up! Great work!
+              Time&apos;s up! Great work!
             </p>
           </div>
         </div>
@@ -155,10 +153,12 @@ export default function AMRAPSessionView({
               </div>
             </div>
             <DialogTitle className="text-center text-2xl">
-              Workout Complete!
+              AMRAP Complete! 💪
             </DialogTitle>
             <DialogDescription className="text-center text-text-secondary">
-              You completed the AMRAP workout
+              You crushed the {formatTime(timeLimit)} AMRAP!
+              <br />
+              Add notes about rounds completed below.
             </DialogDescription>
           </DialogHeader>
 
@@ -184,7 +184,7 @@ export default function AMRAPSessionView({
               </Label>
               <Textarea
                 id="notes"
-                placeholder="Add your notes here (e.g., rounds completed, how you felt, etc.)"
+                placeholder="Example: 5 rounds + 12 reps into round 6, felt strong on squats"
                 value={completionNotes}
                 onChange={(e) => setCompletionNotes(e.target.value)}
                 className="bg-slate-800 border-slate-700 text-white min-h-[100px]"

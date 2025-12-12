@@ -76,8 +76,11 @@ export function AMRAPWrapperCard({
       <div className="bg-slate-800/50 border-b border-slate-700 p-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <Badge variant="secondary" className="text-sm">
-              AMRAP
+            <Badge
+              variant="secondary"
+              className="text-sm px-3 py-1 bg-amber-500/20 border-amber-500/40 text-amber-500 font-bold"
+            >
+              ⏱️ AMRAP {Math.floor(timeLimit / 60)}:00
             </Badge>
             <div className="flex items-center gap-2">
               <Button
@@ -97,7 +100,9 @@ export function AMRAPWrapperCard({
 
           {/* Large Timer Display */}
           <div className="text-center mb-4">
-            <div className={`text-6xl md:text-7xl font-bold font-mono tabular-nums ${timerColor} transition-colors`}>
+            <div className={`text-6xl md:text-7xl font-bold font-mono tabular-nums ${timerColor} transition-colors ${
+              remainingSeconds <= 60 ? 'animate-pulse' : ''
+            }`}>
               {formatTime(timer.remainingMs)}
             </div>
             <p className="text-sm text-text-secondary mt-2">
@@ -155,6 +160,14 @@ export function AMRAPWrapperCard({
       {/* Exercises Section */}
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
+          {/* Round Counter */}
+          <div className="mb-4 flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+            <span className="text-sm text-text-secondary">Rounds Completed</span>
+            <div className="text-2xl font-bold text-white">
+              {Math.floor(checkedExercises.size / exercises.length)}
+            </div>
+          </div>
+
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-white mb-1">
               Exercises
@@ -175,7 +188,7 @@ export function AMRAPWrapperCard({
                   exerciseNumber={index + 1}
                   variant="compact"
                   checked={checkedExercises.has(exercise.id)}
-                  onToggle={(checked) => onToggleExercise(exercise.id)}
+                  onToggle={() => onToggleExercise(exercise.id)}
                 />
               ))}
             </div>
@@ -189,7 +202,7 @@ export function AMRAPWrapperCard({
                   exerciseNumber={index + 1}
                   variant="card"
                   checked={checkedExercises.has(exercise.id)}
-                  onToggle={(checked) => onToggleExercise(exercise.id)}
+                  onToggle={() => onToggleExercise(exercise.id)}
                 />
               ))}
             </div>

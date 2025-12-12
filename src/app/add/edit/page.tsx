@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { WorkoutCardList } from "@/components/workout/workout-card-list"
+import { AMRAPHeaderCard } from "@/components/workout/amrap-header-card"
 import { expandWorkoutToCards, collapseCardsToExercises, detectRepetitionPattern } from "@/lib/workout/card-transformer"
 import type { WorkoutCard } from "@/types/workout-card"
 import {
@@ -43,6 +44,7 @@ export default function EditWorkoutPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [workoutType, setWorkoutType] = useState<string>('standard')
   const [workoutStructure, setWorkoutStructure] = useState<any>(null)
+  const [amrapTimeLimit, setAmrapTimeLimit] = useState<number>(1200) // Default 20 min
 
   useEffect(() => {
     // Load workout data from sessionStorage
@@ -108,6 +110,13 @@ export default function EditWorkoutPage() {
           restBetweenRounds: true,  // Rest between rounds
           defaultRestDuration: 60,
         }
+      }
+
+      // Load AMRAP data
+      if (data.llmData?.workoutType === 'amrap') {
+        setWorkoutType('amrap')
+        const timeLimitSeconds = data.llmData?.structure?.timeLimit || 1200
+        setAmrapTimeLimit(timeLimitSeconds)
       }
 
       const expandedCards = expandWorkoutToCards(exerciseData, repetition)
@@ -177,7 +186,9 @@ export default function EditWorkoutPage() {
         tags: workoutData.llmData?.workoutV1?.tags || [],
         llmData: workoutData.llmData,
         workoutType: workoutType,
-        structure: workoutStructure,
+        structure: workoutType === 'amrap' ? {
+          timeLimit: amrapTimeLimit
+        } : workoutStructure,
         aiNotes: null,  // AI notes now merged into description
         aiEnhanced: workoutDescription.includes('**AI Insights:**'), // Mark as AI enhanced if description contains AI insights
       }
@@ -432,6 +443,14 @@ export default function EditWorkoutPage() {
                       rows={5}
                     />
                   </div>
+
+                  {workoutType === 'amrap' && (
+                    <AMRAPHeaderCard
+                      timeLimit={amrapTimeLimit}
+                      onTimeLimitChange={setAmrapTimeLimit}
+                      isEditable={true}
+                    />
+                  )}
 
                   <div className="pt-4 border-t border-border">
                     <h4 className="font-medium text-text-primary mb-2">Summary</h4>

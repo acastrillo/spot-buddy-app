@@ -10,7 +10,6 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EnhanceWithAIButton } from "@/components/ai/enhance-button"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -29,8 +28,6 @@ import {
   Play,
   AlertCircle,
   Loader2,
-  Timer,
-  Sparkles,
   Trash2
 } from "lucide-react"
 
@@ -199,7 +196,7 @@ export default function WorkoutViewPage() {
               Workout Not Found
             </h2>
             <p className="text-text-secondary mb-4">
-              The workout you're looking for doesn't exist or has been deleted.
+              The workout you&apos;re looking for doesn&apos;t exist or has been deleted.
             </p>
             <Button onClick={() => router.push('/')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -242,6 +239,15 @@ export default function WorkoutViewPage() {
                 <p className="text-sm text-text-secondary break-words">
                   {workout.description}
                 </p>
+                {workout.workoutType === 'amrap' && (
+                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-semibold text-amber-500">
+                      AMRAP {workout.structure?.timeLimit ?
+                        `${Math.floor(workout.structure.timeLimit / 60)} min` : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -299,25 +305,44 @@ export default function WorkoutViewPage() {
             </div>
 
             {/* Workout Meta */}
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <div className="flex items-center space-x-1 text-text-secondary">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm">{formatDuration(workout.totalDuration)}</span>
-              </div>
-              
-              <div className="flex items-center space-x-1 text-text-secondary">
-                <Target className="h-4 w-4" />
-                <span className="text-sm capitalize">{workout.difficulty}</span>
-              </div>
-              
-              {workout.author && (
-                <div className="flex items-center space-x-1 text-text-secondary">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm">@{workout.author.username}</span>
+            {workout.workoutType === 'amrap' ? (
+              <div className="mb-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-text-secondary">Workout Type</div>
+                    <div className="text-lg font-bold text-amber-500">
+                      AMRAP - {Math.floor((workout.structure?.timeLimit || 0) / 60)} Minutes
+                    </div>
+                  </div>
                 </div>
-              )}
-              
-            </div>
+                <p className="text-sm text-text-secondary">
+                  Complete as many rounds as possible in the time limit. Rest as needed.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <div className="flex items-center space-x-1 text-text-secondary">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm">{formatDuration(workout.totalDuration)}</span>
+                </div>
+
+                <div className="flex items-center space-x-1 text-text-secondary">
+                  <Target className="h-4 w-4" />
+                  <span className="text-sm capitalize">{workout.difficulty}</span>
+                </div>
+
+                {workout.author && (
+                  <div className="flex items-center space-x-1 text-text-secondary">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm">@{workout.author.username}</span>
+                  </div>
+                )}
+
+              </div>
+            )}
 
             {/* Quick actions */}
             <div className="flex gap-2 mt-2">
@@ -333,10 +358,26 @@ export default function WorkoutViewPage() {
 
           </div>
 
+          {/* AMRAP Instructions */}
+          {workout.workoutType === 'amrap' && (
+            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Target className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-blue-400">
+                  <strong>AMRAP Format:</strong> Perform exercises in order, repeating as many times as possible. Track rounds in completion notes.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Exercises */}
           <Card>
             <CardHeader>
-              <CardTitle>Exercises ({workout.exercises.length})</CardTitle>
+              <CardTitle>
+                {workout.workoutType === 'amrap'
+                  ? `Exercise Circuit (${workout.exercises.length} movements)`
+                  : `Exercises (${workout.exercises.length})`}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
