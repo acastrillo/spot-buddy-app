@@ -348,7 +348,7 @@ async function resolveUserByCustomer(
 
   const directEmail =
     emailHint ||
-    (typeof customer !== 'string' && 'email' in customer ? (customer as Stripe.Customer).email || undefined : undefined)
+    (customer && typeof customer !== 'string' && 'email' in customer ? (customer as Stripe.Customer).email || undefined : undefined)
 
   const tryLookupByEmail = async (email: string | undefined) => {
     if (!email) return null
