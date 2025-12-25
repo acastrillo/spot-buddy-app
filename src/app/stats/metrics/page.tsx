@@ -317,7 +317,7 @@ export default function BodyMetricsPage() {
           )}
 
           {/* Charts */}
-          <Tabs defaultValue="weight" className="mb-8">
+          <Tabs {...({ defaultValue: "weight" } as any)} className="mb-8">
             <TabsList>
               <TabsTrigger value="weight">Weight</TabsTrigger>
               <TabsTrigger value="bodyfat">Body Fat</TabsTrigger>
