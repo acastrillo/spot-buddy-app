@@ -247,7 +247,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         description: result.enhancedWorkout.description,
         workoutType: result.enhancedWorkout.workoutType,
         structure: result.enhancedWorkout.structure as any,
-        exercises: result.enhancedWorkout.exercises,
+        exercises: result.enhancedWorkout.exercises as any,
         totalDuration: result.enhancedWorkout.duration,
         difficulty: result.enhancedWorkout.difficulty,
       };
