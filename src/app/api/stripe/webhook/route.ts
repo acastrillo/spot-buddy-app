@@ -258,11 +258,12 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   customerId: string | null
   tier: PaidTier | null
 }> {
+  const inv = invoice as any
   const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null
   const subscriptionId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id || null
+    typeof inv.subscription === 'string'
+      ? inv.subscription
+      : inv.subscription?.id || null
 
   // Prefer metadata from invoice payload if present
   const metaTier =
@@ -302,9 +303,9 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
 
   // Fetch subscription to retrieve metadata reliably
   const subscription =
-    typeof invoice.subscription === 'string'
-      ? await getStripe().subscriptions.retrieve(invoice.subscription)
-      : (invoice.subscription as Stripe.Subscription)
+    typeof inv.subscription === 'string'
+      ? await getStripe().subscriptions.retrieve(inv.subscription)
+      : (inv.subscription as Stripe.Subscription)
 
   const resolved = await resolveUserByCustomer(
     subscription.customer,
