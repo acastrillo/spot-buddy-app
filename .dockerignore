@@ -1,17 +1,70 @@
+# Dependencies
 node_modules
 npm-debug.log
+
+# Next.js build output
 .next
+
+# Git
 .git
 .gitignore
+
+# Documentation (not needed in production)
 README.md
-Dockerfile
-.dockerignore
-infrastructure
-infrastructure_backup
-cdk.out
 *.md
-*.json.backup
+docs/
+data/docs/
+
+# Infrastructure (CDK, backups, etc.)
+infrastructure/
+infrastructure_backup/
+cdk.out/
+cdk.json
+cdk.context.json
+
+# Scripts and tools
+scripts/
 test-*.ps1
 deploy-*.ps1
-prisma/prisma
+*.ps1
+
+# Development files
+.env
+.env.local
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Backups and temporary files
+*.backup
+*.bak
+*.tmp
+*.log
+tmp-*.txt
+*.json.backup
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+playwright.config.ts
+playwright-report/
+test-results/
+
+# TypeScript build info
 tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Prisma (schema needed, but not generated files during build)
+prisma/prisma
+prisma/migrations/
+
+# Agent and planning docs
+data/
+
+# Archive
+docs/archive/
