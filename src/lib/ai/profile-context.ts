@@ -54,15 +54,14 @@ export async function buildAIProfileContext(
   if (user?.trainingProfile) {
     const profile = user.trainingProfile;
 
-    context.experienceLevel = profile.experienceLevel;
+    context.experienceLevel = profile.experience;
     context.goals = profile.goals;
     context.equipment = profile.equipment;
-    context.constraints = profile.constraints;
-    context.preferredDuration = profile.preferredDuration;
-    context.trainingFrequency = profile.trainingFrequency;
-    context.energyLevels = profile.energyLevels;
-    context.favoriteExercises = profile.favoriteExercises;
-    context.dislikedExercises = profile.dislikedExercises;
+    context.constraints = profile.constraints.map(c => c.description).join('; ');
+    context.preferredDuration = profile.sessionDuration;
+    context.trainingFrequency = profile.trainingDays;
+    context.favoriteExercises = profile.preferences?.favoriteExercises;
+    context.dislikedExercises = profile.preferences?.dislikedExercises;
   }
 
   try {
