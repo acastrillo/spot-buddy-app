@@ -148,13 +148,14 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
   await ensureUserExists(userId)
 
   const tier = tierMeta
+  const sub = subscription as any
   const update: Parameters<typeof dynamoDBUsers.updateSubscription>[1] = {
     status: mapStripeStatus(subscription.status),
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscription.id,
-    startDate: toDate(subscription.current_period_start),
-    endDate: subscription.cancel_at ? toDate(subscription.cancel_at) : null,
-    trialEndsAt: subscription.trial_end ? toDate(subscription.trial_end) : null,
+    startDate: toDate(sub.current_period_start),
+    endDate: sub.cancel_at ? toDate(sub.cancel_at) : null,
+    trialEndsAt: sub.trial_end ? toDate(sub.trial_end) : null,
   }
 
   if (tier) update.tier = tier
