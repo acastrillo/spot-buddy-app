@@ -267,13 +267,13 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
 
   // Prefer metadata from invoice payload if present
   const metaTier =
-    (inv.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.tier ||
+    inv.subscription_details?.metadata?.tier ||
     inv?.parent?.subscription_details?.metadata?.tier ||
     invoice.metadata?.tier
   const parsedTier = normalizePaidTier(metaTier) ?? null
 
   const userIdFromInvoice =
-    (inv.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.userId ||
+    inv.subscription_details?.metadata?.userId ||
     // Newer payloads sometimes nest under parent.subscription_details
     inv?.parent?.subscription_details?.metadata?.userId ||
     invoice.metadata?.userId
