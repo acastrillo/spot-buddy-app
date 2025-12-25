@@ -46,11 +46,9 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted':
         await handleSubscriptionCanceled(event.data.object as Stripe.Subscription, event.id)
         break
-      case 'invoice_payment.paid': // Newer alias in recent API versions
       case 'invoice.payment_succeeded':
         await handleInvoicePayment(event.data.object as Stripe.Invoice, 'succeeded', event.id)
         break
-      case 'invoice_payment.failed': // Newer alias in recent API versions
       case 'invoice.payment_failed':
         await handleInvoicePayment(event.data.object as Stripe.Invoice, 'failed', event.id)
         break
