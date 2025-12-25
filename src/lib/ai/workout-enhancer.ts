@@ -18,7 +18,7 @@
  * 4. User reviews and saves enhanced workout
  */
 
-import { invokeClaude, logUsage, type BedrockResponse } from './bedrock-client';
+import { invokeClaude, logUsage, type BedrockResponse, type ClaudeContentBlock } from './bedrock-client';
 import { parseWorkoutStructure, generateExerciseContext } from '../knowledge-base/exercise-matcher';
 import type { OrganizedContent } from './workout-content-organizer';
 
@@ -128,8 +128,8 @@ function extractPotentialExerciseNames(text: string): string[] {
 function buildEnhancementSystemPrompt(
   rawText: string,
   context?: TrainingContext
-): string {
-  let prompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data extracted from images or text.
+): ClaudeContentBlock[] {
+  const basePrompt = `You are an expert fitness coach and workout parser. Your job is to clean up and enhance workout data extracted from images or text.
 
 CRITICAL: You must respond with ONLY valid JSON. Do not include any explanatory text, markdown formatting, or commentary. Return ONLY the JSON object.
 
@@ -491,52 +491,66 @@ Return JSON with this EXACT structure:
 
 REMEMBER: Return ONLY the JSON object. No explanations, no markdown code blocks, no additional text. Just pure JSON.`;
 
+  let dynamicPrompt = '';
+
   // Add exercise knowledge base context
   // Extract exercise names from raw text for fuzzy matching
   const exerciseNames = extractPotentialExerciseNames(rawText);
   if (exerciseNames.length > 0) {
     const exerciseContext = generateExerciseContext(exerciseNames);
     if (exerciseContext) {
-      prompt += exerciseContext;
+      dynamicPrompt += exerciseContext;
     }
   }
 
   // Detect workout format
   const { detectedFormat, metadata } = parseWorkoutStructure(rawText);
   if (detectedFormat) {
-    prompt += `\n\n**DETECTED WORKOUT FORMAT:** ${detectedFormat.name} (${detectedFormat.type})`;
-    prompt += `\n${detectedFormat.description}`;
+    dynamicPrompt += `\n\n**DETECTED WORKOUT FORMAT:** ${detectedFormat.name} (${detectedFormat.type})`;
+    dynamicPrompt += `\n${detectedFormat.description}`;
     if (Object.keys(metadata).length > 0) {
-      prompt += `\nDetected metadata: ${JSON.stringify(metadata)}`;
+      dynamicPrompt += `\nDetected metadata: ${JSON.stringify(metadata)}`;
     }
   }
 
   // Add user context if available
   if (context) {
     if (context.personalRecords && Object.keys(context.personalRecords).length > 0) {
-      prompt += `\n\n**User's Personal Records:**\n`;
+      dynamicPrompt += `\n\n**User's Personal Records:**\n`;
       for (const [exercise, pr] of Object.entries(context.personalRecords)) {
-        prompt += `- ${exercise}: ${pr.weight} ${pr.unit} for ${pr.reps} reps\n`;
+        dynamicPrompt += `- ${exercise}: ${pr.weight} ${pr.unit} for ${pr.reps} reps\n`;
       }
-      prompt += `\nUse these PRs to suggest appropriate working weights (typically 70-85% of 1RM).`;
+      dynamicPrompt += `\nUse these PRs to suggest appropriate working weights (typically 70-85% of 1RM).`;
     }
 
     if (context.experience) {
-      prompt += `\n\n**User experience level:** ${context.experience}`;
-      prompt += `\nAdjust suggestions based on this experience level.`;
+      dynamicPrompt += `\n\n**User experience level:** ${context.experience}`;
+      dynamicPrompt += `\nAdjust suggestions based on this experience level.`;
     }
 
     if (context.equipment && context.equipment.length > 0) {
-      prompt += `\n\n**Available equipment:** ${context.equipment.join(', ')}`;
-      prompt += `\nOnly suggest exercises using available equipment.`;
+      dynamicPrompt += `\n\n**Available equipment:** ${context.equipment.join(', ')}`;
+      dynamicPrompt += `\nOnly suggest exercises using available equipment.`;
     }
 
     if (context.goals && context.goals.length > 0) {
-      prompt += `\n\n**Training goals:** ${context.goals.join(', ')}`;
+      dynamicPrompt += `\n\n**Training goals:** ${context.goals.join(', ')}`;
     }
   }
 
-  return prompt;
+  const blocks: ClaudeContentBlock[] = [
+    {
+      type: 'text',
+      text: basePrompt,
+      cache_control: { type: 'ephemeral' },
+    },
+  ];
+
+  if (dynamicPrompt) {
+    blocks.push({ type: 'text', text: dynamicPrompt });
+  }
+
+  return blocks;
 }
 
 /**
@@ -688,8 +702,8 @@ export async function structureWorkout(
 function buildStructurePrompt(
   organized: OrganizedContent,
   context?: TrainingContext
-): string {
-  let prompt = `You are an expert fitness coach. Your job is to structure pre-filtered exercise data into a complete workout.
+): ClaudeContentBlock[] {
+  const basePrompt = `You are an expert fitness coach. Your job is to structure pre-filtered exercise data into a complete workout.
 
 **IMPORTANT:** The exercise lines have already been filtered by another AI. They contain ONLY real exercises.
 Your job is NOT to filter - it's to STRUCTURE and ENHANCE.
@@ -762,38 +776,52 @@ Return JSON with this EXACT structure:
 
 REMEMBER: Return ONLY the JSON object. No explanations, no markdown, no extra text.`;
 
+  let dynamicPrompt = '';
+
   // Add structure hints from Agent 1
   if (organized.structure) {
-    prompt += `\n\n**DETECTED STRUCTURE FROM AGENT 1:**`;
-    prompt += `\nType: ${organized.structure.type || 'standard'}`;
+    dynamicPrompt += `\n\n**DETECTED STRUCTURE FROM AGENT 1:**`;
+    dynamicPrompt += `\nType: ${organized.structure.type || 'standard'}`;
     if (organized.structure.rounds) {
-      prompt += `\nRounds: ${organized.structure.rounds}`;
+      dynamicPrompt += `\nRounds: ${organized.structure.rounds}`;
     }
     if (organized.structure.timeLimit) {
-      prompt += `\nTime Limit: ${organized.structure.timeLimit} seconds`;
+      dynamicPrompt += `\nTime Limit: ${organized.structure.timeLimit} seconds`;
     }
     if (organized.structure.pattern) {
-      prompt += `\nPattern: ${organized.structure.pattern}`;
+      dynamicPrompt += `\nPattern: ${organized.structure.pattern}`;
     }
-    prompt += `\n\nUse these hints to set the correct workoutType and structure fields.`;
+    dynamicPrompt += `\n\nUse these hints to set the correct workoutType and structure fields.`;
   }
 
   // Add user context if available
   if (context) {
     if (context.personalRecords && Object.keys(context.personalRecords).length > 0) {
-      prompt += `\n\n**User's Personal Records:**\n`;
+      dynamicPrompt += `\n\n**User's Personal Records:**\n`;
       for (const [exercise, pr] of Object.entries(context.personalRecords)) {
-        prompt += `- ${exercise}: ${pr.weight} ${pr.unit} for ${pr.reps} reps\n`;
+        dynamicPrompt += `- ${exercise}: ${pr.weight} ${pr.unit} for ${pr.reps} reps\n`;
       }
-      prompt += `\nUse these PRs to suggest appropriate working weights (typically 70-85% of 1RM).`;
+      dynamicPrompt += `\nUse these PRs to suggest appropriate working weights (typically 70-85% of 1RM).`;
     }
 
     if (context.experience) {
-      prompt += `\n\n**User experience level:** ${context.experience}`;
+      dynamicPrompt += `\n\n**User experience level:** ${context.experience}`;
     }
   }
 
-  return prompt;
+  const blocks: ClaudeContentBlock[] = [
+    {
+      type: 'text',
+      text: basePrompt,
+      cache_control: { type: 'ephemeral' },
+    },
+  ];
+
+  if (dynamicPrompt) {
+    blocks.push({ type: 'text', text: dynamicPrompt });
+  }
+
+  return blocks;
 }
 
 /**

@@ -3,7 +3,7 @@
  * GET /api/ai/test-connection
  */
 import { NextResponse } from 'next/server';
-import { testBedrockConnection } from '@/lib/ai/bedrock-client';
+import { getModelId, testBedrockConnection } from '@/lib/ai/bedrock-client';
 
 export async function GET() {
   try {
@@ -26,7 +26,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: 'AWS Bedrock connection is healthy',
-      model: 'claude-sonnet-4-5',
+      model: getModelId(),
       region: process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION || 'us-east-1',
     });
   } catch (error) {

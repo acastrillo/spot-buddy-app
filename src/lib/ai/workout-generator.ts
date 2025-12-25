@@ -10,7 +10,7 @@
  * - "Leg day with squats and deadlifts"
  */
 
-import { invokeClaude, logUsage, type BedrockResponse } from './bedrock-client';
+import { invokeClaude, logUsage, type BedrockResponse, type ClaudeContentBlock } from './bedrock-client';
 import { type TrainingProfile, profileToAIContext } from '../training-profile';
 import { type WorkoutData } from './workout-enhancer';
 
@@ -36,8 +36,8 @@ export interface GeneratedWorkout {
 /**
  * Build system prompt for workout generation
  */
-function buildGenerationSystemPrompt(profile?: TrainingProfile): string {
-  let prompt = `You are an expert personal trainer and workout designer. Your job is to create complete, personalized workout programs based on the user's request.
+function buildGenerationSystemPrompt(profile?: TrainingProfile): ClaudeContentBlock[] {
+  const basePrompt = `You are an expert personal trainer and workout designer. Your job is to create complete, personalized workout programs based on the user's request.
 
 **Your responsibilities:**
 1. **Create comprehensive workouts** with warm-up, main exercises, and cool-down
@@ -95,34 +95,48 @@ Return a JSON object with this structure:
 }
 \`\`\``;
 
+  let profileContext = '';
+
   // Add user training profile context
   if (profile) {
-    prompt += `\n\n${profileToAIContext(profile)}`;
+    profileContext = `\n\n${profileToAIContext(profile)}`;
 
-    prompt += `\n\n**Important personalization notes:**`;
+    profileContext += `\n\n**Important personalization notes:**`;
 
     if (profile.personalRecords && Object.keys(profile.personalRecords).length > 0) {
-      prompt += `\n- Use the PRs above to suggest appropriate working weights`;
+      profileContext += `\n- Use the PRs above to suggest appropriate working weights`;
     }
 
     if (profile.equipment && profile.equipment.length > 0) {
-      prompt += `\n- Only use available equipment: ${profile.equipment.join(', ')}`;
+      profileContext += `\n- Only use available equipment: ${profile.equipment.join(', ')}`;
     }
 
     if (profile.goals && profile.goals.length > 0) {
-      prompt += `\n- Align workout with goals: ${profile.goals.join(', ')}`;
+      profileContext += `\n- Align workout with goals: ${profile.goals.join(', ')}`;
     }
 
     if (profile.constraints && profile.constraints.length > 0) {
-      prompt += `\n- Respect constraints and avoid contraindicated exercises`;
+      profileContext += `\n- Respect constraints and avoid contraindicated exercises`;
     }
 
     if (profile.experience) {
-      prompt += `\n- Adjust complexity for ${profile.experience} level`;
+      profileContext += `\n- Adjust complexity for ${profile.experience} level`;
     }
   }
 
-  return prompt;
+  const blocks: ClaudeContentBlock[] = [
+    {
+      type: 'text',
+      text: basePrompt,
+      cache_control: { type: 'ephemeral' },
+    },
+  ];
+
+  if (profileContext) {
+    blocks.push({ type: 'text', text: profileContext });
+  }
+
+  return blocks;
 }
 
 /**

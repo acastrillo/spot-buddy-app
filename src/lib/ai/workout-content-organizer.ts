@@ -181,6 +181,7 @@ export async function organizeWorkoutContent(
       maxTokens: 2048, // Shorter output than Agent 2
       temperature: 0.1, // Very low temperature for consistent filtering
       model: 'haiku', // Use cheaper model
+      cache: { system: true },
     });
 
     // Parse JSON response
