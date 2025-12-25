@@ -192,11 +192,12 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eve
 }
 
 async function handleInvoicePayment(invoice: Stripe.Invoice, result: 'succeeded' | 'failed', eventId: string) {
+  const inv = invoice as any
   console.log(`[Webhook:${eventId}] invoice.payment.${result}:`, {
     invoiceId: invoice.id,
     customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id,
-    customerEmail: invoice.customer_email,
-    subscriptionId: typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id,
+    customerEmail: inv.customer_email,
+    subscriptionId: typeof inv.subscription === 'string' ? inv.subscription : inv.subscription?.id,
   })
 
   const context = await resolveInvoiceContext(invoice)
