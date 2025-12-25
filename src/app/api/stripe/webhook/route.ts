@@ -267,15 +267,15 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
 
   // Prefer metadata from invoice payload if present
   const metaTier =
-    (invoice.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.tier ||
-    (invoice as any)?.parent?.subscription_details?.metadata?.tier ||
+    (inv.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.tier ||
+    inv?.parent?.subscription_details?.metadata?.tier ||
     invoice.metadata?.tier
   const parsedTier = normalizePaidTier(metaTier) ?? null
 
   const userIdFromInvoice =
-    (invoice.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.userId ||
+    (inv.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.userId ||
     // Newer payloads sometimes nest under parent.subscription_details
-    (invoice as any)?.parent?.subscription_details?.metadata?.userId ||
+    inv?.parent?.subscription_details?.metadata?.userId ||
     invoice.metadata?.userId
   if (userIdFromInvoice) {
     return { userId: userIdFromInvoice as string, subscriptionId, customerId, tier: parsedTier }
@@ -292,7 +292,7 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   }
 
   if (!subscriptionId) {
-    const resolved = await resolveUserByCustomer(customerId, parsedTier ?? undefined, invoice.customer_email || undefined)
+    const resolved = await resolveUserByCustomer(customerId, parsedTier ?? undefined, inv.customer_email || undefined)
     return {
       userId: resolved?.userId || null,
       subscriptionId,
@@ -310,7 +310,7 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   const resolved = await resolveUserByCustomer(
     subscription.customer,
     parsedTier ?? undefined,
-    invoice.customer_email || (typeof subscription.customer === 'string' ? undefined : (subscription.customer as Stripe.Customer).email) || undefined
+    inv.customer_email || (typeof subscription.customer === 'string' ? undefined : (subscription.customer as Stripe.Customer).email) || undefined
   )
   const resolvedUserId = subscription.metadata?.userId || resolved?.userId || null
 
