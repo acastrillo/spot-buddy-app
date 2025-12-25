@@ -2,7 +2,7 @@
  * AWS Bedrock Client for AI-Powered Features
  *
  * This module provides a centralized client for interacting with Amazon Bedrock
- * using Claude 4.5 models for workout enhancements, generation, and AI features.
+ * using Claude 3.x models for workout enhancements, generation, and AI features.
  *
  * Features:
  * - Smart Workout Parser (enhance messy OCR text)
@@ -10,15 +10,14 @@
  * - Training insights and recommendations
  *
  * Cost optimization:
- * - Prompt caching (90% cost savings on repeated context)
- * - Batch processing (50% cost savings on large operations)
+ * - Prompt caching on reusable prompt blocks
+ * - Batch helpers for high-volume processing
  * - Streaming responses for better UX
  *
- * Model Updates (December 2024):
- * - Updated to Claude 4.5 models (latest as of 2025)
- * - Sonnet 4.5: Best for coding and complex agents
- * - Haiku 4.5: Optimized for performance and cost
- * - Opus 4.5: Most intelligent, for sophisticated tasks
+ * Model Updates:
+ * - Claude 3.5 Sonnet (balanced quality and cost)
+ * - Claude 3.5 Haiku (fast, cost-efficient)
+ * - Claude 3 Opus (highest accuracy, premium)
  */
 
 import {
@@ -32,17 +31,21 @@ const BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION 
 // Use cross-region inference profiles for Claude models
 // Cross-region inference profiles are required for on-demand throughput
 // This provides automatic routing to the best available region for optimal performance
-const MODEL_IDS = {
-  opus: 'us.anthropic.claude-opus-4-5-20251101-v1:0', // Opus 4.5 (most intelligent, premium)
-  sonnet: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', // Default: Sonnet 4.5 (best for coding)
-  haiku: 'us.anthropic.claude-haiku-4-5-20251001-v1:0', // Haiku 4.5 (cheaper, faster)
-} as const;
-const DEFAULT_MODEL = 'sonnet';
+export type ClaudeModel = 'opus' | 'sonnet' | 'haiku';
 
-// Cost tracking (approximate) - Claude 4.5 Sonnet pricing
-const COST_PER_INPUT_TOKEN = 0.000003; // $3 per 1M tokens
-const COST_PER_OUTPUT_TOKEN = 0.000015; // $15 per 1M tokens
-const COST_WITH_CACHE = 0.0000003; // 90% savings with prompt caching
+const MODEL_IDS: Record<ClaudeModel, string> = {
+  opus: process.env.AWS_BEDROCK_MODEL_OPUS || 'us.anthropic.claude-3-opus-20240229-v1:0',
+  sonnet: process.env.AWS_BEDROCK_MODEL_SONNET || 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+  haiku: process.env.AWS_BEDROCK_MODEL_HAIKU || 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
+};
+const DEFAULT_MODEL: ClaudeModel = 'sonnet';
+
+const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
+  opus: { input: 0.000015, output: 0.000075 }, // $15 / $75 per 1M tokens
+  sonnet: { input: 0.000003, output: 0.000015 }, // $3 / $15 per 1M tokens
+  haiku: { input: 0.00000025, output: 0.00000125 }, // $0.25 / $1.25 per 1M tokens
+};
+const CACHE_READ_DISCOUNT = 0.1; // Cached reads billed at 10% of input price
 
 /**
  * Bedrock client singleton
@@ -65,12 +68,29 @@ export function getBedrockClient(): BedrockRuntimeClient {
   return bedrockClient;
 }
 
+export interface CacheControl {
+  type: 'ephemeral';
+}
+
+export interface ClaudeContentBlock {
+  type: 'text';
+  text: string;
+  cache_control?: CacheControl;
+}
+
+export type ClaudeContent = string | ClaudeContentBlock[];
+
 /**
  * Message structure for Claude
  */
 export interface ClaudeMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: ClaudeContent;
+}
+
+export interface PromptCacheConfig {
+  system?: boolean;
+  messages?: number[]; // Indexes of messages to cache
 }
 
 /**
@@ -78,12 +98,13 @@ export interface ClaudeMessage {
  */
 export interface BedrockInvokeParams {
   messages: ClaudeMessage[];
-  systemPrompt?: string;
+  systemPrompt?: ClaudeContent;
   maxTokens?: number;
   temperature?: number;
   topP?: number;
   stopSequences?: string[];
-  model?: 'opus' | 'sonnet' | 'haiku'; // Model selection for cost/performance tradeoff
+  model?: ClaudeModel; // Model selection for cost/performance tradeoff
+  cache?: PromptCacheConfig;
 }
 
 /**
@@ -95,11 +116,122 @@ export interface BedrockResponse {
   usage: {
     inputTokens: number;
     outputTokens: number;
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
   };
   cost?: {
     input: number;
     output: number;
     total: number;
+  };
+}
+
+export function getModelId(model: ClaudeModel = DEFAULT_MODEL): string {
+  return MODEL_IDS[model];
+}
+
+function applyCacheControlToContent(content: ClaudeContent, cache: boolean): ClaudeContent {
+  if (!cache) return content;
+
+  if (typeof content === 'string') {
+    return [
+      {
+        type: 'text',
+        text: content,
+        cache_control: { type: 'ephemeral' },
+      },
+    ];
+  }
+
+  if (content.length === 0 || content.some((block) => block.cache_control)) {
+    return content;
+  }
+
+  const lastIndex = content.length - 1;
+  return content.map((block, index) =>
+    index === lastIndex ? { ...block, cache_control: { type: 'ephemeral' } } : block
+  );
+}
+
+function normalizeMessages(
+  messages: ClaudeMessage[],
+  cacheConfig?: PromptCacheConfig
+): ClaudeMessage[] {
+  const cachedMessages = new Set(cacheConfig?.messages ?? []);
+
+  return messages.map((message, index) => ({
+    ...message,
+    content: applyCacheControlToContent(message.content, cachedMessages.has(index)),
+  }));
+}
+
+function normalizeSystemPrompt(
+  systemPrompt: ClaudeContent | undefined,
+  cacheConfig?: PromptCacheConfig
+): ClaudeContent | undefined {
+  if (!systemPrompt) return undefined;
+  return applyCacheControlToContent(systemPrompt, !!cacheConfig?.system);
+}
+
+function buildRequestBody(params: BedrockInvokeParams): {
+  modelId: string;
+  requestBody: Record<string, unknown>;
+  model: ClaudeModel;
+} {
+  const modelKey = params.model || DEFAULT_MODEL;
+  const modelId = MODEL_IDS[modelKey];
+
+  const requestBody: Record<string, unknown> = {
+    anthropic_version: 'bedrock-2023-05-31',
+    max_tokens: params.maxTokens || 4096,
+    messages: normalizeMessages(params.messages, params.cache),
+    ...(params.temperature !== undefined && { temperature: params.temperature }),
+    ...(params.topP !== undefined && { top_p: params.topP }),
+    ...(params.stopSequences && { stop_sequences: params.stopSequences }),
+  };
+
+  const systemPrompt = normalizeSystemPrompt(params.systemPrompt, params.cache);
+  if (systemPrompt) {
+    requestBody.system = systemPrompt;
+  }
+
+  return { modelId, requestBody, model: modelKey };
+}
+
+function extractTextContent(content: any): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content.map((block) => (typeof block?.text === 'string' ? block.text : '')).join('');
+}
+
+function buildUsage(usage: any): BedrockResponse['usage'] {
+  const cacheCreationInputTokens = usage?.cache_creation_input_tokens ?? 0;
+  const cacheReadInputTokens = usage?.cache_read_input_tokens ?? 0;
+  const inputTokens = usage?.input_tokens ?? (cacheCreationInputTokens + cacheReadInputTokens);
+  const outputTokens = usage?.output_tokens ?? 0;
+
+  return {
+    inputTokens,
+    outputTokens,
+    ...(cacheCreationInputTokens ? { cacheCreationInputTokens } : {}),
+    ...(cacheReadInputTokens ? { cacheReadInputTokens } : {}),
+  };
+}
+
+function calculateCost(usage: BedrockResponse['usage'], model: ClaudeModel): BedrockResponse['cost'] {
+  const pricing = MODEL_PRICING[model];
+  const hasCacheUsage = !!(usage.cacheCreationInputTokens || usage.cacheReadInputTokens);
+
+  const inputCost = hasCacheUsage
+    ? (usage.cacheCreationInputTokens || 0) * pricing.input +
+      (usage.cacheReadInputTokens || 0) * pricing.input * CACHE_READ_DISCOUNT
+    : usage.inputTokens * pricing.input;
+  const outputCost = usage.outputTokens * pricing.output;
+
+  return {
+    input: inputCost,
+    output: outputCost,
+    total: inputCost + outputCost,
   };
 }
 
@@ -113,21 +245,7 @@ export async function invokeClaude(
   params: BedrockInvokeParams
 ): Promise<BedrockResponse> {
   const client = getBedrockClient();
-
-  // Select model (default to sonnet)
-  const modelKey = params.model || DEFAULT_MODEL;
-  const modelId = MODEL_IDS[modelKey];
-
-  // Build request body
-  const requestBody = {
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: params.maxTokens || 4096,
-    messages: params.messages,
-    ...(params.systemPrompt && { system: params.systemPrompt }),
-    ...(params.temperature !== undefined && { temperature: params.temperature }),
-    ...(params.topP !== undefined && { top_p: params.topP }),
-    ...(params.stopSequences && { stop_sequences: params.stopSequences }),
-  };
+  const { modelId, requestBody, model } = buildRequestBody(params);
 
   try {
     const command = new InvokeModelCommand({
@@ -140,22 +258,13 @@ export async function invokeClaude(
     const response = await client.send(command);
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-    // Calculate approximate cost
-    const inputTokens = responseBody.usage?.input_tokens || 0;
-    const outputTokens = responseBody.usage?.output_tokens || 0;
-    const cost = {
-      input: inputTokens * COST_PER_INPUT_TOKEN,
-      output: outputTokens * COST_PER_OUTPUT_TOKEN,
-      total: (inputTokens * COST_PER_INPUT_TOKEN) + (outputTokens * COST_PER_OUTPUT_TOKEN),
-    };
+    const usage = buildUsage(responseBody.usage);
+    const cost = calculateCost(usage, model);
 
     return {
-      content: responseBody.content[0].text,
+      content: extractTextContent(responseBody.content),
       stopReason: responseBody.stop_reason,
-      usage: {
-        inputTokens,
-        outputTokens,
-      },
+      usage,
       cost,
     };
   } catch (error) {
@@ -176,21 +285,7 @@ export async function invokeClaudeStream(
   onChunk: (chunk: string) => void
 ): Promise<BedrockResponse> {
   const client = getBedrockClient();
-
-  // Select model (default to sonnet)
-  const modelKey = params.model || DEFAULT_MODEL;
-  const modelId = MODEL_IDS[modelKey];
-
-  // Build request body (same as non-streaming)
-  const requestBody = {
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: params.maxTokens || 4096,
-    messages: params.messages,
-    ...(params.systemPrompt && { system: params.systemPrompt }),
-    ...(params.temperature !== undefined && { temperature: params.temperature }),
-    ...(params.topP !== undefined && { top_p: params.topP }),
-    ...(params.stopSequences && { stop_sequences: params.stopSequences }),
-  };
+  const { modelId, requestBody, model } = buildRequestBody(params);
 
   try {
     const command = new InvokeModelWithResponseStreamCommand({
@@ -206,6 +301,8 @@ export async function invokeClaudeStream(
     let stopReason = '';
     let inputTokens = 0;
     let outputTokens = 0;
+    let cacheCreationInputTokens = 0;
+    let cacheReadInputTokens = 0;
 
     if (response.body) {
       for await (const event of response.body) {
@@ -217,37 +314,80 @@ export async function invokeClaudeStream(
             const text = chunk.delta?.text || '';
             fullContent += text;
             onChunk(text);
-          } else if (chunk.type === 'message_delta') {
-            stopReason = chunk.delta?.stop_reason || '';
           } else if (chunk.type === 'message_start') {
             inputTokens = chunk.message?.usage?.input_tokens || 0;
+            cacheCreationInputTokens = chunk.message?.usage?.cache_creation_input_tokens || 0;
+            cacheReadInputTokens = chunk.message?.usage?.cache_read_input_tokens || 0;
           } else if (chunk.type === 'message_delta') {
-            outputTokens = chunk.usage?.output_tokens || 0;
+            if (chunk.delta?.stop_reason) {
+              stopReason = chunk.delta.stop_reason;
+            }
+            if (chunk.usage?.output_tokens !== undefined) {
+              outputTokens = chunk.usage.output_tokens;
+            }
+            if (chunk.usage?.cache_creation_input_tokens !== undefined) {
+              cacheCreationInputTokens = chunk.usage.cache_creation_input_tokens;
+            }
+            if (chunk.usage?.cache_read_input_tokens !== undefined) {
+              cacheReadInputTokens = chunk.usage.cache_read_input_tokens;
+            }
           }
         }
       }
     }
 
-    // Calculate cost
-    const cost = {
-      input: inputTokens * COST_PER_INPUT_TOKEN,
-      output: outputTokens * COST_PER_OUTPUT_TOKEN,
-      total: (inputTokens * COST_PER_INPUT_TOKEN) + (outputTokens * COST_PER_OUTPUT_TOKEN),
+    const usage: BedrockResponse['usage'] = {
+      inputTokens: inputTokens || (cacheCreationInputTokens + cacheReadInputTokens),
+      outputTokens,
+      ...(cacheCreationInputTokens ? { cacheCreationInputTokens } : {}),
+      ...(cacheReadInputTokens ? { cacheReadInputTokens } : {}),
     };
+    const cost = calculateCost(usage, model);
 
     return {
       content: fullContent,
       stopReason,
-      usage: {
-        inputTokens,
-        outputTokens,
-      },
+      usage,
       cost,
     };
   } catch (error) {
     console.error('[Bedrock] Error streaming model:', error);
     throw new Error(`Failed to stream Claude: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export interface BatchInvokeOptions {
+  concurrency?: number;
+}
+
+/**
+ * Invoke Claude for a batch of requests with a simple concurrency limit.
+ */
+export async function invokeClaudeBatch(
+  requests: BedrockInvokeParams[],
+  options: BatchInvokeOptions = {}
+): Promise<BedrockResponse[]> {
+  if (requests.length === 0) return [];
+
+  const concurrency = Math.max(1, Math.floor(options.concurrency ?? 3));
+  const results: BedrockResponse[] = new Array(requests.length);
+  let index = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = index++;
+      if (currentIndex >= requests.length) break;
+      results[currentIndex] = await invokeClaude(requests[currentIndex]);
+    }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, requests.length) },
+    () => worker()
+  );
+
+  await Promise.all(workers);
+  return results;
 }
 
 /**
@@ -268,16 +408,21 @@ export function isBedrockConfigured(): boolean {
  *
  * @param estimatedInputTokens - Approximate input token count
  * @param estimatedOutputTokens - Approximate output token count
- * @param useCache - Whether prompt caching will be used
+ * @param options - Model and cached input token estimates
  * @returns Estimated cost in USD
  */
 export function estimateCost(
   estimatedInputTokens: number,
   estimatedOutputTokens: number,
-  useCache = false
+  options: { model?: ClaudeModel; cachedInputTokens?: number } = {}
 ): number {
-  const inputCost = estimatedInputTokens * (useCache ? COST_WITH_CACHE : COST_PER_INPUT_TOKEN);
-  const outputCost = estimatedOutputTokens * COST_PER_OUTPUT_TOKEN;
+  const model = options.model || DEFAULT_MODEL;
+  const pricing = MODEL_PRICING[model];
+  const cachedInputTokens = options.cachedInputTokens || 0;
+  const uncachedInputTokens = Math.max(estimatedInputTokens - cachedInputTokens, 0);
+  const inputCost = (uncachedInputTokens * pricing.input) +
+    (cachedInputTokens * pricing.input * CACHE_READ_DISCOUNT);
+  const outputCost = estimatedOutputTokens * pricing.output;
   return inputCost + outputCost;
 }
 
@@ -294,6 +439,8 @@ export function logUsage(
     userId,
     inputTokens: response.usage.inputTokens,
     outputTokens: response.usage.outputTokens,
+    cacheCreationInputTokens: response.usage.cacheCreationInputTokens,
+    cacheReadInputTokens: response.usage.cacheReadInputTokens,
     cost: response.cost?.total.toFixed(6),
     timestamp: new Date().toISOString(),
   });
