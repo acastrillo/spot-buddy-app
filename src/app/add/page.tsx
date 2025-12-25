@@ -432,11 +432,54 @@ export default function ImportWorkoutPage() {
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-text-primary mb-2">
-              Import Workout
+              Add Workout
             </h1>
             <p className="text-text-secondary">
-              Import from social media or enter text manually
+              Generate with AI or import from social media
             </p>
+          </div>
+
+          {/* AI Generator Card - Featured */}
+          <Card className="mb-6 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-primary/20">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary">
+                      AI Workout Generator
+                    </h3>
+                  </div>
+                  <p className="text-sm text-text-secondary mb-4">
+                    Describe your perfect workout in natural language and let AI create a personalized training plan with exercises, sets, reps, and weight suggestions based on your training profile.
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs text-text-secondary mb-4">
+                    <span className="px-2 py-1 bg-surface rounded-md">✨ Personalized to your PRs</span>
+                    <span className="px-2 py-1 bg-surface rounded-md">🎯 Equipment-aware</span>
+                    <span className="px-2 py-1 bg-surface rounded-md">🔥 Goal-optimized</span>
+                  </div>
+                </div>
+                <Link href="/add/generate" className="shrink-0">
+                  <Button size="lg" className="gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Generate Workout
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-text-secondary">Or import existing workout</span>
+            </div>
           </div>
 
           {/* Main Import Card */}
@@ -711,7 +754,7 @@ export default function ImportWorkoutPage() {
                             <Button
                               className="w-full"
                               onClick={processImageWithOCR}
-                              disabled={isProcessingOCR || (user && (() => {
+                              disabled={isProcessingOCR || Boolean(user && (() => {
                                 const tier = (user as any).subscriptionTier || 'free'
                                 const quotaLimit = getQuotaLimit(tier, 'ocrQuotaWeekly')
                                 const quotaUsed = (user as any).ocrQuotaUsed || 0

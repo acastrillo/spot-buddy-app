@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Header } from "@/components/layout/header"
@@ -9,16 +9,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Sparkles, ArrowRight, Info } from "lucide-react"
+import { Loader2, Sparkles, ArrowRight, Info, Zap, TrendingUp, Crown } from "lucide-react"
+import { getAIRequestLimit, normalizeSubscriptionTier } from "@/lib/stripe"
 import Link from "next/link"
+
+interface GenerateWorkoutResponse {
+  success: boolean
+  workout?: any
+  cost?: {
+    inputTokens: number
+    outputTokens: number
+    estimatedCost: number
+  }
+  quotaRemaining?: number
+  rationale?: string
+  alternatives?: string[]
+  error?: string
+  tier?: string
+  aiUsed?: number
+  aiLimit?: number
+}
 
 export default function GenerateWorkoutPage() {
   const router = useRouter()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [prompt, setPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatedWorkout, setGeneratedWorkout] = useState<any | null>(null)
+  const [rationale, setRationale] = useState<string | null>(null)
+  const [alternatives, setAlternatives] = useState<string[]>([])
+  const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null)
+  const [isQuotaError, setIsQuotaError] = useState(false)
+
+  // Calculate user's AI quota
+  const tier = normalizeSubscriptionTier(user?.subscriptionTier || 'free')
+  const aiLimit = getAIRequestLimit(tier)
+  const aiUsed = (user as any)?.aiRequestsUsed || 0
+  const currentQuotaRemaining = aiLimit - aiUsed
 
   const examplePrompts = [
     "Upper body push workout, 45 minutes, dumbbells only",
@@ -37,6 +65,9 @@ export default function GenerateWorkoutPage() {
     setIsGenerating(true)
     setError(null)
     setGeneratedWorkout(null)
+    setRationale(null)
+    setAlternatives([])
+    setIsQuotaError(false)
 
     try {
       const response = await fetch('/api/ai/generate-workout', {
@@ -47,13 +78,21 @@ export default function GenerateWorkoutPage() {
         body: JSON.stringify({ prompt: prompt.trim() }),
       })
 
-      const data = await response.json()
+      const data: GenerateWorkoutResponse = await response.json()
 
       if (!response.ok) {
+        // Check if this is a quota error (403)
+        if (response.status === 403) {
+          setIsQuotaError(true)
+        }
         throw new Error(data.error || 'Failed to generate workout')
       }
 
+      // Set all response fields
       setGeneratedWorkout(data.workout)
+      setRationale(data.rationale || null)
+      setAlternatives(data.alternatives || [])
+      setQuotaRemaining(data.quotaRemaining ?? null)
     } catch (err: any) {
       console.error('Error generating workout:', err)
       setError(err.message || 'Failed to generate workout. Please try again.')
@@ -110,6 +149,38 @@ export default function GenerateWorkoutPage() {
           <div className="grid gap-6">
             {!generatedWorkout ? (
               <>
+                {/* Quota Display */}
+                <Card className={currentQuotaRemaining <= 0 ? 'border-destructive/50' : 'border-primary/20'}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${currentQuotaRemaining <= 0 ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+                          <Zap className={`h-5 w-5 ${currentQuotaRemaining <= 0 ? 'text-destructive' : 'text-primary'}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-text-primary">
+                            AI Generations Remaining
+                          </p>
+                          <p className="text-xs text-text-secondary">
+                            Resets monthly
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-2xl font-bold ${currentQuotaRemaining <= 0 ? 'text-destructive' : 'text-primary'}`}>
+                          {currentQuotaRemaining} / {aiLimit}
+                        </p>
+                        {currentQuotaRemaining <= 0 && (
+                          <Link href="/subscription" className="text-xs text-primary hover:underline flex items-center gap-1 justify-end mt-1">
+                            <Crown className="h-3 w-3" />
+                            Upgrade for more
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Input Card */}
                 <Card>
                   <CardHeader>
@@ -165,14 +236,22 @@ export default function GenerateWorkoutPage() {
                     {/* Error Alert */}
                     {error && (
                       <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
+                        <AlertDescription className="space-y-2">
+                          <p>{error}</p>
+                          {isQuotaError && (
+                            <Link href="/subscription" className="inline-flex items-center gap-1 text-sm font-medium hover:underline">
+                              <Crown className="h-4 w-4" />
+                              View Subscription Plans
+                            </Link>
+                          )}
+                        </AlertDescription>
                       </Alert>
                     )}
 
                     {/* Generate Button */}
                     <Button
                       onClick={handleGenerate}
-                      disabled={isGenerating || !prompt.trim()}
+                      disabled={isGenerating || !prompt.trim() || currentQuotaRemaining <= 0}
                       className="w-full"
                       size="lg"
                     >
@@ -180,6 +259,11 @@ export default function GenerateWorkoutPage() {
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Generating Workout...
+                        </>
+                      ) : currentQuotaRemaining <= 0 ? (
+                        <>
+                          <Crown className="h-4 w-4 mr-2" />
+                          Upgrade to Generate
                         </>
                       ) : (
                         <>
@@ -229,61 +313,120 @@ export default function GenerateWorkoutPage() {
               </>
             ) : (
               /* Success Card */
-              <Card className="border-primary bg-primary/5">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                      <Sparkles className="h-6 w-6 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <CardTitle>Workout Generated!</CardTitle>
-                      <CardDescription>
-                        Your personalized workout has been created and saved to your library
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Workout Preview */}
-                  <div className="bg-background rounded-lg p-4 space-y-2">
-                    <h3 className="font-semibold text-lg text-text-primary">
-                      {generatedWorkout.title}
-                    </h3>
-                    {generatedWorkout.description && (
-                      <p className="text-sm text-text-secondary">
-                        {generatedWorkout.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 text-sm text-text-secondary pt-2">
-                      <span>{generatedWorkout.exercises?.length || 0} exercises</span>
-                      {generatedWorkout.difficulty && (
-                        <span className="capitalize">{generatedWorkout.difficulty}</span>
-                      )}
-                      {generatedWorkout.type && (
-                        <span className="capitalize">{generatedWorkout.type}</span>
-                      )}
-                    </div>
-                  </div>
+              <>
+                {/* Quota Update */}
+                {quotaRemaining !== null && (
+                  <Card className="border-primary/20">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-success/10">
+                            <Zap className="h-5 w-5 text-success" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-text-primary">
+                              AI Generations Remaining
+                            </p>
+                            <p className="text-xs text-text-secondary">
+                              Updated after generation
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-success">
+                            {quotaRemaining} / {aiLimit}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button onClick={handleViewWorkout} className="flex-1" size="lg">
-                      View Workout
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setGeneratedWorkout(null)
-                        setPrompt("")
-                      }}
-                      variant="outline"
-                      size="lg"
-                    >
-                      Generate Another
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="border-primary bg-primary/5">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+                        <Sparkles className="h-6 w-6 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <CardTitle>Workout Generated!</CardTitle>
+                        <CardDescription>
+                          Your personalized workout has been created and saved to your library
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Workout Preview */}
+                    <div className="bg-background rounded-lg p-4 space-y-2">
+                      <h3 className="font-semibold text-lg text-text-primary">
+                        {generatedWorkout.title}
+                      </h3>
+                      {generatedWorkout.description && (
+                        <p className="text-sm text-text-secondary">
+                          {generatedWorkout.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-sm text-text-secondary pt-2">
+                        <span>{generatedWorkout.exercises?.length || 0} exercises</span>
+                        {generatedWorkout.difficulty && (
+                          <span className="capitalize">{generatedWorkout.difficulty}</span>
+                        )}
+                        {generatedWorkout.type && (
+                          <span className="capitalize">{generatedWorkout.type}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* AI Rationale */}
+                    {rationale && (
+                      <div className="bg-background rounded-lg p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                          <h4 className="font-medium text-sm text-text-primary">Why this workout?</h4>
+                        </div>
+                        <p className="text-sm text-text-secondary">{rationale}</p>
+                      </div>
+                    )}
+
+                    {/* Alternatives */}
+                    {alternatives.length > 0 && (
+                      <div className="bg-background rounded-lg p-4 space-y-2">
+                        <h4 className="font-medium text-sm text-text-primary">Alternative Suggestions</h4>
+                        <ul className="space-y-1.5">
+                          {alternatives.map((alt, index) => (
+                            <li key={index} className="text-sm text-text-secondary flex items-start gap-2">
+                              <span className="text-primary mt-0.5">•</span>
+                              <span>{alt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      <Button onClick={handleViewWorkout} className="flex-1" size="lg">
+                        View Workout
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setGeneratedWorkout(null)
+                          setPrompt("")
+                          setRationale(null)
+                          setAlternatives([])
+                          setQuotaRemaining(null)
+                        }}
+                        variant="outline"
+                        size="lg"
+                      >
+                        Generate Another
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </div>
