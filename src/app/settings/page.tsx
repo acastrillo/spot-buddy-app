@@ -23,7 +23,7 @@ import {
   XCircle
 } from "lucide-react"
 import Link from "next/link"
-import { SUBSCRIPTION_TIERS, normalizeSubscriptionTier } from "@/lib/stripe"
+import { SUBSCRIPTION_TIERS, normalizeSubscriptionTier, type SubscriptionTierInput } from "@/lib/subscription-tiers"
 
 // Wrapper component to handle Suspense boundary for useSearchParams
 function SettingsContent() {
@@ -181,7 +181,7 @@ function SettingsContent() {
     return <Login />
   }
 
-  const currentTier = normalizeSubscriptionTier(user?.subscriptionTier)
+  const currentTier = normalizeSubscriptionTier((user?.subscriptionTier ?? 'free') as SubscriptionTierInput)
   const tierConfig = SUBSCRIPTION_TIERS[currentTier]
 
   const settingsSections = [
