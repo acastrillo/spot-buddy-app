@@ -32,7 +32,7 @@ Phase 5 implements a complete subscription and monetization system using Stripe,
 - Manual PR tracking
 - CSV export
 
-### Starter Tier ($7.99/month or $79.99/year - 17% savings)
+### Core Tier ($7.99/month or $79.99/year - 17% savings)
 - ✅ **Unlimited workouts saved**
 - ✅ **5 OCR scans per week** (up from 1)
 - ✅ **Full workout history** (unlimited)
@@ -106,11 +106,11 @@ trial_settings: {
 ### Option B: $2.99 for 30-Day Trial (Paid Trial)
 - **Flow**: Pay $2.99 upfront → 30 days full access → Must manually upgrade to continue
 - **Conversion Rate**: ~60% (higher qualification than free trial)
-- **Best For**: Starter tier (lower commitment, qualified leads)
+- **Best For**: Core tier (lower commitment, qualified leads)
 - **User Experience**:
-  1. User selects "Try Starter for 30 days - Only $2.99"
+  1. User selects "Try Core for 30 days - Only $2.99"
   2. Pay $2.99 via Stripe one-time payment
-  3. Full Starter access for 30 days
+  3. Full Core access for 30 days
   4. On day 25: "Upgrade to continue" prompt in app
   5. Must manually select monthly ($7.99) or annual ($79.99) plan
   6. No auto-renewal (requires explicit upgrade)
@@ -118,7 +118,7 @@ trial_settings: {
 **Stripe Implementation**:
 ```javascript
 // Create one-time $2.99 payment product
-// Manually upgrade user to Starter tier in DynamoDB
+// Manually upgrade user to Core tier in DynamoDB
 // Set expiration date 30 days from payment
 // Downgrade to Free tier after 30 days if no upgrade
 ```
@@ -132,7 +132,7 @@ trial_settings: {
 | Conversion | ~48% | ~60% |
 | CC Required | Yes | Yes |
 | Auto-Renew | Yes | No |
-| Best For | Pro/Elite | Starter |
+| Best For | Pro/Elite | Core |
 | Trial Revenue | $0 | $2.99 per trial |
 | Implementation | Stripe trial period | One-time payment + manual tier management |
 
@@ -230,7 +230,7 @@ STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Stripe Price IDs (Required)
-STRIPE_PRICE_STARTER=price_...
+STRIPE_PRICE_CORE=price_...
 STRIPE_PRICE_PRO=price_...
 STRIPE_PRICE_ELITE=price_...
 ```
@@ -251,7 +251,7 @@ STRIPE_PRICE_ELITE=price_...
    # In Stripe Dashboard:
    1. Go to Products
    2. Create three products:
-      - Starter ($4.99/month)
+      - Core ($4.99/month)
       - Pro ($9.99/month)
       - Elite ($19.99/month)
    3. Copy the price IDs (price_xxx)
@@ -296,7 +296,7 @@ aws ssm put-parameter \
   --region us-east-1
 
 aws ssm put-parameter \
-  --name "/spotter/production/stripe-price-starter" \
+  --name "/spotter/production/stripe-price-core" \
   --value "price_..." \
   --type "String" \
   --region us-east-1
@@ -332,8 +332,8 @@ Update task definition to include Stripe environment variables:
   "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/spotter/production/stripe-webhook-secret"
 },
 {
-  "name": "STRIPE_PRICE_STARTER",
-  "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/spotter/production/stripe-price-starter"
+  "name": "STRIPE_PRICE_CORE",
+  "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/spotter/production/stripe-price-core"
 },
 {
   "name": "STRIPE_PRICE_PRO",
@@ -394,7 +394,7 @@ aws logs tail /ecs/spotter-app --region us-east-1 --follow
 ### Stripe Integration
 
 - [ ] Visit `/subscription` page - all tiers display correctly
-- [ ] Click "Upgrade" on Starter tier - redirects to Stripe checkout
+- [ ] Click "Upgrade" on Core tier - redirects to Stripe checkout
 - [ ] Complete test payment with card `4242 4242 4242 4242`
 - [ ] Verify redirect back to app with success message
 - [ ] Check Settings page shows correct subscription tier
@@ -405,9 +405,9 @@ aws logs tail /ecs/spotter-app --region us-east-1 --follow
 - [ ] As free user, use OCR 2 times successfully
 - [ ] On 3rd OCR attempt, see quota exceeded error
 - [ ] Verify upgrade prompt appears after quota error
-- [ ] Upgrade to Starter tier
+- [ ] Upgrade to Core tier
 - [ ] Verify OCR quota updates to 10/week
-- [ ] Settings page shows "Current plan: Starter"
+- [ ] Settings page shows "Current plan: Core"
 
 ### Webhook Processing
 
@@ -434,7 +434,7 @@ Updated fields:
   lastName?: string
 
   // Subscription fields (already exist)
-  subscriptionTier: 'free' | 'starter' | 'pro' | 'elite'
+  subscriptionTier: 'free' | 'core' | 'pro' | 'elite'
   subscriptionStatus?: 'active' | 'canceled' | 'past_due'
   stripeCustomerId?: string
   stripeSubscriptionId?: string

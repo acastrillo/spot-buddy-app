@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Dumbbell, Check, X, Edit2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,44 +20,22 @@ interface ExerciseCardProps {
  * Displays a single exercise with conditional field visibility.
  * - Display mode: Show only populated fields
  * - Edit mode: Show all fields with inputs
- *   - Click edit button (always visible)
- *   - OR long-press card (500ms - power user shortcut)
+ *   - Click/tap the card or use the edit button (always visible)
  * - Re-hide empty fields after save
  */
 export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
   const [isEditing, setIsEditing] = useState(card.isEditing || false)
   const [editedCard, setEditedCard] = useState<ExerciseCardType>(card)
 
-  // Long-press detection
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-  const [isPressing, setIsPressing] = useState(false)
-
   // Update local state when card prop changes
   useEffect(() => {
     setEditedCard(card)
   }, [card])
 
-  // Long-press handlers
-  const handlePressStart = () => {
-    if (isEditing) return // Don't trigger if already editing
-
-    setIsPressing(true)
-    longPressTimer.current = setTimeout(() => {
+  const openEditor = () => {
+    if (!isEditing) {
       setIsEditing(true)
-      setIsPressing(false)
-    }, 500) // 500ms hold = edit mode
-  }
-
-  const handlePressEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
     }
-    setIsPressing(false)
-  }
-
-  const handlePressCancel = () => {
-    handlePressEnd()
   }
 
   // Edit handlers
@@ -117,15 +95,16 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
   if (!isEditing) {
     return (
       <Card
-        className={`border-primary/40 bg-card/95 hover:bg-muted/80 transition-all cursor-pointer shadow-md ${
-          isPressing ? 'scale-105 ring-2 ring-primary/50' : ''
-        }`}
-        onMouseDown={handlePressStart}
-        onMouseUp={handlePressEnd}
-        onMouseLeave={handlePressCancel}
-        onTouchStart={handlePressStart}
-        onTouchEnd={handlePressEnd}
-        onTouchMove={handlePressCancel}
+        role="button"
+        tabIndex={0}
+        onClick={openEditor}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            openEditor()
+          }
+        }}
+        className="border-primary/40 bg-card/95 hover:bg-muted/80 transition-all cursor-pointer shadow-md focus-within:ring-2 focus-within:ring-primary/50 focus-visible:outline-none"
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -228,12 +207,6 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
             )}
           </div>
 
-          {/* Long-press hint */}
-          {isPressing && (
-            <div className="text-xs text-primary text-center pt-2 animate-pulse">
-              Hold to edit...
-            </div>
-          )}
         </CardContent>
       </Card>
     )

@@ -131,7 +131,7 @@ These files contain pure TypeScript logic with no React dependencies. Can be ext
 **6. Feature Gating & Quotas** (`packages/shared/subscriptions/`):
 ```typescript
 // src/lib/feature-gating.tsx
-- Subscription tier definitions (Free/Starter/Pro/Elite)
+- Subscription tier definitions (Free/Core/Pro/Elite)
 - Feature gates (workouts max, OCR quotas, AI limits)
 - Quota checking logic
 - Pricing ($7.99, $14.99, $34.99 monthly)

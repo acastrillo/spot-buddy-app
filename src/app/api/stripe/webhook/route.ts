@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { dynamoDBUsers, dynamoDBWebhookEvents } from '@/lib/dynamodb'
-import { PaidTier, assertPaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
+import { PaidTier, normalizePaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
 import { AppMetrics } from '@/lib/metrics'
 import { SUBSCRIPTION_TIERS } from '@/lib/stripe'
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId: string) {
   const userId = session.metadata?.userId
-  const tier = session.metadata?.tier as PaidTier | undefined
+  const tier = normalizePaidTier(session.metadata?.tier)
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
   const customerEmail = session.customer_email || session.customer_details?.email
 
@@ -104,7 +104,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
   console.log(`[Webhook:${eventId}] Updating user ${userId} to tier=${tier}, status=active, subscriptionId=${subscriptionId}`)
 
   // Determine billing period and price from session
-  const tierData = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS]
+  const tierData = SUBSCRIPTION_TIERS[tier]
   const amountTotal = session.amount_total ? session.amount_total / 100 : 0 // Convert cents to dollars
   const billingPeriod = amountTotal === tierData.annualPrice ? 'annual' : 'monthly'
 
@@ -125,7 +125,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
 
 async function handleSubscriptionUpsert(subscription: Stripe.Subscription, eventId: string) {
   let userId = subscription.metadata?.userId
-  const tierMeta = subscription.metadata?.tier as PaidTier | undefined
+  const tierMeta = normalizePaidTier(subscription.metadata?.tier)
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id || null
 
   console.log(`[Webhook:${eventId}] subscription.upsert:`, {
@@ -168,7 +168,7 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eventId: string) {
   const userId = subscription.metadata?.userId
-  const tier = subscription.metadata?.tier as PaidTier | undefined
+  const tier = normalizePaidTier(subscription.metadata?.tier)
 
   if (!userId) {
     console.warn(`[Webhook:${eventId}] Subscription cancellation missing userId; skipping`)
@@ -269,13 +269,7 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
     (invoice.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.tier ||
     (invoice as any)?.parent?.subscription_details?.metadata?.tier ||
     invoice.metadata?.tier
-  const parsedTier = (() => {
-    try {
-      return metaTier ? assertPaidTier(metaTier) : null
-    } catch {
-      return null
-    }
-  })()
+  const parsedTier = normalizePaidTier(metaTier) ?? null
 
   const userIdFromInvoice =
     (invoice.subscription_details as Stripe.Invoice.SubscriptionDetails | null | undefined)?.metadata?.userId ||
@@ -292,13 +286,7 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   const userIdFromLine = (lineWithMeta?.metadata as Record<string, string> | undefined)?.userId
   if (userIdFromLine) {
     const lineTierRaw = (lineWithMeta?.metadata as Record<string, string> | undefined)?.tier
-    const lineTier = (() => {
-      try {
-        return lineTierRaw ? assertPaidTier(lineTierRaw) : parsedTier
-      } catch {
-        return parsedTier
-      }
-    })()
+    const lineTier = normalizePaidTier(lineTierRaw) ?? parsedTier
     return { userId: userIdFromLine as string, subscriptionId, customerId, tier: lineTier }
   }
 

@@ -615,8 +615,8 @@ class BillingManager @Inject constructor(
                 SubscriptionTier.ELITE
             activeSubs.any { it.products.contains("pro_monthly") || it.products.contains("pro_annual") } -> 
                 SubscriptionTier.PRO
-            activeSubs.any { it.products.contains("starter_monthly") || it.products.contains("starter_annual") } -> 
-                SubscriptionTier.STARTER
+            activeSubs.any { it.products.contains("core_monthly") || it.products.contains("core_annual") } -> 
+                SubscriptionTier.CORE
             else -> SubscriptionTier.FREE
         }
     }
@@ -674,7 +674,7 @@ class BillingManager @Inject constructor(
 }
 
 enum class SubscriptionTier {
-    FREE, STARTER, PRO, ELITE
+    FREE, CORE, PRO, ELITE
 }
 
 enum class Feature {
@@ -728,7 +728,7 @@ enum class Feature {
 - [ ] Integrate Google Play Billing
 - [ ] Build paywall screen
 - [ ] Implement feature gating
-- [ ] Track OCR quota (1/week free, 5/week starter)
+- [ ] Track OCR quota (1/week free, 5/week core)
 - [ ] Track workout limit (15 max free)
 - [ ] Add upgrade prompts
 - [ ] Test purchase flow
@@ -797,7 +797,7 @@ User subscribes on Android
 - No AI features
 - Ads (mobile only)
 
-### Starter - $7.99/month or $79.99/year
+### Core - $7.99/month or $79.99/year
 - Unlimited workouts
 - 5 OCR scans/week
 - Full history

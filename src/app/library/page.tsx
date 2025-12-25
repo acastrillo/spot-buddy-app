@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import {
   Dumbbell,
   Clock,
-  TrendingUp,
   Search,
   Loader2,
   AlertCircle,

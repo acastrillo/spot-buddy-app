@@ -60,6 +60,43 @@ function playAlertSound(): void {
 }
 
 /**
+ * Play countdown beep with different frequency for each second
+ * @param secondsRemaining - 3, 2, or 1 seconds remaining
+ */
+function playCountdownBeep(secondsRemaining: number): void {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Different frequencies for countdown progression
+    const frequencies: Record<number, number> = {
+      3: 600,  // Low tone
+      2: 700,  // Medium tone
+      1: 800,  // High tone
+    };
+
+    oscillator.frequency.value = frequencies[secondsRemaining] || 800;
+    oscillator.type = 'sine';
+
+    // Shorter beep duration for countdown (300ms vs 500ms)
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.3
+    );
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (error) {
+    console.warn('Failed to play countdown beep:', error);
+  }
+}
+
+/**
  * Show browser notification
  */
 function showNotification(title: string, body: string): void {
@@ -202,7 +239,7 @@ export function useTimerRunner(options: UseTimerRunnerOptions): UseTimerRunnerRe
     if (autoStart && state.status === 'IDLE') {
       setState((prev) => startTimer(prev, Date.now()));
     }
-  }, [autoStart]);
+  }, [autoStart, state.status]);
 
   // Tick loop (200ms interval when running)
   useEffect(() => {
@@ -226,6 +263,33 @@ export function useTimerRunner(options: UseTimerRunnerOptions): UseTimerRunnerRe
       }
     }
   }, [state, persistKey]);
+
+  // Countdown beep detection (3-2-1 seconds)
+  const prevRemainingSecondsRef = useRef<number>(0);
+
+  useEffect(() => {
+    // Only trigger countdown beeps if timer is running
+    if (state.status !== 'RUNNING') {
+      return;
+    }
+
+    const totalRemainingMs = getTotalRemainingMs(state);
+    const remainingSeconds = Math.floor(totalRemainingMs / 1000);
+    const prevRemaining = prevRemainingSecondsRef.current;
+
+    // Beep when crossing countdown thresholds (only when counting down)
+    if (enableSound && prevRemaining > remainingSeconds) {
+      if (prevRemaining > 3 && remainingSeconds === 3) {
+        playCountdownBeep(3); // Low tone
+      } else if (prevRemaining > 2 && remainingSeconds === 2) {
+        playCountdownBeep(2); // Medium tone
+      } else if (prevRemaining > 1 && remainingSeconds === 1) {
+        playCountdownBeep(1); // High tone
+      }
+    }
+
+    prevRemainingSecondsRef.current = remainingSeconds;
+  }, [state, enableSound]);
 
   // Segment change detection
   useEffect(() => {

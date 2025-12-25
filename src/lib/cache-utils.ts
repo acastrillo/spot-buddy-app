@@ -85,7 +85,7 @@ export function isCacheFresh(
     const age = now - entry.timestamp;
 
     return age <= ttlMs;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -132,7 +132,7 @@ export function getCacheAge(key: string): number | null {
     const entry: CacheEntry<any> = JSON.parse(cached);
     const now = Date.now();
     return now - entry.timestamp;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

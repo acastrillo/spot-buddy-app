@@ -23,8 +23,7 @@ import {
   XCircle
 } from "lucide-react"
 import Link from "next/link"
-import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
-import { getTierBadge } from "@/lib/feature-gating"
+import { SUBSCRIPTION_TIERS, normalizeSubscriptionTier } from "@/lib/stripe"
 
 // Wrapper component to handle Suspense boundary for useSearchParams
 function SettingsContent() {
@@ -46,7 +45,7 @@ function SettingsContent() {
       setLastName(user.lastName || "")
       setEmail(user.email || "")
     }
-  }, [user?.id])
+  }, [user])
 
   // Handle checkout success/cancel redirects from Stripe
   useEffect(() => {
@@ -182,9 +181,8 @@ function SettingsContent() {
     return <Login />
   }
 
-  const currentTier = user?.subscriptionTier || 'free'
-  const tierConfig = SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS]
-  const tierBadge = getTierBadge(currentTier as any)
+  const currentTier = normalizeSubscriptionTier(user?.subscriptionTier)
+  const tierConfig = SUBSCRIPTION_TIERS[currentTier]
 
   const settingsSections = [
     {

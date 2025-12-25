@@ -36,7 +36,7 @@ async function verifySingleUser(expectedEmail) {
   console.log(`📧 Unique emails: ${uniqueEmails}\n`);
 
   // Check for duplicates
-  const duplicates = Object.entries(usersByEmail).filter(([_, users]) => users.length > 1);
+  const duplicates = Object.entries(usersByEmail).filter(([, users]) => users.length > 1);
 
   if (duplicates.length > 0) {
     console.log('❌ DUPLICATE USERS FOUND!\n');

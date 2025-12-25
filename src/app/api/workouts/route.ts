@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
-import { logger, createRequestLogger } from "@/lib/logger";
+import { createRequestLogger } from "@/lib/logger";
 import { AppMetrics, PerformanceMonitor } from "@/lib/metrics";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -146,6 +146,13 @@ export async function POST(request: NextRequest) {
       difficulty,
       tags,
       llmData,
+      workoutType,
+      structure,
+      timerConfig,
+      blockTimers,
+      aiEnhanced,
+      aiNotes,
+      muscleGroups,
     } = body;
 
     if (!workoutId || !title || !exercises || !content) {
@@ -170,6 +177,13 @@ export async function POST(request: NextRequest) {
       difficulty,
       tags,
       llmData,
+      workoutType,
+      structure,
+      timerConfig,
+      blockTimers,
+      aiEnhanced,
+      aiNotes,
+      muscleGroups,
     });
     const duration = perf.finish();
 

@@ -21,7 +21,7 @@ Your production site is using **TEST mode** Stripe keys (`sk_test_...`), which m
 
 1. Go to https://dashboard.stripe.com/products (make sure you're in Live mode)
 2. Check if your products exist. If not, create them:
-   - **Starter**: $7.99/month
+   - **Core**: $7.99/month
    - **Pro**: $14.99/month
    - **Elite**: $34.99/month
 3. Copy the **Price IDs** for each product (starts with `price_...`)
@@ -49,7 +49,7 @@ Your production site is using **TEST mode** Stripe keys (`sk_test_...`), which m
    $STRIPE_SECRET_KEY = "sk_live_YOUR_ACTUAL_KEY"
    $STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_ACTUAL_KEY"
    $STRIPE_WEBHOOK_SECRET = "whsec_YOUR_WEBHOOK_SECRET"
-   $STRIPE_PRICE_STARTER = "price_YOUR_STARTER_ID"
+   $STRIPE_PRICE_CORE = "price_YOUR_CORE_ID"
    $STRIPE_PRICE_PRO = "price_YOUR_PRO_ID"
    $STRIPE_PRICE_ELITE = "price_YOUR_ELITE_ID"
    ```

@@ -8,12 +8,12 @@ Your Stripe account is connected but has **zero products**. Follow these exact s
 2. You should see "No products" or an empty list
 3. Look for the **"+ Add product"** button (top right)
 
-## Step 2: Create Product #1 - Starter
+## Step 2: Create Product #1 - Core
 
 Click **"+ Add product"** and fill in:
 
 ```
-Name: Spot Buddy Starter
+Name: Spot Buddy Core
 Description: (leave blank or add: "Perfect for individuals starting their fitness journey")
 ```
 
@@ -77,12 +77,12 @@ Now open your `.env.local` file and update these lines:
 
 ```env
 # Stripe Price IDs (Test Mode) - REPLACE WITH YOUR ACTUAL PRICE IDs
-STRIPE_PRICE_STARTER=price_[paste_starter_price_id_here]
+STRIPE_PRICE_CORE=price_[paste_core_price_id_here]
 STRIPE_PRICE_PRO=price_[paste_pro_price_id_here]
 STRIPE_PRICE_ELITE=price_[paste_elite_price_id_here]
 
 # Client-side accessible (SAME IDs as above)
-NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_[paste_starter_price_id_here]
+NEXT_PUBLIC_STRIPE_PRICE_CORE=price_[paste_core_price_id_here]
 NEXT_PUBLIC_STRIPE_PRICE_PRO=price_[paste_pro_price_id_here]
 NEXT_PUBLIC_STRIPE_PRICE_ELITE=price_[paste_elite_price_id_here]
 ```
@@ -111,7 +111,7 @@ You should now see your 3 products with their price IDs!
 After this, running `npx tsx scripts/list-all-stripe-products.ts` should show:
 
 ```
-🏷️  Product: Spot Buddy Starter
+🏷️  Product: Spot Buddy Core
    Product ID: prod_xxxxx
    💰 Prices:
       • Price ID: price_xxxxx (← COPY THIS)

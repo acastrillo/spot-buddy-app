@@ -106,7 +106,7 @@ MSYS_NO_PATHCONV=1 aws logs tail /ecs/spotter-app --region us-east-1 --since 1h 
 2. Find the `checkout.session.completed` event
 3. Check `metadata` field contains:
    - `userId`: The authenticated user's ID
-   - `tier`: The subscription tier (starter/pro/elite)
+   - `tier`: The subscription tier (core/pro/elite)
 
 ### 3. Subscription Tier Not Reflecting in UI
 

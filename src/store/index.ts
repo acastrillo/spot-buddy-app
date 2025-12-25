@@ -1,6 +1,7 @@
 "use client"
 
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession } from "next-auth/react";
+import { normalizeSubscriptionTier } from "@/lib/stripe";
 
 // It's a good practice to define the shape of the user object from your session
 interface SessionUser {
@@ -51,7 +52,7 @@ export const useAuthStore = (): AuthState => {
         email: sessionUser.email,
         firstName: sessionUser.firstName ?? null,
         lastName: sessionUser.lastName ?? null,
-        subscriptionTier: sessionUser.subscriptionTier ?? "free",
+        subscriptionTier: normalizeSubscriptionTier(sessionUser.subscriptionTier),
         subscriptionStatus: sessionUser.subscriptionStatus ?? "active",
         ocrQuotaUsed: sessionUser.ocrQuotaUsed ?? 0,
         ocrQuotaLimit: sessionUser.ocrQuotaLimit ?? 2,

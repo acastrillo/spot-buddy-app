@@ -5,7 +5,7 @@
 import Stripe from 'stripe';
 
 const priceIds = {
-  starter: 'price_1SZCI8HqcH7hy1ecDXvm2FrT',
+  core: 'price_1SZCI8HqcH7hy1ecDXvm2FrT',
   pro: 'price_1SZCIlHqcH7hy1ecfjWftBk2',
   elite: 'price_1SZCJEHqcH7hy1echqpdgJ5y',
 };
@@ -20,9 +20,10 @@ async function verifyPrice(stripe: Stripe, priceId: string, tierName: string) {
     console.log(`   Active: ${price.active}`);
     console.log('');
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ ${tierName}: ${priceId}`);
-    console.error(`   Error: ${error.message}`);
+    console.error(`   Error: ${message}`);
     console.log('');
     return false;
   }
@@ -46,7 +47,7 @@ async function main() {
   });
 
   const results = await Promise.all([
-    verifyPrice(stripe, priceIds.starter, 'STARTER ($7.99)'),
+    verifyPrice(stripe, priceIds.core, 'CORE ($7.99)'),
     verifyPrice(stripe, priceIds.pro, 'PRO ($14.99)'),
     verifyPrice(stripe, priceIds.elite, 'ELITE ($34.99)'),
   ]);

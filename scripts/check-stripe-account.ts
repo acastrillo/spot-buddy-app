@@ -49,8 +49,9 @@ async function main() {
     console.log('   - Either switch accounts in dashboard OR');
     console.log('   - Use the API key from the account you\'re viewing\n');
 
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error:', message);
   }
 }
 

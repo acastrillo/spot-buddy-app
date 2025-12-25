@@ -58,9 +58,9 @@ async function main() {
           console.log(`      Active: ${price.active}`);
 
           // Map product name to price ID
-          if (product.name.includes('Starter')) {
-            priceMap.starter = price.id;
-          } else if (product.name.includes('Pro') && !product.name.includes('Starter')) {
+          if (product.name.includes('Core')) {
+            priceMap.core = price.id;
+          } else if (product.name.includes('Pro') && !product.name.includes('Core')) {
             priceMap.pro = price.id;
           } else if (product.name.includes('Elite')) {
             priceMap.elite = price.id;
@@ -76,24 +76,25 @@ async function main() {
     console.log('📝 COPY THESE TO YOUR .env.local:');
     console.log('==========================================\n');
 
-    if (priceMap.starter && priceMap.pro && priceMap.elite) {
+    if (priceMap.core && priceMap.pro && priceMap.elite) {
       console.log('# Stripe Price IDs (Test Mode)');
-      console.log(`STRIPE_PRICE_STARTER=${priceMap.starter}`);
+      console.log(`STRIPE_PRICE_CORE=${priceMap.core}`);
       console.log(`STRIPE_PRICE_PRO=${priceMap.pro}`);
       console.log(`STRIPE_PRICE_ELITE=${priceMap.elite}`);
       console.log('');
       console.log('# Client-side accessible Stripe price IDs (required for browser)');
-      console.log(`NEXT_PUBLIC_STRIPE_PRICE_STARTER=${priceMap.starter}`);
+      console.log(`NEXT_PUBLIC_STRIPE_PRICE_CORE=${priceMap.core}`);
       console.log(`NEXT_PUBLIC_STRIPE_PRICE_PRO=${priceMap.pro}`);
       console.log(`NEXT_PUBLIC_STRIPE_PRICE_ELITE=${priceMap.elite}`);
       console.log('\n');
     } else {
       console.log('⚠️  Could not find all three tiers');
-      console.log('   Make sure products are named: "Spot Buddy Starter", "Spot Buddy Pro", "Spot Buddy Elite"');
+      console.log('   Make sure products are named: "Spot Buddy Core", "Spot Buddy Pro", "Spot Buddy Elite"');
     }
 
-  } catch (error: any) {
-    console.error('❌ Error fetching products:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error fetching products:', message);
   }
 }
 

@@ -71,7 +71,7 @@
 - [x] STRIPE_SECRET_KEY - Updated 2025-11-26
 - [x] STRIPE_WEBHOOK_SECRET - Updated 2025-11-26
 - [x] STRIPE_PUBLISHABLE_KEY - Updated 2025-11-26
-- [x] STRIPE_PRICE_STARTER - Updated 2025-11-26
+- [x] STRIPE_PRICE_CORE - Updated 2025-11-26
 - [x] STRIPE_PRICE_PRO - Updated 2025-11-26
 - [x] STRIPE_PRICE_ELITE - Updated 2025-11-26
 - [x] NEXTAUTH_URL - https://spotter.cannashieldct.com

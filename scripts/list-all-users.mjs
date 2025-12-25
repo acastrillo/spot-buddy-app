@@ -60,7 +60,7 @@ async function listAllUsers() {
   console.log('\n═══════════════════════════════════════════════════════════');
 
   // Summary
-  const duplicateEmails = Object.entries(usersByEmail).filter(([_, users]) => users.length > 1);
+  const duplicateEmails = Object.entries(usersByEmail).filter(([, users]) => users.length > 1);
   if (duplicateEmails.length > 0) {
     console.log(`\n⚠️  SUMMARY: Found ${duplicateEmails.length} email(s) with duplicates:`);
     duplicateEmails.forEach(([email, users]) => {

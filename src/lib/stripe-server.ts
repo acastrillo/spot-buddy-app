@@ -102,6 +102,12 @@ export function assertPaidTier(tier: string): PaidTier {
   return tier as PaidTier
 }
 
+export function normalizePaidTier(tier: string | null | undefined): PaidTier | undefined {
+  if (!tier) return undefined
+  if (tier === 'starter') return 'core'
+  return PAID_TIERS.includes(tier as PaidTier) ? (tier as PaidTier) : undefined
+}
+
 export function getPriceIdForTier(tier: PaidTier, billingPeriod: BillingPeriod = 'monthly'): string {
   const envKeys: Record<PaidTier, Record<BillingPeriod, (keyof NodeJS.ProcessEnv)[]>> = {
     core: {

@@ -258,7 +258,7 @@ Response: {
   provider: string // "google" | "facebook" | "credentials"
 
   // Subscription
-  subscriptionTier: string // "free" | "starter" | "pro" | "elite"
+  subscriptionTier: string // "free" | "core" | "pro" | "elite"
   subscriptionStatus: string // "active" | "inactive" | "trialing" | "canceled"
   stripeCustomerId: string (indexed via stripeCustomerId-index GSI)
   stripeSubscriptionId: string
@@ -509,7 +509,7 @@ STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Price IDs (from Stripe Dashboard)
-STRIPE_PRICE_STARTER=price_...
+STRIPE_PRICE_CORE=price_...
 STRIPE_PRICE_PRO=price_...
 STRIPE_PRICE_ELITE=price_...
 ```
@@ -1338,7 +1338,7 @@ export async function POST(req: NextRequest) {
 
     const { tier } = await req.json();
 
-    if (!['starter', 'pro', 'elite'].includes(tier)) {
+    if (!['core', 'pro', 'elite'].includes(tier)) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
     }
 
@@ -1503,7 +1503,7 @@ fun SubscriptionScreen(
         }
 
         // Paid Tiers
-        listOf("starter", "pro", "elite").forEach { tier ->
+        listOf("core", "pro", "elite").forEach { tier ->
             SubscriptionTierCard(
                 tier = tier,
                 isCurrent = currentTier == tier,
@@ -1536,7 +1536,7 @@ fun SubscriptionTierCard(
             )
             Text(
                 text = when(tier) {
-                    "starter" -> "$7.99/month"
+                    "core" -> "$7.99/month"
                     "pro" -> "$14.99/month"
                     "elite" -> "$34.99/month"
                     else -> "Free"
@@ -1782,7 +1782,7 @@ Response (200):
     "email": "user@example.com",
     "firstName": "John",
     "lastName": "Doe",
-    "subscriptionTier": "starter",
+    "subscriptionTier": "core",
     "subscriptionStatus": "active",
     "ocrQuotaUsed": 5,
     "ocrQuotaLimit": 12
@@ -1982,7 +1982,7 @@ Content-Type: application/json
 
 Request:
 {
-  "tier": "starter" // or "pro", "elite"
+  "tier": "core" // or "pro", "elite"
 }
 
 Response (200):
@@ -1999,7 +1999,7 @@ Authorization: Bearer <token>
 
 Response (200):
 {
-  "tier": "starter",
+  "tier": "core",
   "status": "active",
   "currentPeriodEnd": "2024-12-30T00:00:00Z",
   "cancelAtPeriodEnd": false

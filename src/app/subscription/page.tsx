@@ -10,11 +10,11 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, Loader2, Crown, Zap, Sparkles, CheckCircle, XCircle, RefreshCw } from "lucide-react"
-import { SUBSCRIPTION_TIERS } from "@/lib/stripe"
+import { SUBSCRIPTION_TIERS, normalizeSubscriptionTier } from "@/lib/stripe"
 
 // Inner component that uses useSearchParams
 function SubscriptionContent() {
-  const { isAuthenticated, user, isLoading: authLoading } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const { update: updateSession } = useSession()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState<string | null>(null)
@@ -68,7 +68,7 @@ function SubscriptionContent() {
     return <Login />
   }
 
-  const currentTier = user?.subscriptionTier || 'free'
+  const currentTier = normalizeSubscriptionTier(user?.subscriptionTier)
 
   const handleSubscribe = async (tier: string) => {
     setLoading(tier)
@@ -218,7 +218,7 @@ function SubscriptionContent() {
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-text-primary mb-1">
-                      Current Plan: {SUBSCRIPTION_TIERS[currentTier as keyof typeof SUBSCRIPTION_TIERS].name}
+                      Current Plan: {SUBSCRIPTION_TIERS[currentTier].name}
                     </h3>
                     <p className="text-sm text-text-secondary">
                       Status: {user?.subscriptionStatus || 'Active'}
@@ -374,13 +374,13 @@ function SubscriptionContent() {
               <div>
                 <h4 className="font-semibold text-text-primary mb-2">Why choose annual billing?</h4>
                 <p className="text-sm text-text-secondary">
-                  Annual plans save you 20-22% compared to monthly billing. Plus, you'll stay committed to your fitness goals for a full year!
+                  Annual plans save you 20-22% compared to monthly billing. Plus, you&apos;ll stay committed to your fitness goals for a full year!
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold text-text-primary mb-2">Can I cancel anytime?</h4>
                 <p className="text-sm text-text-secondary">
-                  Yes! You can cancel your subscription at any time. You'll retain access to paid features until the end of your billing period.
+                  Yes! You can cancel your subscription at any time. You&apos;ll retain access to paid features until the end of your billing period.
                 </p>
               </div>
               <div>
@@ -392,13 +392,13 @@ function SubscriptionContent() {
               <div>
                 <h4 className="font-semibold text-text-primary mb-2">Can I upgrade or downgrade my plan?</h4>
                 <p className="text-sm text-text-secondary">
-                  Yes! You can upgrade at any time and you'll be prorated for the remaining time. Downgrades take effect at the end of your billing period.
+                  Yes! You can upgrade at any time and you&apos;ll be prorated for the remaining time. Downgrades take effect at the end of your billing period.
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold text-text-primary mb-2">Can I switch from monthly to annual billing?</h4>
                 <p className="text-sm text-text-secondary">
-                  Absolutely! You can switch your billing period through the billing portal. You'll receive a prorated credit for your remaining time.
+                  Absolutely! You can switch your billing period through the billing portal. You&apos;ll receive a prorated credit for your remaining time.
                 </p>
               </div>
             </CardContent>

@@ -23,7 +23,6 @@
 
 import fetch from 'node-fetch';
 import fs from 'fs';
-import path from 'path';
 
 // Configuration
 const BASE_URL = 'http://localhost:3000';
@@ -189,7 +188,6 @@ async function testRateLimit(config) {
   logSuccess(`Correctly Blocked: ${results.blocked}`);
 
   const totalExpected = limit + 1;
-  const totalActual = results.passed + results.failed + results.blocked;
   const successRate = ((results.passed + results.blocked) / totalExpected) * 100;
 
   if (successRate === 100) {
@@ -219,6 +217,9 @@ async function runTests() {
     logSuccess('Dev server is running');
   } catch (error) {
     logError('Dev server is not running!');
+    if (error) {
+      logError(String(error));
+    }
     logInfo('Please start the dev server with: npm run dev');
     process.exit(1);
   }

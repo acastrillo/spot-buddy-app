@@ -144,7 +144,7 @@ Price Range: $0 ─────────────────────�
 - **Pain**: Phone cluttered with workout screenshots, never organized
 - **Willingness to Pay**: $5-15/month for organization + AI features
 - **Acquisition Channel**: Instagram ads, influencer partnerships
-- **Lifetime Value**: $155 (Starter tier, 36-month average)
+- **Lifetime Value**: $155 (Core tier, 36-month average)
 
 **Secondary Segment: "Data-Driven Athletes"** (30% of TAM)
 - **Demographics**: 28-40 years old, 65% male, fitness enthusiast
@@ -191,7 +191,7 @@ Price Range: $0 ─────────────────────�
 
 ---
 
-**Starter Tier: Entry-Level Sweet Spot**
+**Core Tier: Entry-Level Sweet Spot**
 
 | Feature | Value | Competitive Comparison |
 |---------|-------|------------------------|
@@ -227,7 +227,7 @@ $9.99 ← Too expensive (same as Hevy/Fitbod, less established)
 
 | Feature | Value | Justification |
 |---------|-------|---------------|
-| Price | $14.99/mo | 50% premium over Starter, fair for unlimited AI |
+| Price | $14.99/mo | 50% premium over Core, fair for unlimited AI |
 | OCR | 5/week | Unlimited in practice for most users |
 | Instagram | 7/week | Daily workout saving capability |
 | AI | 30/month | 1 per day average (high engagement) |
@@ -313,7 +313,7 @@ Spot Buddy Elite (AI coach): $34.99/mo ← MASSIVE VALUE GAP
 
 **Current Feature Allocation**:
 ```
-Feature               Free  Starter  Pro  Elite
+Feature               Free  Core  Pro  Elite
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Workouts              31    ∞        ∞    ∞
 OCR scans             1/mo  3/wk     5/wk 10/wk
@@ -336,7 +336,7 @@ Advanced analytics    ❌    ❌       ✅   ✅
 2. **AI Request Separation** (Medium Priority)
    - **Problem**: Separate quotas for "enhancements" vs "generations" confuses users
    - **Solution**: Unified "AI Credits" system
-     - Starter: 10 AI credits/month (use for enhancement OR generation)
+     - Core: 10 AI credits/month (use for enhancement OR generation)
      - Pro: 30 AI credits/month
      - Elite: 100 AI credits/month (soft cap with overage fees at $0.10/credit)
    - **Benefit**: Simplifies messaging, gives users flexibility
@@ -346,8 +346,8 @@ Advanced analytics    ❌    ❌       ✅   ✅
    - **Solution**: Add 1 AI enhancement/month to Free tier
    - **Risk**: Minimal (costs $0.01/month, creates demand for more)
 
-4. **Starter Tier AI Generation Gap** (Medium Priority)
-   - **Problem**: Starter users get enhancements but not generations (incomplete AI value)
+4. **Core Tier AI Generation Gap** (Medium Priority)
+   - **Problem**: Core users get enhancements but not generations (incomplete AI value)
    - **Current**: 10 enhancements, 0 generations
    - **Proposed**: 10 AI credits (use for either feature)
    - **Benefit**: Users can try AI workout generation, driving Pro upgrades
@@ -364,7 +364,7 @@ Advanced analytics    ❌    ❌       ✅   ✅
 **Gap Analysis**:
 
 ```
-Free ──────> Starter ──────> Pro ──────> Elite
+Free ──────> Core ──────> Pro ──────> Elite
 $0            $7.99          $14.99       $34.99
       +$7.99        +$7.00         +$20.00
 ```
@@ -372,8 +372,8 @@ $0            $7.99          $14.99       $34.99
 **Price Jump Analysis**:
 | Transition | Absolute Increase | % Increase | Features Added | Value/Dollar |
 |------------|-------------------|------------|----------------|--------------|
-| Free → Starter | +$7.99 | ∞% | Unlimited workouts, 5x OCR, 10 AI | **Excellent** |
-| Starter → Pro | +$7.00 | +88% | Unlimited OCR, 3x AI, personalized WOD, social | **Excellent** |
+| Free → Core | +$7.99 | ∞% | Unlimited workouts, 5x OCR, 10 AI | **Excellent** |
+| Core → Pro | +$7.00 | +88% | Unlimited OCR, 3x AI, personalized WOD, social | **Excellent** |
 | Pro → Elite | +$20.00 | +133% | AI coach, 3.3x AI, priority support | **Fair** |
 
 **Issues**:
@@ -386,7 +386,7 @@ $0            $7.99          $14.99       $34.99
 2. **Annual Pricing Absent**:
    - **Problem**: 20% of SaaS users prefer annual billing (better LTV, lower churn)
    - **Solution**: Add annual tiers with 17% discount (2 months free):
-     - Starter: $79.99/year (vs $95.88 monthly)
+     - Core: $79.99/year (vs $95.88 monthly)
      - Pro: $149.99/year (vs $179.88 monthly)
      - Elite: $499.99/year (vs $599.88 monthly at $49.99/mo)
 
@@ -422,16 +422,16 @@ Price Range:      $0 ───────────────────�
 
 ### 3.2 Feature-to-Price Comparison
 
-**Value Delivered per Dollar Spent** (Starter Tier Comparison):
+**Value Delivered per Dollar Spent** (Core Tier Comparison):
 
 | App | Monthly Price | Workouts | OCR | AI Features | Social | Value Score |
 |-----|---------------|----------|-----|-------------|--------|-------------|
 | JEFIT Elite | $6.99 | Unlimited | No | No | Limited | 6/10 |
 | Hevy Pro | $9.99 | Unlimited | No | Basic recommendations | Yes | 7/10 |
 | Fitbod | $12.99 | Unlimited | No | AI workouts only | No | 7/10 |
-| **Spot Buddy Starter** | **$7.99** | **Unlimited** | **Yes (5/wk)** | **10 AI/mo** | **No** | **8/10** |
+| **Spot Buddy Core** | **$7.99** | **Unlimited** | **Yes (5/wk)** | **10 AI/mo** | **No** | **8/10** |
 
-**Spot Buddy wins on value-per-dollar at Starter tier.**
+**Spot Buddy wins on value-per-dollar at Core tier.**
 
 ---
 
@@ -592,7 +592,7 @@ Same as Android: Web-based checkout, no in-app purchases
 
 **Alternative: iOS In-App Purchases** (if web checkout rejected)
 - Add IAP products at 43% markup to offset Apple commission:
-  - Starter: $11.49/month (nets $8.04 after 30%)
+  - Core: $11.49/month (nets $8.04 after 30%)
   - Pro: $21.49/month (nets $15.04 after 30%)
   - Elite: $49.99/month (nets $34.99 after 30%)
 - Market as "premium iOS experience" with exclusive features
@@ -646,14 +646,14 @@ Same as Android: Web-based checkout, no in-app purchases
 ### 4.4 Geographic Pricing Strategy
 
 **Current Pricing** (USD, US market):
-- Starter: $7.99/month
+- Core: $7.99/month
 - Pro: $14.99/month
 - Elite: $34.99/month
 
 **International Expansion Pricing** (Phase 4 - 2026):
 
 **Tier 1 Markets** (High purchasing power):
-| Region | Currency | Starter | Pro | Elite | Notes |
+| Region | Currency | Core | Pro | Elite | Notes |
 |--------|----------|---------|-----|-------|-------|
 | US | USD | $7.99 | $14.99 | $34.99 | Base pricing |
 | Canada | CAD | $10.99 | $19.99 | $46.99 | +15% for currency conversion |
@@ -662,7 +662,7 @@ Same as Android: Web-based checkout, no in-app purchases
 | Western Europe | EUR | €7.49 | €13.99 | €32.99 | Match USD purchasing power |
 
 **Tier 2 Markets** (Moderate purchasing power):
-| Region | Currency | Starter | Pro | Elite | Notes |
+| Region | Currency | Core | Pro | Elite | Notes |
 |--------|----------|---------|-----|-------|-------|
 | Brazil | BRL | R$24.99 | R$44.99 | R$104.99 | -50% in USD equivalent |
 | India | INR | ₹499 | ₹899 | ₹2,099 | -60% in USD equivalent |
@@ -688,7 +688,7 @@ Same as Android: Web-based checkout, no in-app purchases
 | Tier | Weekly Limit | Monthly Equivalent | Annual Equivalent |
 |------|--------------|--------------------|--------------------|
 | Free | 3/week | ~12/month | ~144/year |
-| Starter | 5/week | ~20/month | ~240/year |
+| Core | 5/week | ~20/month | ~240/year |
 | Pro | 7/week | ~28/month | ~336/year |
 | Elite | 12/week | ~48/month | ~576/year |
 
@@ -700,13 +700,13 @@ Same as Android: Web-based checkout, no in-app purchases
 
 **Monthly Value by Tier**:
 - Free: 12 imports/month × $0.36 = **$4.32/month value**
-- Starter: 20 imports/month × $0.36 = **$7.20/month value**
+- Core: 20 imports/month × $0.36 = **$7.20/month value**
 - Pro: 28 imports/month × $0.36 = **$10.08/month value**
 - Elite: 48 imports/month × $0.36 = **$17.28/month value**
 
 **Analysis**:
 - ✅ **Free tier provides $4.32 value** → Good teaser, creates demand
-- ✅ **Starter tier Instagram value ($7.20) nearly equals price ($7.99)** → Feature pays for itself
+- ✅ **Core tier Instagram value ($7.20) nearly equals price ($7.99)** → Feature pays for itself
 - ⚠️ **Pro tier gap is small** (7 vs 5/week = only +8 imports/month)
 - ❌ **Elite tier should be unlimited** (current cap at 12/week is arbitrary)
 
@@ -720,14 +720,14 @@ Same as Android: Web-based checkout, no in-app purchases
 2. **Adjust Limits** (Medium Priority)
    ```
    Free:    3/week   (12/month)  ← Keep as teaser
-   Starter: 10/week  (40/month)  ← Increase for better value
+   Core: 10/week  (40/month)  ← Increase for better value
    Pro:     20/week  (80/month)  ← Increase significantly
    Elite:   Unlimited            ← Premium positioning
    ```
 
 3. **Marketing Messaging** (High Priority)
    - Free tier: "Save up to 12 workouts from screenshots every month"
-   - Starter tier: "Import 40+ workouts monthly—never lose a routine again"
+   - Core tier: "Import 40+ workouts monthly—never lose a routine again"
    - Pro tier: "Unlimited workout scans—turn any screenshot into a trackable workout"
    - Elite tier: "Unlimited everything + AI coach"
 
@@ -743,7 +743,7 @@ Same as Android: Web-based checkout, no in-app purchases
 | Tier | Enhancements/mo | Generations/mo | Total AI Requests |
 |------|-----------------|----------------|-------------------|
 | Free | 0 | 0 | 0 |
-| Starter | 10 | 0 | 10 |
+| Core | 10 | 0 | 10 |
 | Pro | 30 | 30 | 60 |
 | Elite | 100 | 100 | 200 |
 
@@ -754,10 +754,10 @@ Same as Android: Web-based checkout, no in-app purchases
    - Creates decision fatigue: "Should I enhance or generate?"
    - Solution: **Unified AI Credits** (use for any AI feature)
 
-2. **Starter Tier Generation Gap**:
-   - Starter users can enhance but not generate (incomplete AI experience)
+2. **Core Tier Generation Gap**:
+   - Core users can enhance but not generate (incomplete AI experience)
    - Creates frustration when they see "Generate with AI" button (grayed out)
-   - Solution: **Give Starter 10 AI credits** (use for either feature)
+   - Solution: **Give Core 10 AI credits** (use for either feature)
 
 3. **Pro Tier Limits Too Low**:
    - 30 enhancements + 30 generations = 2 AI actions/day
@@ -777,7 +777,7 @@ Free Tier:
 - Can use for 1 enhancement OR 1 generation
 - Resets monthly
 
-Starter Tier:
+Core Tier:
 - 15 AI credits/month (up from 10 enhancements only)
 - Can use for ANY combination of enhancements/generations
 - Example: 10 enhancements + 5 generations, or 15 generations, etc.
@@ -801,7 +801,7 @@ Elite Tier:
 | Tier | Old Credits | New Credits | Monthly AI Cost | Cost/User Increase |
 |------|-------------|-------------|-----------------|---------------------|
 | Free | 0 | 1 | $0.01 | +$0.01 |
-| Starter | 10 | 15 | $0.20 | +$0.05 |
+| Core | 10 | 15 | $0.20 | +$0.05 |
 | Pro | 60 | 100 | $1.50 | +$0.60 |
 | Elite | 200 | 300 | $4.50 | +$1.50 |
 
@@ -896,21 +896,21 @@ Elite Tier:
 
 **Current Structure** (Confusing):
 ```
-Starter: 10 enhancements, 0 generations
+Core: 10 enhancements, 0 generations
 Pro:     30 enhancements, 30 generations
 Elite:   100 enhancements, 100 generations
 ```
 
 **Problems**:
 1. Users don't understand difference between "enhancement" and "generation"
-2. Starter users see "Generate with AI" button but can't use it (frustration)
+2. Core users see "Generate with AI" button but can't use it (frustration)
 3. Pro users must ration separate quotas (decision fatigue)
 4. Elite users have effectively unlimited (200 total) but unclear soft cap
 
 **Proposed Structure** (Unified AI Credits):
 ```
 Free:    1 AI credit/month
-Starter: 15 AI credits/month
+Core: 15 AI credits/month
 Pro:     100 AI credits/month
 Elite:   300 AI credits/month (soft cap, then 1/hour throttle)
 ```
@@ -968,7 +968,7 @@ AI Coach:        Free (Elite only, 20 msgs/day limit)
 
 1. **Add Annual Pricing** (Expected Impact: +20% LTV)
    ```
-   Starter:
+   Core:
    - Monthly: $7.99/month
    - Annual: $79.99/year (17% savings = 2 months free)
 
@@ -994,7 +994,7 @@ AI Coach:        Free (Elite only, 20 msgs/day limit)
 
 3. **Implement Unified AI Credits** (Expected Impact: +25% AI feature engagement)
    - Free: 1 credit/month
-   - Starter: 15 credits/month
+   - Core: 15 credits/month
    - Pro: 100 credits/month
    - Elite: 300 credits/month (soft cap)
    - Enhancement = 1 credit, Generation = 2 credits
@@ -1032,21 +1032,21 @@ trial_settings: {
 
 **Expected Conversion Rate**: 48% (industry benchmark for opt-out trials)
 
-**Alternative: $2.99 for 30-Day Trial** (Starter Tier Only):
+**Alternative: $2.99 for 30-Day Trial** (Core Tier Only):
 
 **User Flow**:
-1. User clicks "Try Starter for 30 days - Only $2.99"
+1. User clicks "Try Core for 30 days - Only $2.99"
 2. One-time Stripe payment ($2.99)
-3. Manually upgrade user to Starter tier in DynamoDB
+3. Manually upgrade user to Core tier in DynamoDB
 4. Set expiration date 30 days from payment
-5. On Day 25: In-app prompt "Upgrade to continue Starter features"
+5. On Day 25: In-app prompt "Upgrade to continue Core features"
 6. Must manually select monthly ($7.99) or annual ($79.99) plan
 7. If no upgrade: Downgrade to Free tier after 30 days
 
 **Expected Conversion Rate**: 60% (higher qualification than free trial)
 
 **Recommended Strategy**:
-- **Starter**: $2.99/30-day trial (qualified leads, trial revenue)
+- **Core**: $2.99/30-day trial (qualified leads, trial revenue)
 - **Pro/Elite**: 7-day free trial (higher commitment, easier onboarding)
 
 ---
@@ -1108,7 +1108,7 @@ Workout Completion Sharing:
 ```
 Limited Time: First 1,000 Android Users Get 30% Off
 
-Starter:  $7.99 → $5.59/month (for 6 months)
+Core:  $7.99 → $5.59/month (for 6 months)
 Pro:      $14.99 → $10.49/month (for 6 months)
 Elite:    $49.99 → $34.99/month (for 6 months)
 
@@ -1131,7 +1131,7 @@ After 6 months: Automatically renews at full price
 ```
 Pre-register for iOS app → Get 40% off first year (annual plan)
 
-Starter:  $79.99 → $47.99/year
+Core:  $79.99 → $47.99/year
 Pro:      $149.99 → $89.99/year
 Elite:    $499.99 → $299.99/year
 
@@ -1151,7 +1151,7 @@ Valid for first 2,000 iOS pre-registrations
 **Recommended Annual Discounts**:
 | Tier | Monthly | Annual (Monthly Equiv) | Discount % | Savings |
 |------|---------|------------------------|------------|---------|
-| Starter | $7.99 | $79.99 ($6.67/mo) | 17% | $16.89 (2 mo free) |
+| Core | $7.99 | $79.99 ($6.67/mo) | 17% | $16.89 (2 mo free) |
 | Pro | $14.99 | $149.99 ($12.50/mo) | 17% | $29.89 (2 mo free) |
 | Elite | $49.99 | $499.99 ($41.67/mo) | 17% | $99.89 (2 mo free) |
 
@@ -1167,7 +1167,7 @@ Valid for first 2,000 iOS pre-registrations
 4. **Lower Processing Costs**: 1 Stripe transaction/year vs 12/year
 
 **Expected Annual Adoption**:
-- **Starter**: 25% of users choose annual (higher price sensitivity)
+- **Core**: 25% of users choose annual (higher price sensitivity)
 - **Pro**: 35% choose annual (better value perception)
 - **Elite**: 45% choose annual (serious users commit long-term)
 
@@ -1210,7 +1210,7 @@ Plus:
 **LTV:CAC Ratio by Tier**:
 | Tier | LTV (36 months) | Max CAC (3:1 ratio) | Profitable CAC Range |
 |------|-----------------|---------------------|----------------------|
-| Starter | $155.52 | $51.84 | $0-40 |
+| Core | $155.52 | $51.84 | $0-40 |
 | Pro | $270.72 | $90.24 | $0-60 |
 | Elite | $519.12 | $173.04 | $0-100 |
 
@@ -1307,7 +1307,7 @@ Plus:
 [Compare All Plans ↓]  (collapsed by default)
 
 ┌─────────────────────────────────────────────┐
-│  Starter - $7.99/month                       │
+│  Core - $7.99/month                       │
 │  Perfect for casual trackers                 │
 └─────────────────────────────────────────────┘
 
@@ -1343,13 +1343,13 @@ When user clicks "Cancel Subscription":
 │                                            │
 │  Before you cancel, would you consider:   │
 │                                            │
-│  🎯 Downgrade to Starter ($7.99/month)    │
+│  🎯 Downgrade to Core ($7.99/month)    │
 │     Keep unlimited workouts, reduce AI     │
 │                                            │
 │  🎁 Pause subscription for 1 month (free) │
 │     Come back anytime, no data loss        │
 │                                            │
-│  [Downgrade to Starter]  [Pause 1 Month]  │
+│  [Downgrade to Core]  [Pause 1 Month]  │
 │  [Cancel Anyway]                           │
 └───────────────────────────────────────────┘
 ```
@@ -1432,17 +1432,17 @@ Offer expires in 7 days.
 
 | Conversion Type | Rate | Justification |
 |----------------|------|---------------|
-| Free → Starter | 20% | Restrictive free tier (31 workouts, 1 OCR) drives urgency |
-| Free → Pro | 8% | Power users skip Starter, go straight to Pro |
+| Free → Core | 20% | Restrictive free tier (31 workouts, 1 OCR) drives urgency |
+| Free → Pro | 8% | Power users skip Core, go straight to Pro |
 | Free → Elite | 2% | Serious athletes, coaches, early adopters |
 | **Total Free → Paid** | **30%** | Above industry avg due to value prop + restrictions |
-| Starter → Pro | 25% | AI feature exposure drives upgrades |
+| Core → Pro | 25% | AI feature exposure drives upgrades |
 | Pro → Elite | 10% | AI coach + crew features appeal to committed users |
 
 **User Tier Distribution** (at 10,000 total users):
 ```
 Free:    7,000 users (70%)
-Starter: 1,500 users (15%)
+Core: 1,500 users (15%)
 Pro:     1,000 users (10%)
 Elite:   500 users (5%)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1455,7 +1455,7 @@ Total:   10,000 users (30% paid conversion)
 
 **Conservative Scenario** (25% paid conversion):
 
-| User Counts (Year 1 End) | Free | Starter | Pro | Elite | Total |
+| User Counts (Year 1 End) | Free | Core | Pro | Elite | Total |
 |---------------------------|------|---------|-----|-------|-------|
 | Q1 (1,000 users) | 750 | 150 | 75 | 25 | 1,000 |
 | Q2 (5,000 users) | 3,750 | 750 | 375 | 125 | 5,000 |
@@ -1465,7 +1465,7 @@ Total:   10,000 users (30% paid conversion)
 **Monthly Recurring Revenue (MRR)**:
 ```
 Q4 MRR:
-- Starter: 4,500 × $7.99 = $35,955
+- Core: 4,500 × $7.99 = $35,955
 - Pro: 2,250 × $14.99 = $33,728
 - Elite: 750 × $49.99 = $37,493
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1477,7 +1477,7 @@ Annual Recurring Revenue (ARR): $107,176 × 12 = $1,286,112
 **Monthly Costs** (Q4):
 ```
 AWS Infrastructure: $800
-AI Tokens (4,500 Starter + 2,250 Pro + 750 Elite): $5,175
+AI Tokens (4,500 Core + 2,250 Pro + 750 Elite): $5,175
 Stripe Fees (2.9% + $0.30 × 7,500): $5,358
 Support (1 FTE): $5,000
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1491,14 +1491,14 @@ Annual Profit: $1,090,116
 
 **Moderate Scenario** (30% paid conversion):
 
-| User Counts (Year 1 End) | Free | Starter | Pro | Elite | Total |
+| User Counts (Year 1 End) | Free | Core | Pro | Elite | Total |
 |---------------------------|------|---------|-----|-------|-------|
 | Q4 (30,000 users) | 21,000 | 5,250 | 2,625 | 1,125 | 30,000 |
 
 **Monthly Recurring Revenue (MRR)**:
 ```
 Q4 MRR:
-- Starter: 5,250 × $7.99 = $41,948
+- Core: 5,250 × $7.99 = $41,948
 - Pro: 2,625 × $14.99 = $39,348
 - Elite: 1,125 × $49.99 = $56,239
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1524,14 +1524,14 @@ Annual Profit: $1,384,644
 
 **Aggressive Scenario** (35% paid conversion + faster growth):
 
-| User Counts (Year 1 End) | Free | Starter | Pro | Elite | Total |
+| User Counts (Year 1 End) | Free | Core | Pro | Elite | Total |
 |---------------------------|------|---------|-----|-------|-------|
 | Q4 (50,000 users) | 32,500 | 10,500 | 5,250 | 1,750 | 50,000 |
 
 **Monthly Recurring Revenue (MRR)**:
 ```
 Q4 MRR:
-- Starter: 10,500 × $7.99 = $83,895
+- Core: 10,500 × $7.99 = $83,895
 - Pro: 5,250 × $14.99 = $78,698
 - Elite: 1,750 × $49.99 = $87,483
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1577,7 +1577,7 @@ Weighted Average Subscription Duration:
 
 | Tier | Monthly Price | Annual Price | Costs/User/Month | Avg. Duration | LTV (Monthly) | LTV (Annual) | Blended LTV |
 |------|---------------|--------------|------------------|---------------|---------------|--------------|-------------|
-| Starter | $7.99 | $79.99/year | $0.67 | 19.2 months | $140.54 | $200.32 | **$155.52** |
+| Core | $7.99 | $79.99/year | $0.67 | 19.2 months | $140.54 | $200.32 | **$155.52** |
 | Pro | $14.99 | $149.99/year | $2.47 | 22.4 months* | $239.73 | $337.76 | **$270.72** |
 | Elite | $34.99** | $349.99/year | $5.57 | 28.8 months* | $680.71 | $849.98 | **$741.33** |
 
@@ -1605,12 +1605,12 @@ Total Fixed: $221/month
 
 **Variable Costs per Paid User**:
 ```
-Starter: $0.67 (AI tokens) + $0.53 (Stripe) = $1.20/user/month
+Core: $0.67 (AI tokens) + $0.53 (Stripe) = $1.20/user/month
 Pro: $2.47 (AI tokens) + $0.74 (Stripe) = $3.21/user/month
 Elite: $5.57 (AI tokens) + $1.74 (Stripe) = $7.31/user/month
 
 Weighted Average (tier distribution):
-- 50% Starter × $1.20 = $0.60
+- 50% Core × $1.20 = $0.60
 - 35% Pro × $3.21 = $1.12
 - 15% Elite × $7.31 = $1.10
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1623,7 +1623,7 @@ Total Costs = Fixed + (Variable × Paid Users)
 $221 + ($2.82 × Paid Users) = Total Revenue
 
 Average Revenue per Paid User:
-- 50% Starter × $7.99 = $4.00
+- 50% Core × $7.99 = $4.00
 - 35% Pro × $14.99 = $5.25
 - 15% Elite × $49.99 = $7.50
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1654,7 +1654,7 @@ $221 / $13.93 = 16 paid users
 **Standard Pricing** (Post-Launch):
 ```
 Free:    $0/month
-Starter: $7.99/month or $79.99/year
+Core: $7.99/month or $79.99/year
 Pro:     $14.99/month or $149.99/year
 Elite:   $49.99/month or $499.99/year
 ```
@@ -1664,7 +1664,7 @@ Elite:   $49.99/month or $499.99/year
 🚀 ANDROID LAUNCH SPECIAL 🚀
 Get 30% off for 6 months!
 
-Starter: $5.59/month (normally $7.99)
+Core: $5.59/month (normally $7.99)
 Pro:     $10.49/month (normally $14.99)
 Elite:   $34.99/month (normally $49.99)
 
@@ -1675,7 +1675,7 @@ Offer ends: March 31, 2025 or first 1,000 sign-ups
 **Messaging**:
 - "Be one of the first 1,000 Android users and save 30%!"
 - "Limited time: Lock in discounted pricing for 6 months"
-- "Early adopter bonus: Get Pro features at Starter prices"
+- "Early adopter bonus: Get Pro features at Core prices"
 
 **Expected Impact**:
 - Conversion rate: 45% (vs 30% at full price)
@@ -1697,7 +1697,7 @@ Sign up now and get:
 ✅ Lifetime early adopter badge
 ✅ Priority access to new features
 
-Starter: $47.99/year (save $32)
+Core: $47.99/year (save $32)
 Pro:     $89.99/year (save $60)
 Elite:   $299.99/year (save $200)
 
@@ -1767,7 +1767,7 @@ Justification: Simplifies launch, tests product-market fit
 **Phase 2 (Year 2)**: International Expansion
 
 **Tier 1 Markets** (High Purchasing Power):
-| Country | Currency | Starter | Pro | Elite |
+| Country | Currency | Core | Pro | Elite |
 |---------|----------|---------|-----|-------|
 | US | USD | $7.99 | $14.99 | $49.99 |
 | Canada | CAD | $10.99 | $19.99 | $66.99 |
@@ -1776,7 +1776,7 @@ Justification: Simplifies launch, tests product-market fit
 | Germany | EUR | €7.49 | €13.99 | €46.99 |
 
 **Tier 2 Markets** (Moderate Purchasing Power):
-| Country | Currency | Starter | Pro | Elite |
+| Country | Currency | Core | Pro | Elite |
 |---------|----------|---------|-----|-------|
 | Brazil | BRL | R$24.99 | R$44.99 | R$149.99 |
 | Mexico | MXN | $129 | $239 | $799 |
@@ -1821,7 +1821,7 @@ Used for fundraising, valuation, long-term planning
 ARPU = Total Revenue / Total Paid Users
 
 Track by tier:
-- Starter ARPU: $7.99
+- Core ARPU: $7.99
 - Pro ARPU: $14.99
 - Elite ARPU: $49.99
 - Blended ARPU: Weighted average across tiers
@@ -1834,7 +1834,7 @@ Target: Increase blended ARPU over time through upsells
 LTV = (ARPU × Average Subscription Duration) - (Cost per User × Duration)
 
 Track by tier:
-- Starter LTV: ~$155
+- Core LTV: ~$155
 - Pro LTV: ~$271
 - Elite LTV: ~$741 (or $1,058 at $49.99 pricing)
 
@@ -1877,7 +1877,7 @@ Target: 48% (industry average for opt-out trials)
 
 **Upgrade Rate** (Tier Migration):
 ```
-Starter → Pro Upgrade Rate = (Starter Users Upgraded to Pro / Total Starter Users) × 100%
+Core → Pro Upgrade Rate = (Core Users Upgraded to Pro / Total Core Users) × 100%
 
 Target: 25% annually
 ```
@@ -1887,7 +1887,7 @@ Target: 25% annually
 Churn Rate = (Canceled Users This Month / Active Users Start of Month) × 100%
 
 Track by tier:
-- Starter: 6% churn/month (higher price sensitivity)
+- Core: 6% churn/month (higher price sensitivity)
 - Pro: 4% churn/month
 - Elite: 3% churn/month (committed users)
 
@@ -1898,7 +1898,7 @@ Target: <5% overall monthly churn
 ```
 Revenue Churn = (Revenue Lost from Cancellations / Total MRR Start of Month) × 100%
 
-More important than user churn (losing Elite user hurts more than Starter)
+More important than user churn (losing Elite user hurts more than Core)
 
 Target: <3% monthly revenue churn
 ```
@@ -1907,8 +1907,8 @@ Target: <3% monthly revenue churn
 ```
 NRR = ((MRR Start + Expansion - Contraction - Churn) / MRR Start) × 100%
 
-Expansion: Upgrades (Starter → Pro)
-Contraction: Downgrades (Pro → Starter)
+Expansion: Upgrades (Core → Pro)
+Contraction: Downgrades (Pro → Core)
 Churn: Cancellations
 
 Target: >100% (expansion exceeds churn)
@@ -1924,7 +1924,7 @@ Avg Workouts/User = Total Workouts Created / Total Users
 
 Benchmark by tier:
 - Free: 5-10 workouts/month (limited by 31-workout cap)
-- Starter: 15-20 workouts/month
+- Core: 15-20 workouts/month
 - Pro: 20-30 workouts/month
 - Elite: 25-40 workouts/month
 
@@ -1937,7 +1937,7 @@ OCR Usage % = (Users Who Used OCR / Total Users) × 100%
 
 Track quota hit rate:
 - Free: 80% hit 1 OCR/month limit (driving conversions)
-- Starter: 40% hit 3 OCR/week limit
+- Core: 40% hit 3 OCR/week limit
 - Pro: 10% hit 5 OCR/week limit (effectively unlimited)
 
 Target: 60%+ of users use OCR at least once/month
@@ -1984,7 +1984,7 @@ Target: Increase to 75% (scheduling increases retention by 30%)
 Annual % = (Annual Subscribers / Total Paid Users) × 100%
 
 Track by tier:
-- Starter: 25% annual
+- Core: 25% annual
 - Pro: 35% annual
 - Elite: 45% annual
 
@@ -2020,7 +2020,7 @@ Upgrade/Downgrade Ratio = Upgrades / Downgrades
 
 Healthy ratio: >3:1 (3 upgrades for every 1 downgrade)
 
-Current: ~4:1 (Starter → Pro upgrades common, Pro → Starter rare)
+Current: ~4:1 (Core → Pro upgrades common, Pro → Core rare)
 ```
 
 ---
@@ -2040,14 +2040,14 @@ USER METRICS
 Total Users:           10,000
 Free Users:            7,000 (70%)
 Paid Users:            3,000 (30%)
-  - Starter:           1,500 (50%)
+  - Core:           1,500 (50%)
   - Pro:               1,000 (33%)
   - Elite:             500 (17%)
 
 REVENUE METRICS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MRR:                   $40,475
-  - Starter MRR:       $11,985 (30%)
+  - Core MRR:       $11,985 (30%)
   - Pro MRR:           $14,990 (37%)
   - Elite MRR:         $24,995 (62%)**
 ARR:                   $485,700
@@ -2093,7 +2093,7 @@ NRR:                   105% (expansion > churn)
 
 **Strengths**:
 - Free tier perfectly calibrated (31 workouts creates urgency)
-- Starter/Pro tiers well-positioned vs competitors
+- Core/Pro tiers well-positioned vs competitors
 - Unique feature set (Instagram import + AI) justifies premium pricing
 - Break-even achieved at just 16 paid users (extremely low risk)
 
@@ -2109,7 +2109,7 @@ NRR:                   105% (expansion > churn)
 
 **1. Add Annual Pricing** (Expected Impact: +20% LTV)
 ```
-Starter:  $79.99/year  (save $16 vs monthly)
+Core:  $79.99/year  (save $16 vs monthly)
 Pro:      $149.99/year (save $30 vs monthly)
 Elite:    $499.99/year (save $100 vs monthly)
 ```
@@ -2121,7 +2121,7 @@ Elite:    $499.99/year (save $100 vs monthly)
 **3. Implement Unified AI Credits** (Expected Impact: +25% AI engagement)
 ```
 Free:    1 credit/month
-Starter: 15 credits/month
+Core: 15 credits/month
 Pro:     100 credits/month
 Elite:   300 credits/month (soft cap)
 
@@ -2139,7 +2139,7 @@ Enhancement = 1 credit, Generation = 2 credits
 **5. Launch with 30% Early Adopter Discount**
 ```
 First 1,000 Android users:
-Starter: $5.59/month (normally $7.99)
+Core: $5.59/month (normally $7.99)
 Pro:     $10.49/month (normally $14.99)
 Elite:   $34.99/month (normally $49.99)
 
@@ -2218,7 +2218,7 @@ Creates waitlist, validates demand, locks in revenue
 └──────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────┐
-│  STARTER TIER - $7.99/month or $79.99/year               │
+│  CORE TIER - $7.99/month or $79.99/year               │
 │  Perfect for casual trackers                             │
 ├──────────────────────────────────────────────────────────┤
 │  ✅ Unlimited workouts                                    │
@@ -2234,7 +2234,7 @@ Creates waitlist, validates demand, locks in revenue
 │  PRO TIER - $14.99/month or $149.99/year 🔥              │
 │  Most Popular - Perfect for serious athletes             │
 ├──────────────────────────────────────────────────────────┤
-│  ✅ Everything in Starter, plus:                          │
+│  ✅ Everything in Core, plus:                          │
 │  ✅ Unlimited OCR scans                                   │
 │  ✅ Unlimited workout image scans                         │
 │  ✅ 100 AI credits/month (NEW - increased from 60)        │

@@ -196,7 +196,7 @@ This document outlines the current state of the Spot Buddy project, what's been 
 
 #### Stripe Integration
 - ✅ Stripe SDK installed and configured
-- ✅ Subscription tier definitions (Free, Starter $4.99, Pro $9.99, Elite $19.99)
+- ✅ Subscription tier definitions (Free, Core $4.99, Pro $9.99, Elite $19.99)
 - ✅ Stripe checkout session creation (`/api/stripe/checkout`)
 - ✅ Stripe webhook handler for subscription lifecycle (`/api/stripe/webhook`)
 - ✅ Billing portal integration (`/api/stripe/portal`)
@@ -212,7 +212,7 @@ This document outlines the current state of the Spot Buddy project, what's been 
 
 #### Tier Features
 - ✅ Free: 2 OCR/week, 50 workouts max, basic tracking
-- ✅ Starter: 10 OCR/week, unlimited workouts, basic analytics
+- ✅ Core: 10 OCR/week, unlimited workouts, basic analytics
 - ✅ Pro: Unlimited OCR, AI features, advanced analytics
 - ✅ Elite: All Pro features + social + priority support
 
@@ -419,7 +419,7 @@ Q4 2025
 - **Free**: $0/month
   - 2 OCR/week, 50 workouts max, basic features
 
-- **Starter**: $4.99/month
+- **Core**: $4.99/month
   - 10 OCR/week, unlimited workouts, basic analytics
 
 - **Pro**: $9.99/month

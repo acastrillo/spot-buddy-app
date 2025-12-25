@@ -14,6 +14,16 @@ interface WorkoutStructure {
   values?: number[];
   rounds?: number;
   timeLimit?: number;
+  amrapBlocks?: AMRAPBlockInfo[];
+}
+
+interface AMRAPBlockInfo {
+  id: string;
+  label: string;
+  timeLimit: number;
+  order: number;
+  startLine: number;
+  endLine?: number;
 }
 
 interface ParsedExercise {
@@ -141,9 +151,119 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Parse time limit from various AMRAP formats
+ * Supports: "20", "20 min", "20 minutes", "90 sec", "90 seconds", "10:30"
+ */
+function parseTimeLimit(timeStr: string): number | null {
+  const lower = timeStr.toLowerCase().trim();
+
+  // MM:SS format (e.g., "10:30" = 630 seconds)
+  const timeFormatMatch = lower.match(/(\d+):(\d+)/);
+  if (timeFormatMatch) {
+    const minutes = parseInt(timeFormatMatch[1]);
+    const seconds = parseInt(timeFormatMatch[2]);
+    return minutes * 60 + seconds;
+  }
+
+  // Seconds format (e.g., "90 sec" = 90 seconds)
+  const secondsMatch = lower.match(/(\d+)\s*(?:sec|second|seconds|s\b)/);
+  if (secondsMatch) {
+    return parseInt(secondsMatch[1]);
+  }
+
+  // Minutes format (e.g., "20 min" = 1200 seconds)
+  const minutesMatch = lower.match(/(\d+)\s*(?:min|minute|minutes|m\b)?/);
+  if (minutesMatch) {
+    return parseInt(minutesMatch[1]) * 60;
+  }
+
+  return null;
+}
+
+/**
+ * Detect multiple AMRAP blocks in workout caption
+ * Returns array of blocks with section markers and time limits
+ */
+function detectAMRAPBlocks(caption: string): AMRAPBlockInfo[] {
+  const lines = caption.split('\n');
+  const blocks: AMRAPBlockInfo[] = [];
+
+  // Enhanced AMRAP patterns supporting multiple formats
+  const amrapPatterns = [
+    // "Part A: AMRAP 15 MIN" or "Part B - AMRAP 10"
+    /(?:part\s+([a-z])|section\s+([a-z]))[:\-\s]*amrap\s+(?:for|in)?\s*(.+)/i,
+    // "Block 1: AMRAP 20 MIN" or "Block 2 - AMRAP 10"
+    /(?:block|round)\s+(\d+)[:\-\s]*amrap\s+(?:for|in)?\s*(.+)/i,
+    // Emoji numbers: "1️⃣ AMRAP 15 MIN"
+    /([0-9️⃣①②③④⑤⑥⑦⑧⑨])\s*amrap\s+(?:for|in)?\s*(.+)/i,
+    // Standard: "AMRAP 20 MIN" with variations
+    /amrap\s+(?:for|in)?\s*(.+)/i,
+  ];
+
+  lines.forEach((line, lineIndex) => {
+    const lower = line.toLowerCase();
+
+    // Try each pattern
+    for (const pattern of amrapPatterns) {
+      const match = line.match(pattern);
+      if (!match) continue;
+
+      let label = 'AMRAP';
+      let timeStr = '';
+
+      if (match[1]) {
+        // Part A/B or Block number
+        label = match[1].toUpperCase().startsWith('PART')
+          ? `Part ${match[1].toUpperCase()}`
+          : `Block ${match[1]}`;
+        timeStr = match[2] || match[3] || '';
+      } else if (match[2]) {
+        // Emoji or other marker
+        label = `Block ${blocks.length + 1}`;
+        timeStr = match[2];
+      } else {
+        timeStr = match[1] || '';
+      }
+
+      const timeLimit = parseTimeLimit(timeStr);
+      if (timeLimit) {
+        blocks.push({
+          id: `block-${blocks.length + 1}`,
+          label: label || `Block ${blocks.length + 1}`,
+          timeLimit,
+          order: blocks.length + 1,
+          startLine: lineIndex,
+        });
+        break; // Found a match, move to next line
+      }
+    }
+  });
+
+  // Set end lines for each block (end of one block = start of next)
+  for (let i = 0; i < blocks.length - 1; i++) {
+    blocks[i].endLine = blocks[i + 1].startLine - 1;
+  }
+  if (blocks.length > 0) {
+    blocks[blocks.length - 1].endLine = lines.length - 1;
+  }
+
+  return blocks;
+}
+
 // Detect workout structure patterns
 function detectWorkoutStructure(caption: string): WorkoutStructure {
   const text = caption.toLowerCase();
+
+  // First, check for multi-block AMRAP workouts
+  const amrapBlocks = detectAMRAPBlocks(caption);
+  if (amrapBlocks.length > 1) {
+    // Multi-block AMRAP detected
+    return { type: 'amrap', amrapBlocks };
+  } else if (amrapBlocks.length === 1) {
+    // Single AMRAP block
+    return { type: 'amrap', timeLimit: amrapBlocks[0].timeLimit };
+  }
 
   // Ladder/pyramid patterns: "50-40-30-20-10", "21-15-9", "5-4-3-2-1"
   const ladderMatch = caption.match(/(\d+(?:-\d+){2,})/);
@@ -156,13 +276,6 @@ function detectWorkoutStructure(caption: string): WorkoutStructure {
   const roundsMatch = text.match(/(\d+)\s*(?:rounds?|rft|r)/);
   if (roundsMatch) {
     return { type: 'rounds', rounds: parseInt(roundsMatch[1]) };
-  }
-
-  // AMRAP patterns: "AMRAP 20", "20 min AMRAP"
-  const amrapMatch = text.match(/(?:amrap\s*(\d+)|(\d+)\s*(?:min|minute)?\s*amrap)/);
-  if (amrapMatch) {
-    const time = parseInt(amrapMatch[1] || amrapMatch[2]);
-    return { type: 'amrap', timeLimit: time };
   }
 
   // EMOM patterns: "EMOM 10", "Every minute for 10"

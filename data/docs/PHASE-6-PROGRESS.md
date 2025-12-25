@@ -412,7 +412,7 @@ Add Bedrock permissions to ECS task role:
 
 ### Per-User Monthly Costs (Phase 6 Only)
 
-**Starter Tier** ($4.99/month):
+**Core Tier** ($4.99/month):
 - 10 AI enhancements/month
 - Estimated cost: $0.10/user/month (10 × $0.01)
 - Profit margin: $4.89 (98%)

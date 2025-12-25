@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
@@ -18,9 +18,7 @@ import { authOptions } from "@/lib/auth-options";
  * const { userId } = auth;
  * ```
  */
-export async function getAuthenticatedUserId(
-  request?: NextRequest
-): Promise<{ userId: string } | { error: NextResponse }> {
+export async function getAuthenticatedUserId(): Promise<{ userId: string } | { error: NextResponse }> {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string })?.id;
 

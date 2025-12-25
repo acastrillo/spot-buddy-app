@@ -5,9 +5,9 @@
 
 echo "Updating Stripe products and pricing..."
 
-# 1. Update Starter → Core
+# 1. Update Core
 echo ""
-echo "1. Updating Starter product to Core..."
+echo "1. Updating Core product..."
 stripe products update prod_TUMTNghFco0wBj \
   --name="Spot Buddy Core" \
   --description="Unlimited workouts, 3 Instagram imports/week, 10 AI requests/month, PR tracking, body metrics"
@@ -106,7 +106,7 @@ echo "NEXT_PUBLIC_STRIPE_PRICE_ELITE=$ELITE_MONTHLY"
 echo "NEXT_PUBLIC_STRIPE_PRICE_ELITE_ANNUAL=$ELITE_ANNUAL"
 echo "=========================================="
 echo ""
-echo "Note: Old price IDs (Starter) can be archived after migration"
-echo "Old Starter Monthly: price_1SXNkhHdCvK1ftFggPNictAm"
+echo "Note: Old price IDs can be archived after migration"
+echo "Old Core Monthly: price_1SXNkhHdCvK1ftFggPNictAm"
 echo "Old Pro Monthly: price_1SXNlyHdCvK1ftFg2rKRnNDG"
 echo "Old Elite Monthly: price_1SXNmSHdCvK1ftFgibTcq5mI"

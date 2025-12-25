@@ -301,7 +301,7 @@ Attributes:
 - firstName: String
 - lastName: String
 - image: String (optional)
-- subscriptionTier: String (free/starter/pro/elite)
+- subscriptionTier: String (free/core/pro/elite)
 - subscriptionStatus: String
 - stripeCustomerId: String (optional)
 - stripeSubscriptionId: String (optional)

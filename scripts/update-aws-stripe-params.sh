@@ -24,17 +24,17 @@ if [ -z "$STRIPE_SECRET_KEY" ] || [ -z "$STRIPE_PUBLISHABLE_KEY" ] || [ -z "$STR
     exit 1
 fi
 
-if [ -z "$STRIPE_PRICE_STARTER" ] || [ -z "$STRIPE_PRICE_PRO" ] || [ -z "$STRIPE_PRICE_ELITE" ]; then
+if [ -z "$STRIPE_PRICE_CORE" ] || [ -z "$STRIPE_PRICE_PRO" ] || [ -z "$STRIPE_PRICE_ELITE" ]; then
     echo "❌ Error: Missing Stripe price IDs in .env.local"
     echo "   Make sure you've created products in Stripe and copied the price IDs!"
     exit 1
 fi
 
 # Check if price IDs look correct (should start with price_)
-if [[ ! "$STRIPE_PRICE_STARTER" =~ ^price_ ]] || [[ ! "$STRIPE_PRICE_PRO" =~ ^price_ ]] || [[ ! "$STRIPE_PRICE_ELITE" =~ ^price_ ]]; then
+if [[ ! "$STRIPE_PRICE_CORE" =~ ^price_ ]] || [[ ! "$STRIPE_PRICE_PRO" =~ ^price_ ]] || [[ ! "$STRIPE_PRICE_ELITE" =~ ^price_ ]]; then
     echo "❌ Error: Price IDs must start with 'price_' not 'prod_'"
     echo "   You may have copied Product IDs instead of Price IDs"
-    echo "   Starter: $STRIPE_PRICE_STARTER"
+    echo "   Core: $STRIPE_PRICE_CORE"
     echo "   Pro: $STRIPE_PRICE_PRO"
     echo "   Elite: $STRIPE_PRICE_ELITE"
     exit 1
@@ -64,7 +64,7 @@ update_param() {
 update_param "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
 update_param "STRIPE_PUBLISHABLE_KEY" "$STRIPE_PUBLISHABLE_KEY"
 update_param "STRIPE_WEBHOOK_SECRET" "$STRIPE_WEBHOOK_SECRET"
-update_param "STRIPE_PRICE_STARTER" "$STRIPE_PRICE_STARTER"
+update_param "STRIPE_PRICE_CORE" "$STRIPE_PRICE_CORE"
 update_param "STRIPE_PRICE_PRO" "$STRIPE_PRICE_PRO"
 update_param "STRIPE_PRICE_ELITE" "$STRIPE_PRICE_ELITE"
 

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTimerRunner, requestNotificationPermission } from '@/lib/hooks/useTimerRunner';
-import { TIMER_TEMPLATES, type TimerParams, type TimerTemplate } from '@/timers';
+import { TIMER_TEMPLATES } from '@/timers';
 
 // ============================================================================
 // Utility Functions

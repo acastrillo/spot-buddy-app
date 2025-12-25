@@ -45,7 +45,7 @@
 - **OCR**: Tesseract.js (client-side) + AWS Textract integration
 
 **External Services**:
-- **Stripe**: Subscription billing (4 tiers: Free, Starter, Pro, Elite)
+- **Stripe**: Subscription billing (4 tiers: Free, Core, Pro, Elite)
 - **AWS Bedrock**: AI features (Claude Sonnet 4.5) - Phase 6 backend ready
 - **Apify**: Instagram content scraping
 
@@ -188,7 +188,7 @@ spot-buddy-web/
 
 ### Phase 5: Subscription & Monetization ✅
 - **Stripe Integration**: Checkout sessions, webhooks, billing portal
-- **4 Tiers**: Free, Starter ($7.99/mo), Pro ($14.99/mo), Elite ($34.99/mo)
+- **4 Tiers**: Free, Core ($7.99/mo), Pro ($14.99/mo), Elite ($34.99/mo)
 - **Feature Gating**: OCR quota enforcement, upgrade prompts
 - **Usage Tracking**: OCR quota, workouts saved, AI requests (Phase 6)
 - **Subscription Page**: Pricing cards, current plan display, upgrade/downgrade
@@ -273,7 +273,7 @@ spot-buddy-web/
 | Tier | Price | Key Features |
 |------|-------|--------------|
 | **Free** | $0 | 15 workouts max, 1 OCR/week, 30-day history, basic stats |
-| **Starter** | $7.99/mo | Unlimited workouts, 5 OCR/week, 10 AI enhancements/month |
+| **Core** | $7.99/mo | Unlimited workouts, 5 OCR/week, 10 AI enhancements/month |
 | **Pro** | $14.99/mo | Unlimited OCR, 30 AI enhancements/month, 30 AI generations/month, personalized WOD |
 | **Elite** | $34.99/mo | 100 AI enhancements, 100 AI generations, AI Coach (Phase 7), Crew features |
 

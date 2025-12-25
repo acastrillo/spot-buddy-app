@@ -41,7 +41,6 @@ export default function BodyMetricsPage() {
   const [metrics, setMetrics] = useState<BodyMetric[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
   // Form state
   const [formData, setFormData] = useState<Partial<BodyMetric>>({

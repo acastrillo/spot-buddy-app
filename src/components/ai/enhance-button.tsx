@@ -19,7 +19,6 @@ interface EnhanceWithAIButtonProps {
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
   enhancementType?: 'full' | 'format' | 'details' | 'optimize';
-  showQuota?: boolean;
   aiEnhanced?: boolean;
 }
 
@@ -30,7 +29,6 @@ export function EnhanceWithAIButton({
   size = 'default',
   className = '',
   enhancementType = 'full',
-  showQuota = true,
   aiEnhanced = false,
 }: EnhanceWithAIButtonProps) {
   const router = useRouter();

@@ -4,8 +4,7 @@ import { NextResponse } from 'next/server';
 import { TextractClient, DetectDocumentTextCommand } from '@aws-sdk/client-textract';
 import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { dynamoDBUsers } from '@/lib/dynamodb';
-import { getQuotaLimit } from '@/lib/stripe';
-import type { SubscriptionTier } from '@/lib/feature-gating';
+import { getQuotaLimit, normalizeSubscriptionTier } from '@/lib/stripe';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 // Helper function to create Textract client lazily
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     // Get quota limit based on subscription tier
-    const tier = (user.subscriptionTier || 'free') as SubscriptionTier;
+    const tier = normalizeSubscriptionTier(user.subscriptionTier);
     const weeklyLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
 
     // Check if user has unlimited quota (null limit means unlimited for pro/elite)

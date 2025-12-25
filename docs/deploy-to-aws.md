@@ -26,7 +26,7 @@ MSYS_NO_PATHCONV=1 aws logs tail /ecs/spotter-app --follow --region us-east-1
 
 ## What's updated:
 - ✅ Stripe API keys (correct account)
-- ✅ Stripe price IDs (Starter, Pro, Elite)
+- ✅ Stripe price IDs (Core, Pro, Elite)
 - ✅ Stripe webhook secret
 - ✅ User details bug fixed
 - ✅ Sign out button fixed
@@ -35,6 +35,6 @@ MSYS_NO_PATHCONV=1 aws logs tail /ecs/spotter-app --follow --region us-east-1
 1. Go to https://spotter.cannashieldct.com
 2. Sign in with Google/Facebook
 3. Navigate to /subscription
-4. Try subscribing to Starter ($7.99)
+4. Try subscribing to Core ($7.99)
 5. Use test card: 4242 4242 4242 4242
 6. Verify subscription updates

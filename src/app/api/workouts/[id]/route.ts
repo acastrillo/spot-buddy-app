@@ -41,8 +41,41 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, exercises, totalDuration, difficulty, tags } =
-      body;
+    const {
+      title,
+      description,
+      exercises,
+      totalDuration,
+      difficulty,
+      tags,
+      workoutType,
+      structure,
+      timerConfig,
+      blockTimers,
+      aiEnhanced,
+      aiNotes,
+      muscleGroups,
+    } = body;
+
+    const hasUpdates = [
+      title,
+      description,
+      exercises,
+      totalDuration,
+      difficulty,
+      tags,
+      workoutType,
+      structure,
+      timerConfig,
+      blockTimers,
+      aiEnhanced,
+      aiNotes,
+      muscleGroups,
+    ].some((value) => value !== undefined);
+
+    if (!hasUpdates) {
+      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
+    }
 
     await dynamoDBWorkouts.update(userId, id, {
       title,
@@ -51,6 +84,13 @@ export async function PATCH(
       totalDuration,
       difficulty,
       tags,
+      workoutType,
+      structure,
+      timerConfig,
+      blockTimers,
+      aiEnhanced,
+      aiNotes,
+      muscleGroups,
     });
 
     return NextResponse.json({ success: true });

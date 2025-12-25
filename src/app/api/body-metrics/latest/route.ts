@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBBodyMetrics } from "@/lib/dynamodb";
 
 // GET /api/body-metrics/latest - Get the most recent body metric entry
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) return auth.error;

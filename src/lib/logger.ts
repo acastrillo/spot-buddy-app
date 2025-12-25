@@ -125,7 +125,6 @@ class Logger {
     duration: number,
     metadata?: LogMetadata
   ) {
-    const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
     this.info(`${method} ${path} ${status} ${duration}ms`, {
       ...metadata,
       method,

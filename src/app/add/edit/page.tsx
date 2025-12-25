@@ -489,7 +489,7 @@ export default function EditWorkoutPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Workout Cards</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Long-press any card to edit. Empty fields auto-hide.
+                    Tap a card to edit; drag the handle to reorder. Empty fields auto-hide.
                   </p>
                 </CardHeader>
                 <CardContent>

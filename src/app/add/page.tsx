@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Link2,
   FileText,
@@ -27,6 +35,7 @@ import { getQuotaLimit } from "@/lib/stripe"
 import { UpgradePrompt } from "@/components/subscription/upgrade-prompt"
 import { WorkoutEnhancerButton } from "@/components/ai/workout-enhancer-button"
 import Link from "next/link"
+import Image from "next/image"
 
 const formatEnhancedWorkoutText = (enhancedWorkout: any): string => {
   if (!enhancedWorkout) return ""
@@ -123,6 +132,8 @@ export default function ImportWorkoutPage() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isProcessingOCR, setIsProcessingOCR] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
+  const [workoutType, setWorkoutType] = useState<'regular' | 'amrap'>('regular')
+  const [amrapTimeLimit, setAmrapTimeLimit] = useState<number>(12) // Default 12 minutes
 
   const setWorkoutContent = useCallback((value: unknown) => {
     if (typeof value === "string") {
@@ -234,7 +245,6 @@ export default function ImportWorkoutPage() {
 
       // Update user quota in store (refresh session)
       if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).ocrQuotaUsed = data.quotaUsed
       }
 
@@ -364,7 +374,7 @@ export default function ImportWorkoutPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             caption: workoutContent,
             url: activeTab === 'url' ? url : undefined
           }),
@@ -373,6 +383,17 @@ export default function ImportWorkoutPage() {
         if (processResponse.ok) {
           workoutToEdit = await processResponse.json()
           setWorkoutData(workoutToEdit)
+        }
+      }
+
+      // Add AMRAP data to llmData if AMRAP is selected
+      if (workoutType === 'amrap' && workoutToEdit) {
+        workoutToEdit = {
+          ...workoutToEdit,
+          workoutType: 'amrap',
+          structure: {
+            timeLimit: amrapTimeLimit * 60 // Convert minutes to seconds
+          }
         }
       }
 
@@ -389,10 +410,10 @@ export default function ImportWorkoutPage() {
       }
 
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-      
+
       // Navigate to edit page
       router.push('/add/edit')
-      
+
     } catch (error) {
       console.error('Processing error:', error)
       alert('Failed to process workout')
@@ -426,7 +447,7 @@ export default function ImportWorkoutPage() {
                 <span className="font-semibold">Import Workout</span>
               </div>
               <p className="text-sm text-text-secondary">
-                Choose how you'd like to import your workout
+                Choose how you&apos;d like to import your workout
               </p>
             </CardHeader>
             <CardContent className="pt-0">
@@ -598,7 +619,7 @@ export default function ImportWorkoutPage() {
                           return (
                             <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                               <p className="text-sm text-red-500 mb-2">
-                                You've used all your OCR scans this week. {tier === 'free' ? 'Upgrade to get more!' : 'Your quota resets weekly.'}
+                                You&apos;ve used all your OCR scans this week. {tier === 'free' ? 'Upgrade to get more!' : 'Your quota resets weekly.'}
                               </p>
                               {tier === 'free' && (
                                 <Link href="/subscription">
@@ -628,10 +649,13 @@ export default function ImportWorkoutPage() {
                         {imagePreview ? (
                           <div className="space-y-4">
                             <div className="relative">
-                              <img
+                              <Image
                                 src={imagePreview}
                                 alt="Workout preview"
-                                className="max-h-64 mx-auto rounded-lg"
+                                className="max-h-64 mx-auto rounded-lg object-contain"
+                                width={800}
+                                height={800}
+                                priority
                               />
                               <Button
                                 variant="destructive"
@@ -733,7 +757,7 @@ export default function ImportWorkoutPage() {
                       </div>
 
                       <p className="text-sm text-text-secondary mt-2">
-                        Upload a screenshot of your workout and we'll extract the text using OCR
+                        Upload a screenshot of your workout and we&apos;ll extract the text using OCR
                       </p>
                     </div>
                   </div>
@@ -742,25 +766,81 @@ export default function ImportWorkoutPage() {
                 <TabsContent value="manual">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-2">
+                      <Label htmlFor="workout-title" className="text-text-primary">
                         Workout Title
-                      </label>
+                      </Label>
                       <Input
+                        id="workout-title"
                         placeholder="e.g., Upper Body Strength, AMRAP 20"
                         value={workoutTitle}
                         onChange={(e) => setWorkoutTitle(e.target.value)}
+                        className="mt-2"
                       />
                     </div>
-                    
+
                     <div>
-                      <label className="block text-sm font-medium text-text-primary mb-2">
+                      <Label htmlFor="workout-type" className="text-text-primary">
+                        Workout Type
+                      </Label>
+                      <Select
+                        value={workoutType}
+                        onValueChange={(value: 'regular' | 'amrap') => setWorkoutType(value)}
+                      >
+                        <SelectTrigger id="workout-type" className="mt-2">
+                          <SelectValue placeholder="Select workout type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="regular">Regular</SelectItem>
+                          <SelectItem value="amrap">AMRAP (As Many Rounds As Possible)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-text-secondary mt-1">
+                        Choose workout format. AMRAP workouts are time-based challenges.
+                      </p>
+                    </div>
+
+                    {workoutType === 'amrap' && (
+                      <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
+                        <div>
+                          <Label htmlFor="time-limit" className="text-text-primary">
+                            Time Limit (minutes)
+                          </Label>
+                          <Input
+                            id="time-limit"
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={amrapTimeLimit}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1
+                              setAmrapTimeLimit(Math.max(1, Math.min(120, value)))
+                            }}
+                            className="mt-2"
+                          />
+                          <p className="text-xs text-text-secondary mt-1">
+                            Set the time limit for your AMRAP workout (1-120 minutes)
+                          </p>
+                        </div>
+                        <div className="text-sm text-primary space-y-1">
+                          <p className="font-medium">AMRAP Format:</p>
+                          <p className="text-xs text-text-secondary">
+                            Complete as many rounds of the exercises as possible within the time limit.
+                            The timer will count down, and you will track how many rounds you complete.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="workout-content" className="text-text-primary">
                         Workout Content
-                      </label>
+                      </Label>
                       <Textarea
-                        placeholder="Your workout content will appear here..."
+                        id="workout-content"
+                        placeholder="Enter your exercises, one per line...&#10;Example:&#10;10 Push-ups&#10;15 Squats&#10;20 Sit-ups"
                         value={workoutContent}
                         onChange={(e) => setWorkoutContent(e.target.value)}
-                        className="min-h-[200px]"
+                        className="min-h-[200px] mt-2"
                       />
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-sm text-text-secondary">

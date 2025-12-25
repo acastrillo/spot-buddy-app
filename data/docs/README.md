@@ -1,61 +1,103 @@
 # Spot Buddy - Fitness Tracking App
 
 [![Production](https://img.shields.io/badge/production-live-green)](https://spotter.cannashieldct.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15.5.1-black)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5.7-black)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.1.0-blue)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![Stripe](https://img.shields.io/badge/Stripe-19.1.0-blueviolet)](https://stripe.com/)
+[![AWS](https://img.shields.io/badge/AWS-Bedrock-orange)](https://aws.amazon.com/bedrock/)
 
-Spot Buddy is a modern fitness tracking application that lets users save Instagram workouts, upload workout screenshots with OCR text extraction, and track their fitness progress across devices. Built with Next.js 15, React 19, and deployed on AWS infrastructure.
+Spot Buddy is a modern fitness tracking application that lets users save Instagram workouts, upload workout screenshots with OCR text extraction, and track their fitness progress across devices with AI-powered features. Built with Next.js 15.5.7, React 19.1.0, and deployed on AWS infrastructure.
 
 🌐 **Live App**: [https://spotter.cannashieldct.com](https://spotter.cannashieldct.com)
 
 ## 🎯 Features
 
-### ✅ Current Features (v1.1)
+### ✅ Current Features (v1.5)
 
-- **Authentication**: Secure login with AWS Cognito (Google OAuth supported)
-- **Workout Management**: Save, edit, and delete workouts with full CRUD operations
-- **Cross-Device Sync**: DynamoDB-backed persistence with real-time synchronization
-- **Instagram Workouts**: Parse and import workout routines from Instagram posts
-- **OCR Processing**: Extract workout text from images using Tesseract.js and AWS Textract
-- **Workout Library**: Browse and search your saved workouts
-- **Workout Details**: View individual workouts with exercise breakdowns
-- **Personal Records (PRs)**: Automatic PR detection with 7 different 1RM calculation formulas
-- **Body Metrics Tracking**: Weight, body fat %, and 8 body measurements with progression charts
-- **Stats & Progress**: Comprehensive tracking pages for PRs and body metrics
+#### Core Functionality
+- **Authentication**: Secure AWS Cognito with Google OAuth federated sign-in
+- **Workout Management**: Full CRUD operations with cross-device sync via DynamoDB
+- **Instagram Integration**: Parse and import workout routines from Instagram posts
+- **OCR Processing**: Extract workout text from images using AWS Textract
 - **Offline Support**: LocalStorage cache for offline access
 - **Dark Theme**: Fitness-focused dark UI with cyan/purple accents
 
+#### Workout Features
+- **AMRAP Workouts** (New): As Many Rounds As Possible workout type with time limits
+  - Manual creation with configurable time limits (1-120 min)
+  - Specialized session view with round tracking
+  - Multi-block AMRAP support
+- **Workout Notes**: Add notes when completing workouts
+- **Card Carousel**: Swipeable card-based workout session view with research-based UX
+
+#### Calendar & Scheduling (Phase 2 ✅)
+- **Calendar View**: Visual calendar with workout indicators
+- **Scheduling**: Schedule workouts for future dates
+- **Completion Tracking**: Mark workouts as completed with dates
+- **Recent Activity**: Last 24 hours and completion history
+
+#### Smart Timers (Phase 3 ✅)
+- **Interval Timer**: Customizable countdown timer (1-60 min)
+- **HIIT Timer**: High-Intensity Interval Training with presets (Tabata, EMOM, etc.)
+- **Rest Timer Widget**: Floating timer on workout pages with quick presets
+
+#### Stats & Progress (Phase 4 ✅)
+- **Personal Records**: Automatic PR detection with 7 different 1RM formulas
+- **Body Metrics**: Weight, body fat %, and 8 body measurements
+- **Progression Charts**: 30/90-day trends and analytics
+- **Exercise History**: Track performance by exercise and muscle group
+
+#### Subscriptions (Phase 5 ✅)
+- **Free Tier**: 15 workouts max, 1 OCR/week, 30-day history
+- **Core** ($7.99/mo): Unlimited workouts, 5 OCR/week, 10 AI enhancements/month
+- **Pro** ($14.99/mo): Unlimited OCR, 30 AI enhancements + generations/month
+- **Elite** ($34.99/mo): 100 AI requests/month, AI Coach, Crew features
+- **Stripe Integration**: Secure payment processing and subscription management
+
+#### AI Features (Phase 6 - 40% Complete)
+- ✅ **Smart Workout Parser**: AI-powered workout enhancement with Claude Sonnet 4.5
+  - Clean up messy OCR text
+  - Standardize exercise names
+  - Suggest weights based on PRs
+  - Add form cues and safety tips
+- 🚧 **Training Profile**: Personalized fitness profile
+- 🚧 **AI Workout Generator**: Natural language workout creation
+- 🚧 **Workout of the Day**: Daily personalized workout suggestions
+
 ### 📋 Coming Soon (Roadmap)
 
-- **Calendar View**: Schedule and track workouts by date (Phase 2)
-- **Smart Timers**: Interval timers for workouts with audio alerts (Phase 3)
-- **Social Features**: Connect with workout crews, share routines (Phase 5)
-- **Subscription Plans**: Free, Core, Pro, and Elite tiers with Stripe (Phase 5)
-- **AI Analysis**: Workout recommendations with Amazon Bedrock (Phase 6+)
+- **Complete Phase 6**: Finish remaining AI features (Training Profile, Generator, WOD)
+- **Android App**: Native Kotlin app with Instagram share sheet integration (Q1 2025)
+- **iOS App**: Native Swift app (after Android launch)
+- **AI Coach**: Interactive fitness coaching with daily check-ins (Phase 7)
+- **Crew Features**: Social workout tracking and leaderboards (Phase 8)
 - **Apple Health Integration**: Sync with health data and wearables (Phase 8+)
-- **Mobile App**: React Native app for iOS/Android (Phase 7+)
 
 ## 🏗️ Tech Stack
 
 ### Frontend
-- **Framework**: Next.js 15.5.1 (App Router)
-- **UI Library**: React 19
-- **Language**: TypeScript 5.7
-- **Styling**: Tailwind CSS with custom dark theme
+- **Framework**: Next.js 15.5.7 (App Router) with Turbopack dev mode
+- **UI Library**: React 19.1.0
+- **Language**: TypeScript 5.x
+- **Styling**: Tailwind CSS 3.4.17 with custom dark theme
 - **UI Components**: shadcn/ui (New York style)
-- **State Management**: Zustand + NextAuth session
-- **Forms**: React Hook Form + Zod validation
-- **Icons**: Lucide React
+- **State Management**: Zustand 5.0.8 + NextAuth session
+- **Forms**: React Hook Form 7.63.0 + Zod 3.25.76 validation
+- **Icons**: Lucide React 0.542.0
+- **Charts**: Recharts 3.2.1
 
 ### Backend & Infrastructure
 - **Hosting**: AWS ECS Fargate (containerized)
-- **Database**: AWS DynamoDB (production), SQLite + Prisma (development)
-- **Authentication**: AWS Cognito with NextAuth.js
+- **Database**: AWS DynamoDB (production), SQLite + Prisma ORM 6.16.1 (development)
+- **Authentication**: NextAuth.js 4.24.7 with AWS Cognito + Google OAuth
+- **Payments**: Stripe 19.1.0 with @stripe/stripe-js 8.0.0
+- **AI**: AWS Bedrock Runtime 3.916.0 (Claude Sonnet 4.5)
 - **Load Balancer**: Application Load Balancer with HTTPS
 - **DNS**: Route53 (spotter.cannashieldct.com)
 - **Container Registry**: AWS ECR
-- **OCR**: Tesseract.js + AWS Textract integration
+- **OCR**: AWS Textract 3.883.0
+- **Rate Limiting**: Upstash Redis 1.35.6 + Upstash Ratelimit 2.0.6
 
 ### Developer Tools
 - **Package Manager**: npm
@@ -93,8 +135,12 @@ Spot Buddy is a modern fitness tracking application that lets users save Instagr
 
    Edit `.env` and configure:
    - `DATABASE_URL` - SQLite database path (dev mode)
-   - `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, `COGNITO_USER_POOL_ID`
-   - `AWS_REGION`, `AUTH_SECRET`, `COGNITO_ISSUER_URL`
+   - `AUTH_SECRET`, `NEXTAUTH_URL`
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+   - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
+   - `EMAIL_SERVER_HOST`, `EMAIL_SERVER_PORT`, `EMAIL_SERVER_USER`, `EMAIL_SERVER_PASSWORD`, `EMAIL_FROM`
+   - `AWS_REGION` (for DynamoDB/Textract/S3)
+   - `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, `COGNITO_USER_POOL_ID`, `COGNITO_ISSUER_URL` (only if using legacy Cognito route)
    - `DYNAMODB_USERS_TABLE`, `DYNAMODB_WORKOUTS_TABLE`
    - `APIFY_API_TOKEN` (for Instagram scraping)
 
@@ -214,10 +260,9 @@ See [prisma/schema.prisma](prisma/schema.prisma) for full schema with User, Acco
 
 ## 🔐 Authentication Flow
 
-1. User clicks login → redirected to AWS Cognito hosted UI
-2. Cognito validates credentials (or Google OAuth)
-3. Cognito returns to callback with authorization code
-4. NextAuth.js exchanges code for tokens
+1. User clicks login → redirected to selected NextAuth provider (Google/Facebook) or submits credentials
+2. Provider validates credentials/OAuth and returns to NextAuth callback
+3. NextAuth.js exchanges code for tokens (OAuth) or validates credentials
 5. JWT callback syncs user to DynamoDB and fetches subscription data
 6. Session callback shapes user object for client
 7. Frontend accesses auth state via `useAuthStore` hook
@@ -266,12 +311,10 @@ aws ecs update-service --cluster spotter-cluster --service spotter-service --for
 
 ## 🧪 Testing
 
-Currently no automated tests configured. To add:
+Playwright E2E tests are configured. To run them:
 
 ```bash
-# Recommended testing stack
-npm install --save-dev jest @testing-library/react @testing-library/jest-dom
-npm install --save-dev @playwright/test  # For E2E
+npx playwright test
 ```
 
 ## 🤝 Contributing
@@ -303,26 +346,48 @@ Contributions are welcome! Please follow these guidelines:
 
 See [PROJECT-STATE.md](PROJECT-STATE.md) for detailed roadmap, MVP requirements, and north star goals.
 
-### Phase 1: Core Persistence ✅ (Complete - Oct 2025)
+### Phase 1: Core Persistence ✅ (Complete - October 2024)
 - DynamoDB workout CRUD operations
 - Cross-device synchronization
 - API routes for workout management
+- Authentication with AWS Cognito
 
-### Phase 4: Enhanced Stats & PRs ✅ (Complete - Jan 6, 2025)
+### Phase 2: Calendar & Scheduling ✅ (Complete - January 7, 2025)
+- Calendar view with workout scheduling
+- Date range queries and filtering
+- Scheduled/completed workout indicators
+- Recent activity feed
+
+### Phase 3: Smart Timers ✅ (Complete - January 7, 2025)
+- Interval timer with custom durations
+- HIIT timer with presets (Tabata, EMOM, etc.)
+- Rest timer widget on workout pages
+- Web Audio API for notifications
+
+### Phase 4: Enhanced Stats & PRs ✅ (Complete - January 6, 2025)
 - Personal records tracking with automatic detection
 - 7 different 1RM calculation formulas
 - Body metrics tracking (weight, measurements, body fat)
 - Progression charts and analytics
 
-### Phase 2: Calendar & Scheduling (Next)
-- Calendar view with workout scheduling
-- Date range queries and filtering
-- Workout reminders
+### Phase 5: Subscription & Monetization ✅ (Complete - January 8, 2025)
+- Stripe payment integration
+- Four subscription tiers (Free, Core, Pro, Elite)
+- Feature gating and usage quota tracking
+- Subscription management UI
 
-### Phase 3: Enhanced Workouts
-- Smart workout timers (interval, HIIT, rest)
-- AI-powered features (Bedrock integration)
-- Enhanced OCR with AWS Textract
+### Phase 6: AI-Powered Features 🚧 (In Progress - 40% Complete)
+- ✅ AWS Bedrock client infrastructure
+- ✅ Smart Workout Parser with Claude Sonnet 4.5
+- 🚧 Training Profile system
+- 🚧 AI Workout Generator
+- 🚧 Workout of the Day (WOD)
+
+### Phase 7-8: Future Phases (Planned)
+- **Phase 7**: AI Coach with daily check-ins
+- **Phase 8**: Crew features and social workout tracking
+- **Android App**: Native Kotlin with Instagram share sheet (Q1 2025)
+- **iOS App**: Native Swift (after Android)
 
 See full roadmap in [ROADMAP.md](ROADMAP.md).
 

@@ -81,7 +81,7 @@ async function createCompletionsTable() {
     });
 
     console.log("Creating table...");
-    const createResponse = await client.send(createCommand);
+    await client.send(createCommand);
 
     console.log("⏳ Waiting for table to become active...");
     await waitUntilTableExists(

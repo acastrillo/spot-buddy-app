@@ -32,7 +32,7 @@ foreach ($key in $requiredKeys) {
 }
 
 # Verify price IDs
-$priceKeys = @('STRIPE_PRICE_STARTER', 'STRIPE_PRICE_PRO', 'STRIPE_PRICE_ELITE')
+$priceKeys = @('STRIPE_PRICE_CORE', 'STRIPE_PRICE_PRO', 'STRIPE_PRICE_ELITE')
 foreach ($key in $priceKeys) {
     if (-not $envVars.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($envVars[$key])) {
         Write-Host "❌ Error: Missing $key in .env.local" -ForegroundColor Red
@@ -82,7 +82,7 @@ try {
     Update-SsmParameter "STRIPE_SECRET_KEY" $envVars['STRIPE_SECRET_KEY']
     Update-SsmParameter "STRIPE_PUBLISHABLE_KEY" $envVars['STRIPE_PUBLISHABLE_KEY']
     Update-SsmParameter "STRIPE_WEBHOOK_SECRET" $envVars['STRIPE_WEBHOOK_SECRET']
-    Update-SsmParameter "STRIPE_PRICE_STARTER" $envVars['STRIPE_PRICE_STARTER']
+    Update-SsmParameter "STRIPE_PRICE_CORE" $envVars['STRIPE_PRICE_CORE']
     Update-SsmParameter "STRIPE_PRICE_PRO" $envVars['STRIPE_PRICE_PRO']
     Update-SsmParameter "STRIPE_PRICE_ELITE" $envVars['STRIPE_PRICE_ELITE']
 

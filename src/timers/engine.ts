@@ -17,6 +17,10 @@ import type {
   SegmentKind,
 } from './types';
 
+function assertUnreachable(value: never): never {
+  throw new Error(`Unsupported timer params kind: ${(value as any)?.kind ?? 'unknown'}`);
+}
+
 // ============================================================================
 // Segment ID Generation
 // ============================================================================
@@ -188,11 +192,7 @@ export function buildSegmentsFromParams(params: TimerParams): TimerSegment[] {
     case 'TABATA':
       return buildTabataSegments(params);
     default: {
-      // Exhaustiveness check
-      const _exhaustiveCheck: never = params;
-      throw new Error(
-        `Unsupported timer params kind: ${(params as any).kind}`
-      );
+      return assertUnreachable(params as never);
     }
   }
 }

@@ -9,13 +9,6 @@ import { checkRateLimit } from '@/lib/rate-limit';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-// Magic bytes for image file validation
-const IMAGE_SIGNATURES = {
-  jpeg: [0xFF, 0xD8, 0xFF],
-  png: [0x89, 0x50, 0x4E, 0x47],
-  webp: [0x52, 0x49, 0x46, 0x46],
-};
-
 function validateImageSignature(header: Uint8Array): boolean {
   // Check JPEG
   if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) return true;

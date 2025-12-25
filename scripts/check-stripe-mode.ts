@@ -68,8 +68,9 @@ async function main() {
       console.log('- Should say "Live mode" if using live API key');
     }
 
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error:', message);
   }
 }
 

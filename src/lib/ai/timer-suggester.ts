@@ -202,6 +202,7 @@ export async function suggestTimerForWorkout(
     const cleaned = bedrockResponse.content.trim();
     suggestion = JSON.parse(cleaned) as TimerSuggestion;
   } catch (error) {
+    console.error('[Timer Suggester] Parse error:', error);
     console.error('[Timer Suggester] Failed to parse AI response:', bedrockResponse.content);
     throw new Error('Invalid JSON response from timer suggester agent');
   }

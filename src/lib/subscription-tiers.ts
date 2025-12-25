@@ -2,6 +2,35 @@
 // This file is safe to import on both client and server
 // Updated: December 2024 - New 3-tier structure with annual pricing
 
+const coreTier = {
+  name: 'Core',
+  price: 8.99,
+  annualPrice: 69.99, // $5.83/month when billed annually (22% discount)
+  // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
+  priceId: process.env.STRIPE_PRICE_CORE || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE,
+  annualPriceId: process.env.STRIPE_PRICE_CORE_ANNUAL || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL,
+  features: [
+    'Unlimited workouts',
+    '3 Instagram imports per week',
+    '10 AI requests per month',
+    'Unlimited history',
+    'PR tracking',
+    'Body metrics',
+    'Basic analytics',
+    'Calendar scheduling',
+  ],
+  limits: {
+    workoutsWeekly: null, // Unlimited
+    instagramSavesWeekly: 3, // 3 per week
+    workoutsMax: null, // Unlimited
+    aiRequestsMonthly: 10,
+    historyDays: null, // Unlimited
+    aiFeatures: true,
+    advancedAnalytics: false,
+    ocrQuotaWeekly: 10,
+  },
+} as const
+
 export const SUBSCRIPTION_TIERS = {
   free: {
     name: 'Free',
@@ -26,35 +55,10 @@ export const SUBSCRIPTION_TIERS = {
       historyDays: 90, // 90-day history limit
       aiFeatures: true, // Limited AI access (1/month)
       advancedAnalytics: false,
+      ocrQuotaWeekly: 2,
     },
   },
-  core: {
-    name: 'Core',
-    price: 8.99,
-    annualPrice: 69.99, // $5.83/month when billed annually (22% discount)
-    // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
-    priceId: process.env.STRIPE_PRICE_CORE || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE,
-    annualPriceId: process.env.STRIPE_PRICE_CORE_ANNUAL || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL,
-    features: [
-      'Unlimited workouts',
-      '3 Instagram imports per week',
-      '10 AI requests per month',
-      'Unlimited history',
-      'PR tracking',
-      'Body metrics',
-      'Basic analytics',
-      'Calendar scheduling',
-    ],
-    limits: {
-      workoutsWeekly: null, // Unlimited
-      instagramSavesWeekly: 3, // 3 per week
-      workoutsMax: null, // Unlimited
-      aiRequestsMonthly: 10,
-      historyDays: null, // Unlimited
-      aiFeatures: true,
-      advancedAnalytics: false,
-    },
-  },
+  core: coreTier,
   pro: {
     name: 'Pro',
     price: 13.99,
@@ -82,6 +86,7 @@ export const SUBSCRIPTION_TIERS = {
       advancedAnalytics: true,
       workoutTemplates: true,
       dataExport: true,
+      ocrQuotaWeekly: null,
     },
   },
   elite: {
@@ -113,31 +118,49 @@ export const SUBSCRIPTION_TIERS = {
       customTemplates: true,
       apiAccess: false, // Coming soon
       workoutSharing: true,
+      ocrQuotaWeekly: null,
     },
   },
 } as const
 
 export type SubscriptionTier = keyof typeof SUBSCRIPTION_TIERS
+export type SubscriptionTierInput = SubscriptionTier | 'starter' | null | undefined
+
+export function normalizeSubscriptionTier(tier: SubscriptionTierInput): SubscriptionTier {
+  if (!tier) return 'free'
+  if (tier === 'starter') return 'core'
+  return Object.prototype.hasOwnProperty.call(SUBSCRIPTION_TIERS, tier) ? tier : 'free'
+}
 
 // Helper to check if user has access to a feature
 export function hasFeatureAccess(
-  tier: SubscriptionTier,
+  tier: SubscriptionTierInput,
   feature: keyof typeof SUBSCRIPTION_TIERS.pro.limits
 ): boolean {
-  const tierLimits = SUBSCRIPTION_TIERS[tier].limits as any
+  const normalizedTier = normalizeSubscriptionTier(tier)
+  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as any
   return tierLimits[feature] === true || tierLimits[feature] === null
 }
 
 // Helper to get quota limit for a tier
 export function getQuotaLimit(
-  tier: SubscriptionTier,
-  quota: 'workoutsWeekly' | 'instagramSavesWeekly' | 'instagramSavesMonthly' | 'workoutsMax' | 'aiRequestsMonthly' | 'historyDays'
+  tier: SubscriptionTierInput,
+  quota:
+    | 'workoutsWeekly'
+    | 'instagramSavesWeekly'
+    | 'instagramSavesMonthly'
+    | 'workoutsMax'
+    | 'aiRequestsMonthly'
+    | 'historyDays'
+    | 'ocrQuotaWeekly'
 ): number | null {
-  const tierLimits = SUBSCRIPTION_TIERS[tier].limits as any
+  const normalizedTier = normalizeSubscriptionTier(tier)
+  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as any
   return tierLimits[quota] ?? null
 }
 
 // Helper to get AI request limit for a tier
-export function getAIRequestLimit(tier: SubscriptionTier): number {
-  return SUBSCRIPTION_TIERS[tier].limits.aiRequestsMonthly ?? 0
+export function getAIRequestLimit(tier: SubscriptionTierInput): number {
+  const normalizedTier = normalizeSubscriptionTier(tier)
+  return SUBSCRIPTION_TIERS[normalizedTier].limits.aiRequestsMonthly ?? 0
 }

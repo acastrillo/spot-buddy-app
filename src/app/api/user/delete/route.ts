@@ -4,16 +4,15 @@
  * DELETE /api/user/delete - Permanently delete user account and all associated data
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { dynamoDBUsers, dynamoDBWorkouts } from '@/lib/dynamodb';
-import { signOut } from 'next-auth/react';
 
 /**
  * DELETE /api/user/delete
  * Permanently delete user account and all associated data
  */
-export async function DELETE(req: NextRequest) {
+export async function DELETE() {
   try {
     // SECURITY: Authenticate user
     const auth = await getAuthenticatedUserId();

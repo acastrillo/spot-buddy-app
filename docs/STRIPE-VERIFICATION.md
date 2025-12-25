@@ -22,7 +22,7 @@ Verify these price IDs exist and are active:
 
 | Tier | Price ID | Monthly Price |
 |------|----------|---------------|
-| Starter | `price_1SGJLsHqcH7hy1ecgUGCqe7U` | $7.99 |
+| Core | `price_1SGJLsHqcH7hy1ecgUGCqe7U` | $7.99 |
 | Pro | `price_1SGJTsHqcH7hy1ec8LE7k3Ix` | $14.99 |
 | Elite | `price_1SGJWyHqcH7hy1ecqZuX5hFW` | $34.99 |
 
@@ -71,7 +71,7 @@ When deploying to production:
    - `STRIPE_SECRET_KEY` (starts with `sk_live_`)
    - `STRIPE_PUBLISHABLE_KEY` (starts with `pk_live_`)
    - `STRIPE_WEBHOOK_SECRET` (from production webhook)
-   - `STRIPE_PRICE_STARTER` (production price ID)
+   - `STRIPE_PRICE_CORE` (production price ID)
    - `STRIPE_PRICE_PRO` (production price ID)
    - `STRIPE_PRICE_ELITE` (production price ID)
 
@@ -79,9 +79,9 @@ When deploying to production:
 
 After verifying the above, test these scenarios:
 
-- [ ] New user subscribes to Starter tier
-- [ ] User upgrades from Starter to Pro
-- [ ] User downgrades from Pro to Starter
+- [ ] New user subscribes to Core tier
+- [ ] User upgrades from Core to Pro
+- [ ] User downgrades from Pro to Core
 - [ ] User cancels subscription
 - [ ] Payment fails (use test card `4000 0000 0000 0341`)
 - [ ] Payment succeeds after failure

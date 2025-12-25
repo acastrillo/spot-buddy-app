@@ -130,7 +130,7 @@ Your app needs to handle return from browser after checkout:
 // screens/SubscriptionScreen.tsx
 import { Linking } from 'react-native';
 
-async function handleUpgrade(tier: 'starter' | 'pro' | 'elite') {
+async function handleUpgrade(tier: 'core' | 'pro' | 'elite') {
   try {
     // Get authenticated user token
     const token = await getAuthToken(); // Your existing auth

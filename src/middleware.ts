@@ -11,9 +11,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function middleware() {
   // Clone the response
   const response = NextResponse.next()
 
@@ -54,6 +53,7 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",  // unsafe-inline needed for styled components
     "img-src 'self' data: https: blob:",  // Allow images from HTTPS, data URIs, and blobs
     "font-src 'self' data:",  // Allow fonts from self and data URIs
+    "media-src 'self' data: blob: https://ssl.gstatic.com",  // Allow audio cues hosted on gstatic
     "connect-src 'self' https://*.amazonaws.com https://accounts.google.com https://www.facebook.com https://graph.facebook.com",  // Allow AWS, Google, and Facebook OAuth
     "frame-ancestors 'none'",  // Equivalent to X-Frame-Options: DENY
     "base-uri 'self'",  // Restrict <base> tag to same origin

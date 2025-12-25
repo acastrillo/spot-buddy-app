@@ -6,7 +6,7 @@
 
 ## Issue Summary
 
-Users were being downgraded from paid subscription tiers (Starter, Pro, Elite) to "free" tier every time they signed in via OAuth (Google/Facebook), despite successful Stripe checkout and webhook confirmation.
+Users were being downgraded from paid subscription tiers (Core, Pro, Elite) to "free" tier every time they signed in via OAuth (Google/Facebook), despite successful Stripe checkout and webhook confirmation.
 
 ## Symptoms
 

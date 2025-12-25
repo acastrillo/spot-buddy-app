@@ -12,7 +12,7 @@ $STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_PUBLISHABLE_KEY_HERE"
 $STRIPE_WEBHOOK_SECRET = "whsec_YOUR_WEBHOOK_SECRET_HERE"
 
 # Price IDs for LIVE mode (get these from your Stripe Products page)
-$STRIPE_PRICE_STARTER = "price_YOUR_STARTER_PRICE_ID"
+$STRIPE_PRICE_CORE = "price_YOUR_CORE_PRICE_ID"
 $STRIPE_PRICE_PRO = "price_YOUR_PRO_PRICE_ID"
 $STRIPE_PRICE_ELITE = "price_YOUR_ELITE_PRICE_ID"
 
@@ -24,12 +24,12 @@ aws ssm put-parameter --name "/spotter-app/STRIPE_PUBLISHABLE_KEY" --value $STRI
 aws ssm put-parameter --name "/spotter-app/STRIPE_WEBHOOK_SECRET" --value $STRIPE_WEBHOOK_SECRET --type "SecureString" --overwrite --region us-east-1
 
 # Update price IDs
-aws ssm put-parameter --name "/spotter-app/STRIPE_PRICE_STARTER" --value $STRIPE_PRICE_STARTER --type "String" --overwrite --region us-east-1
+aws ssm put-parameter --name "/spotter-app/STRIPE_PRICE_CORE" --value $STRIPE_PRICE_CORE --type "String" --overwrite --region us-east-1
 aws ssm put-parameter --name "/spotter-app/STRIPE_PRICE_PRO" --value $STRIPE_PRICE_PRO --type "String" --overwrite --region us-east-1
 aws ssm put-parameter --name "/spotter-app/STRIPE_PRICE_ELITE" --value $STRIPE_PRICE_ELITE --type "String" --overwrite --region us-east-1
 
 # Update public price IDs (for client-side)
-aws ssm put-parameter --name "/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_STARTER" --value $STRIPE_PRICE_STARTER --type "String" --overwrite --region us-east-1
+aws ssm put-parameter --name "/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_CORE" --value $STRIPE_PRICE_CORE --type "String" --overwrite --region us-east-1
 aws ssm put-parameter --name "/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_PRO" --value $STRIPE_PRICE_PRO --type "String" --overwrite --region us-east-1
 aws ssm put-parameter --name "/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_ELITE" --value $STRIPE_PRICE_ELITE --type "String" --overwrite --region us-east-1
 

@@ -134,7 +134,7 @@ export function collapseCardsToExercises(cards: WorkoutCard[]): EditExercise[] {
   // Convert grouped cards back to exercises
   const exercises: EditExercise[] = [];
 
-  exerciseMap.forEach((cardGroup, key) => {
+  exerciseMap.forEach((cardGroup) => {
     if (cardGroup.length === 0) return;
 
     // Use first card as template
@@ -142,16 +142,6 @@ export function collapseCardsToExercises(cards: WorkoutCard[]): EditExercise[] {
 
     // Count total sets (number of cards with same exercise)
     const totalSets = cardGroup.length;
-
-    // Check if all cards have same values (uniform sets)
-    const isUniform = cardGroup.every((card) => {
-      return (
-        card.reps === firstCard.reps &&
-        card.weight === firstCard.weight &&
-        card.distance === firstCard.distance &&
-        card.timing === firstCard.timing
-      );
-    });
 
     const exercise: EditExercise = {
       id: firstCard.originalExerciseId || firstCard.id,

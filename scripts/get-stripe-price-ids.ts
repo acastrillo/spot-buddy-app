@@ -38,8 +38,9 @@ async function getPriceForProduct(productId: string, productName: string) {
       console.error(`❌ ${productName}: No monthly recurring price found`);
       return null;
     }
-  } catch (error: any) {
-    console.error(`❌ ${productName}: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ ${productName}: ${message}`);
     return null;
   }
 }
@@ -50,30 +51,30 @@ async function main() {
   console.log('==========================================\n');
 
   const productIds = {
-    starter: process.env.STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    core: process.env.STRIPE_PRICE_CORE || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE,
     pro: process.env.STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
     elite: process.env.STRIPE_PRICE_ELITE || process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE,
   };
 
   console.log('Current Product IDs from .env.local:\n');
 
-  const starterPriceId = await getPriceForProduct(productIds.starter!, 'STARTER');
+  const corePriceId = await getPriceForProduct(productIds.core!, 'CORE');
   console.log('');
   const proPriceId = await getPriceForProduct(productIds.pro!, 'PRO');
   console.log('');
   const elitePriceId = await getPriceForProduct(productIds.elite!, 'ELITE');
 
-  if (starterPriceId && proPriceId && elitePriceId) {
+  if (corePriceId && proPriceId && elitePriceId) {
     console.log('\n==========================================');
     console.log('📝 UPDATE YOUR .env.local WITH THESE:');
     console.log('==========================================\n');
     console.log(`# Stripe Price IDs (Test Mode)`);
-    console.log(`STRIPE_PRICE_STARTER=${starterPriceId}`);
+    console.log(`STRIPE_PRICE_CORE=${corePriceId}`);
     console.log(`STRIPE_PRICE_PRO=${proPriceId}`);
     console.log(`STRIPE_PRICE_ELITE=${elitePriceId}`);
     console.log('');
     console.log(`# Client-side accessible Stripe price IDs (required for browser)`);
-    console.log(`NEXT_PUBLIC_STRIPE_PRICE_STARTER=${starterPriceId}`);
+    console.log(`NEXT_PUBLIC_STRIPE_PRICE_CORE=${corePriceId}`);
     console.log(`NEXT_PUBLIC_STRIPE_PRICE_PRO=${proPriceId}`);
     console.log(`NEXT_PUBLIC_STRIPE_PRICE_ELITE=${elitePriceId}`);
     console.log('\n');

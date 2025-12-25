@@ -8,9 +8,9 @@ Go to: https://dashboard.stripe.com/test/products
 
 Click **"+ Add product"** and create these 3 products:
 
-### Product 1: Spot Buddy Starter
+### Product 1: Spot Buddy Core
 ```
-Name: Spot Buddy Starter
+Name: Spot Buddy Core
 Description: (optional) Perfect for individuals starting their fitness journey
 Price: $7.99
 Billing: Monthly
@@ -41,12 +41,12 @@ Replace BOTH sets of IDs in your `.env.local`:
 
 ```env
 # Stripe Price IDs (Test Mode) - REPLACE WITH YOUR PRICE IDs
-STRIPE_PRICE_STARTER=price_YOUR_STARTER_ID_HERE
+STRIPE_PRICE_CORE=price_YOUR_CORE_ID_HERE
 STRIPE_PRICE_PRO=price_YOUR_PRO_ID_HERE
 STRIPE_PRICE_ELITE=price_YOUR_ELITE_ID_HERE
 
 # Client-side accessible (SAME IDs as above)
-NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_YOUR_STARTER_ID_HERE
+NEXT_PUBLIC_STRIPE_PRICE_CORE=price_YOUR_CORE_ID_HERE
 NEXT_PUBLIC_STRIPE_PRICE_PRO=price_YOUR_PRO_ID_HERE
 NEXT_PUBLIC_STRIPE_PRICE_ELITE=price_YOUR_ELITE_ID_HERE
 ```
@@ -80,7 +80,7 @@ npm run dev
 # In browser:
 # 1. Sign up or dev login
 # 2. Go to /subscription
-# 3. Click Subscribe to Starter
+# 3. Click Subscribe to Core
 # 4. Use test card: 4242 4242 4242 4242
 ```
 
@@ -93,10 +93,10 @@ Your app needs these environment variables in AWS:
 STRIPE_SECRET_KEY=sk_test_[YOUR_STRIPE_SECRET_KEY]
 STRIPE_PUBLISHABLE_KEY=pk_test_[YOUR_STRIPE_PUBLISHABLE_KEY]
 STRIPE_WEBHOOK_SECRET=whsec_[YOUR_PRODUCTION_WEBHOOK_SECRET]
-STRIPE_PRICE_STARTER=price_[YOUR_STARTER_PRICE_ID]
+STRIPE_PRICE_CORE=price_[YOUR_CORE_PRICE_ID]
 STRIPE_PRICE_PRO=price_[YOUR_PRO_PRICE_ID]
 STRIPE_PRICE_ELITE=price_[YOUR_ELITE_PRICE_ID]
-NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_[YOUR_STARTER_PRICE_ID]
+NEXT_PUBLIC_STRIPE_PRICE_CORE=price_[YOUR_CORE_PRICE_ID]
 NEXT_PUBLIC_STRIPE_PRICE_PRO=price_[YOUR_PRO_PRICE_ID]
 NEXT_PUBLIC_STRIPE_PRICE_ELITE=price_[YOUR_ELITE_PRICE_ID]
 ```

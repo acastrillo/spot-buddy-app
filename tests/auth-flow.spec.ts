@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Production Authentication Flow', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async () => {
     // Set a longer timeout for OAuth flows
     test.setTimeout(60000);
   });

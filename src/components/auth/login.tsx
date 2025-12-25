@@ -11,7 +11,7 @@ import Link from "next/link";
 type AuthMode = "signin" | "signup";
 
 export function Login() {
-  const { login, loginWithEmail, loginWithCredentials, signup, devLogin } = useAuthStore();
+  const { login, loginWithCredentials, signup, devLogin } = useAuthStore();
   const [loadingProvider, setLoadingProvider] = useState<"google" | "facebook" | "email" | "credentials" | "dev" | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [email, setEmail] = useState("");

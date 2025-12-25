@@ -50,7 +50,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Subscription & Billing
-  subscriptionTier      String    @default("free") // free, starter, pro, elite
+  subscriptionTier      String    @default("free") // free, core, pro, elite
   subscriptionStatus    String    @default("active") // active, inactive, trialing, canceled, past_due
   subscriptionStartDate DateTime?
   subscriptionEndDate   DateTime?

@@ -1,11 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
-import { Button } from "@/components/ui/button"
 import { Scale, Ruler, TrendingUp } from "lucide-react"
 import Link from "next/link"
 

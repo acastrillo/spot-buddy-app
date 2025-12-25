@@ -19,13 +19,7 @@
  */
 
 import { invokeClaude, logUsage, type BedrockResponse } from './bedrock-client';
-import {
-  matchExercise,
-  detectWorkoutFormat,
-  parseWorkoutStructure,
-  generateExerciseContext,
-  suggestExercises,
-} from '../knowledge-base/exercise-matcher';
+import { parseWorkoutStructure, generateExerciseContext } from '../knowledge-base/exercise-matcher';
 import type { OrganizedContent } from './workout-content-organizer';
 
 /**
@@ -160,6 +154,36 @@ CRITICAL: You must respond with ONLY valid JSON. Do not include any explanatory 
 - Structure: Complete exercises as many times as possible in time limit
 - Example: "AMRAP 20 MIN"
 - Set workoutType: "amrap", structure.timeLimit = time in seconds
+
+**CRITICAL: Multi-Block AMRAP Detection:**
+When you detect AMRAP workouts, carefully identify if there are MULTIPLE AMRAP blocks within a single workout.
+
+**Section Markers to Watch For:**
+- Part A, Part B, Part C
+- Block 1, Block 2, Block 3
+- Emoji numbers: 1️⃣, 2️⃣, 3️⃣
+- "First/Second/Third AMRAP"
+
+**Output Format Rules:**
+
+1. SINGLE AMRAP BLOCK (backward compatible) - Use when there is only ONE AMRAP section:
+   Set workoutType: "amrap", structure.timeLimit in seconds, exercises as flat array
+
+2. MULTIPLE AMRAP BLOCKS (new format) - Use when there are 2+ distinct AMRAP sections:
+   Set workoutType: "amrap", create amrapBlocks array where each block has:
+   - id (string like "block-1")
+   - label (string like "Part A")
+   - timeLimit (number in seconds)
+   - order (number 1, 2, 3...)
+   - exercises (array of exercises for THAT block only)
+
+**Critical Multi-Block Rules:**
+- Use amrapBlocks field ONLY when 2+ distinct AMRAP sections exist
+- Use structure.timeLimit for single AMRAP (backward compatibility)
+- Each block exercises array contains ONLY exercises in that specific section
+- Preserve section labels from original text
+- Set order field to match sequence
+- DO NOT use amrapBlocks for single AMRAP workout
 
 **Rounds:**
 - Pattern: "X ROUNDS" or "X rounds for time"
@@ -788,6 +812,8 @@ export async function enhanceWorkoutStream(
   context: TrainingContext | undefined,
   onChunk: (chunk: string) => void
 ): Promise<EnhancementResult> {
+  // Streaming not yet implemented; keep signature for future use
+  void onChunk;
   // For now, we'll use non-streaming since JSON parsing is complex with streaming
   // In the future, we could implement a custom JSON stream parser
   return enhanceWorkout(rawText, context);
@@ -840,4 +866,5 @@ export {
   detectWorkoutFormat,
   parseWorkoutStructure,
   suggestExercises,
+  generateExerciseContext,
 } from '../knowledge-base/exercise-matcher';

@@ -43,9 +43,10 @@ async function main() {
     console.log('Account Status: Active');
     console.log(`Available Balance: $${(balance.available[0]?.amount || 0) / 100}`);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Failed to connect to Stripe:');
-    console.error(`   Error: ${error.message}`);
+    console.error(`   Error: ${message}`);
     console.error('\n   Possible issues:');
     console.error('   1. Invalid API key');
     console.error('   2. API key has insufficient permissions');

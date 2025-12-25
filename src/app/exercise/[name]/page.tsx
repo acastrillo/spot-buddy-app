@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect, use, useCallback } from "react"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -24,7 +24,6 @@ import {
   getExerciseHistory,
   calculateAverageWeight,
   calculateAverageReps,
-  getExerciseFrequency,
   categorizeExerciseByMuscleGroup,
 } from "@/lib/exercise-history"
 import {
@@ -50,11 +49,7 @@ export default function ExerciseDetailPage({ params }: Props) {
   const [history, setHistory] = useState<any[]>([])
   const [prs, setPRs] = useState<any[]>([])
 
-  useEffect(() => {
-    loadExerciseData()
-  }, [user?.id, exerciseName])
-
-  async function loadExerciseData() {
+  const loadExerciseData = useCallback(async () => {
     if (!user?.id) return
 
     setIsLoading(true)
@@ -78,7 +73,11 @@ export default function ExerciseDetailPage({ params }: Props) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [exerciseName, user?.id])
+
+  useEffect(() => {
+    loadExerciseData()
+  }, [loadExerciseData])
 
   if (!isAuthenticated) {
     return <Login />
@@ -93,7 +92,7 @@ export default function ExerciseDetailPage({ params }: Props) {
   const weightChartData = history
     .slice(0, 20)
     .reverse()
-    .map((exercise, index) => {
+    .map((exercise) => {
       const maxWeight = Math.max(...exercise.sets.map((s: any) => s.weight))
       return {
         date: new Date(exercise.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

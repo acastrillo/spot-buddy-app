@@ -14,7 +14,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedSession } from '@/lib/api-auth';
 import { dynamoDBUsers, dynamoDBWorkouts, DynamoDBWorkout } from '@/lib/dynamodb';
 import {
-  enhanceWorkout,
   structureWorkout,
   estimateEnhancementCost,
   type TrainingContext
@@ -22,15 +21,13 @@ import {
 import {
   organizeWorkoutContent,
   validateOrganizedContent,
-  estimateOrganizationCost
 } from '@/lib/ai/workout-content-organizer';
 import {
   suggestTimerForWorkout,
-  estimateTimerSuggestionCost,
   type WorkoutForTimerSuggestion,
   type TimerSuggestion
 } from '@/lib/ai/timer-suggester';
-import { getAIRequestLimit } from '@/lib/subscription-tiers';
+import { getAIRequestLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 interface EnhanceWorkoutRequest {
@@ -150,14 +147,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       }
     }
 
-    const tier = user.subscriptionTier || 'free';
+    const tier = normalizeSubscriptionTier(user.subscriptionTier);
     const aiLimit = getAIRequestLimit(tier);
     const aiUsed = user.aiRequestsUsed || 0;
 
     // Check if user has AI quota remaining
     if (aiUsed >= aiLimit) {
       const upgradeMessage = aiLimit === 0
-        ? 'AI features are not available on the free tier. Upgrade to Starter ($7.99/mo) for 10 AI requests per month.'
+        ? 'AI features are not available on the free tier. Upgrade to Core ($8.99/mo) for 10 AI requests per month.'
         : `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
 
       return NextResponse.json(

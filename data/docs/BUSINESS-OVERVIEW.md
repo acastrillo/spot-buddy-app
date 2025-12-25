@@ -162,7 +162,7 @@ Cool-down (5 min):
 
 ### Subscription Tiers
 
-| Feature | **Free** | **Starter** $7.99/mo | **Pro** $14.99/mo | **Elite** $34.99/mo |
+| Feature | **Free** | **Core** $7.99/mo | **Pro** $14.99/mo | **Elite** $34.99/mo |
 |---------|----------|----------------------|------------------|---------------------|
 | **Core Features** |
 | Workout tracking | 15 max | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
@@ -194,20 +194,20 @@ Cool-down (5 min):
 
 #### Primary Revenue Stream: Subscriptions
 - **Free tier**: Lead generation and viral growth
-- **Starter tier**: Entry-level paid tier for casual users
+- **Core tier**: Entry-level paid tier for casual users
 - **Pro tier**: Power users who want AI features and unlimited access
 - **Elite tier**: Serious athletes and coaches who want full AI coach + social features
 
 **Conversion Targets**:
-- **Free → Starter**: 15% conversion (OCR quota limit pressure)
-- **Starter → Pro**: 25% upgrade rate (AI feature exposure)
+- **Free → Core**: 15% conversion (OCR quota limit pressure)
+- **Core → Pro**: 25% upgrade rate (AI feature exposure)
 - **Pro → Elite**: 10% upgrade rate (social features, AI coach)
 - **Overall paid conversion**: 30% of active users
 
 **User Journey**:
 1. Sign up free → Save 15 workouts, use 1 OCR/week
 2. Hit workout limit or OCR quota → See upgrade prompt
-3. Upgrade to Starter ($7.99) → Get unlimited workouts + 5 OCR/week + 10 AI enhancements
+3. Upgrade to Core ($7.99) → Get unlimited workouts + 5 OCR/week + 10 AI enhancements
 4. Use AI features 10 times → Hit limit, want more
 5. Upgrade to Pro ($14.99) → Get unlimited OCR + 30 AI enhancements + 30 AI generations + personalized WOD
 6. Discover social features & AI coach → Consider Elite ($34.99)
@@ -308,7 +308,7 @@ Cool-down (5 min):
 | Tier | Users | Enhancements/mo | Generations/mo | WOD (personalized) | Monthly Cost |
 |------|-------|-----------------|----------------|-------------------|--------------|
 | **Free** | 10,000 | 0 | 0 | Generic (cached) | $0 |
-| **Starter** | 1,500 | 7,500 (5 per user) | 7,500 | Generic | $150 |
+| **Core** | 1,500 | 7,500 (5 per user) | 7,500 | Generic | $150 |
 | **Pro** | 500 | 25,000 (50 per user) | 25,000 | 15,000 (daily x30) | $950 |
 | **Elite** | 100 | Unlimited* | Unlimited* | 3,000 (daily x30) | $500** |
 | **Total** | 12,100 | | | | **~$1,600/mo** |
@@ -318,23 +318,23 @@ Cool-down (5 min):
 
 **Cost per user**:
 - Free: $0
-- Starter: $0.10/user/month
+- Core: $0.10/user/month
 - Pro: $1.90/user/month
 - Elite: $5/user/month
 
 **AI Cost as % of Revenue**:
-- Starter ($4.99): 2% ($0.10 cost)
+- Core ($4.99): 2% ($0.10 cost)
 - Pro ($9.99): 19% ($1.90 cost)
 - Elite ($19.99): 25% ($5 cost)
 
 ### Profitability Analysis
 
 #### Scenario 1: 1,000 Total Users (Early Stage)
-**User Mix**: 700 free, 150 Starter, 100 Pro, 50 Elite
+**User Mix**: 700 free, 150 Core, 100 Pro, 50 Elite
 
 | Revenue | Monthly |
 |---------|---------|
-| Starter: 150 × $4.99 | $748.50 |
+| Core: 150 × $4.99 | $748.50 |
 | Pro: 100 × $9.99 | $999 |
 | Elite: 50 × $19.99 | $999.50 |
 | **Total Revenue** | **$2,747** |
@@ -342,7 +342,7 @@ Cool-down (5 min):
 | Costs | Monthly |
 |-------|---------|
 | AWS Infrastructure | $200 |
-| AI Tokens (Starter: $15, Pro: $190, Elite: $250) | $455 |
+| AI Tokens (Core: $15, Pro: $190, Elite: $250) | $455 |
 | Stripe fees (2.9% + $0.30 × 300) | $170 |
 | Other services | $20 |
 | **Total Costs** | **$845** |
@@ -353,11 +353,11 @@ Cool-down (5 min):
 ---
 
 #### Scenario 2: 10,000 Total Users (Growth Stage)
-**User Mix**: 7,000 free, 1,500 Starter, 1,000 Pro, 500 Elite
+**User Mix**: 7,000 free, 1,500 Core, 1,000 Pro, 500 Elite
 
 | Revenue | Monthly |
 |---------|---------|
-| Starter: 1,500 × $4.99 | $7,485 |
+| Core: 1,500 × $4.99 | $7,485 |
 | Pro: 1,000 × $9.99 | $9,990 |
 | Elite: 500 × $19.99 | $9,995 |
 | **Total Revenue** | **$27,470** |
@@ -365,7 +365,7 @@ Cool-down (5 min):
 | Costs | Monthly |
 |-------|---------|
 | AWS Infrastructure (scaled) | $600 |
-| AI Tokens (Starter: $150, Pro: $1,900, Elite: $2,500) | $4,550 |
+| AI Tokens (Core: $150, Pro: $1,900, Elite: $2,500) | $4,550 |
 | Stripe fees (2.9% + $0.30 × 3,000) | $1,697 |
 | Other services | $50 |
 | **Total Costs** | **$6,897** |
@@ -376,11 +376,11 @@ Cool-down (5 min):
 ---
 
 #### Scenario 3: 50,000 Total Users (Mature Stage)
-**User Mix**: 35,000 free, 7,500 Starter, 5,000 Pro, 2,500 Elite
+**User Mix**: 35,000 free, 7,500 Core, 5,000 Pro, 2,500 Elite
 
 | Revenue | Monthly |
 |---------|---------|
-| Starter: 7,500 × $4.99 | $37,425 |
+| Core: 7,500 × $4.99 | $37,425 |
 | Pro: 5,000 × $9.99 | $49,950 |
 | Elite: 2,500 × $19.99 | $49,975 |
 | **Total Revenue** | **$137,350** |
@@ -388,7 +388,7 @@ Cool-down (5 min):
 | Costs | Monthly |
 |-------|---------|
 | AWS Infrastructure (scaled) | $2,000 |
-| AI Tokens (Starter: $750, Pro: $9,500, Elite: $12,500) | $22,750 |
+| AI Tokens (Core: $750, Pro: $9,500, Elite: $12,500) | $22,750 |
 | Stripe fees (2.9% + $0.30 × 15,000) | $8,481 |
 | Other services | $200 |
 | Support staff (2 FTE @ $5k/mo) | $10,000 |
@@ -404,14 +404,14 @@ Cool-down (5 min):
 #### Unit Economics (Per Paid User)
 | Tier | Monthly Price | Cost/User | Gross Margin | Lifetime Value* |
 |------|---------------|-----------|--------------|-----------------|
-| Starter | $4.99 | $0.67 | $4.32 (87%) | $155.52 (3 years) |
+| Core | $4.99 | $0.67 | $4.32 (87%) | $155.52 (3 years) |
 | Pro | $9.99 | $2.47 | $7.52 (75%) | $270.72 (3 years) |
 | Elite | $19.99 | $5.57 | $14.42 (72%) | $519.12 (3 years) |
 
 *Assumes 36-month average subscription duration (industry standard)
 
 #### Customer Acquisition Cost (CAC) Targets
-| Channel | CAC | Payback Period (Starter) | Payback Period (Pro) |
+| Channel | CAC | Payback Period (Core) | Payback Period (Pro) |
 |---------|-----|--------------------------|----------------------|
 | Organic/Viral | $0-5 | <1 month | <1 month |
 | Content Marketing | $10-20 | 3-5 months | 2-3 months |

@@ -127,7 +127,6 @@ export default function DashboardPage() {
 
     window.addEventListener("storage", handleStorage)
     window.addEventListener("focus", handleFocus)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.addEventListener("workoutsUpdated" as any, handleWorkoutsUpdated as EventListener)
 
     return () => {
@@ -136,7 +135,6 @@ export default function DashboardPage() {
       hasLoadedStatsRef.current = false
       window.removeEventListener("storage", handleStorage)
       window.removeEventListener("focus", handleFocus)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       window.removeEventListener("workoutsUpdated" as any, handleWorkoutsUpdated as EventListener)
     }
   }, [user?.id])

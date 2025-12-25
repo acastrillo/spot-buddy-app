@@ -35,6 +35,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputType = type === 'number' ? 'number' : 'text';
 
   const handleSave = useCallback(() => {
     if (editValue !== value) {
@@ -66,7 +67,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
     return (
       <div className="relative">
         <input
-          type="text"
+          type={inputType}
           value={editValue}
           onChange={(e) => {
             setEditValue(e.target.value);
@@ -115,8 +116,6 @@ export const EditableWorkoutTable: React.FC<EditableWorkoutTableProps> = ({
   onExercisesChange,
   className = ''
 }) => {
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-
   // Get suggestions for movement names from the glossary
   const movementSuggestions = [
     'Push-Up', 'Pull-Up', 'Squat', 'Deadlift', 'Burpee', 'Thruster',

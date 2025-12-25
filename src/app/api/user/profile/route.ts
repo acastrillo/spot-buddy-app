@@ -22,7 +22,7 @@ import {
  * GET /api/user/profile
  * Retrieve user's training profile
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // SECURITY: Authenticate user
     const auth = await getAuthenticatedUserId();

@@ -66,7 +66,7 @@ node scripts/create-stripe-customer-gsi.mjs
 - ✅ STRIPE_SECRET_KEY (updated 2025-11-26)
 - ✅ STRIPE_WEBHOOK_SECRET (updated 2025-11-26)
 - ✅ STRIPE_PUBLISHABLE_KEY (updated 2025-11-26)
-- ✅ STRIPE_PRICE_STARTER (updated 2025-11-26)
+- ✅ STRIPE_PRICE_CORE (updated 2025-11-26)
 - ✅ STRIPE_PRICE_PRO (updated 2025-11-26)
 - ✅ STRIPE_PRICE_ELITE (updated 2025-11-26)
 

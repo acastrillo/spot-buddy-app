@@ -39,7 +39,7 @@ import {
   normaliseWorkoutForEditing,
   type StoredWorkout,
 } from "@/lib/workouts/types";
-import { TIMER_TEMPLATES, type TimerParams } from "@/timers";
+import { TIMER_TEMPLATES } from "@/timers";
 
 type WorkoutSource = "dynamodb" | "local";
 

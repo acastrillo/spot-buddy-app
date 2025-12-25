@@ -11,7 +11,6 @@ import {
   Plus,
   Calendar,
   LogOut,
-  User,
   Zap,
   BarChart3,
   Scale,

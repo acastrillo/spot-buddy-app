@@ -9,8 +9,8 @@ Your Stripe account has NO active prices configured. Follow these steps to set u
 
 ### Create 3 Products:
 
-#### Product 1: Spot Buddy Starter
-- **Name:** Spot Buddy Starter
+#### Product 1: Spot Buddy Core
+- **Name:** Spot Buddy Core
 - **Description:** 3 OCR scans/week, 5 Instagram saves/week, unlimited workouts, 10 AI requests/month
 - **Pricing:**
   - Type: **Recurring**
@@ -48,12 +48,12 @@ After creating the products, update your `.env.local` file with the NEW price ID
 
 ```env
 # Stripe Price IDs (Test Mode) - UPDATE THESE WITH YOUR NEW PRICE IDs
-STRIPE_PRICE_STARTER=price_YOUR_STARTER_PRICE_ID_HERE
+STRIPE_PRICE_CORE=price_YOUR_CORE_PRICE_ID_HERE
 STRIPE_PRICE_PRO=price_YOUR_PRO_PRICE_ID_HERE
 STRIPE_PRICE_ELITE=price_YOUR_ELITE_PRICE_ID_HERE
 
 # Client-side accessible Stripe price IDs (required for browser)
-NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_YOUR_STARTER_PRICE_ID_HERE
+NEXT_PUBLIC_STRIPE_PRICE_CORE=price_YOUR_CORE_PRICE_ID_HERE
 NEXT_PUBLIC_STRIPE_PRICE_PRO=price_YOUR_PRO_PRICE_ID_HERE
 NEXT_PUBLIC_STRIPE_PRICE_ELITE=price_YOUR_ELITE_PRICE_ID_HERE
 ```
@@ -111,7 +111,7 @@ npm run dev
 
 1. Sign up with a new account (or use dev login)
 2. Navigate to `/subscription`
-3. Click "Subscribe to Starter"
+3. Click "Subscribe to Core"
 4. Use Stripe test card: `4242 4242 4242 4242`
    - Expiry: Any future date (e.g., 12/25)
    - CVC: Any 3 digits (e.g., 123)

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkoutCompletions } from "@/lib/dynamodb";
 
@@ -7,7 +7,7 @@ import { dynamoDBWorkoutCompletions } from "@/lib/dynamodb";
  * Get workout completion statistics for the authenticated user
  * Returns: thisWeek, total, streak, hoursTrained
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) return auth.error;

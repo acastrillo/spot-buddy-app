@@ -39,22 +39,6 @@ function hiitConfigToTimerParams(config: HIITConfig): IntervalWorkRestParams {
 }
 
 /**
- * Get color classes for segment kind
- */
-function getPhaseColors(kind: string): { bg: string; text: string; border: string } {
-  switch (kind) {
-    case 'prep':
-      return { bg: 'bg-secondary/20', text: 'text-secondary', border: 'border-secondary/30' };
-    case 'work':
-      return { bg: 'bg-primary/20', text: 'text-primary', border: 'border-primary/30' };
-    case 'rest':
-      return { bg: 'bg-rest/20', text: 'text-rest', border: 'border-rest/30' };
-    default:
-      return { bg: 'bg-gray-200', text: 'text-gray-600', border: 'border-gray-300' };
-  }
-}
-
-/**
  * Get progress bar color
  */
 function getProgressBarColor(kind: string): string {

@@ -4,6 +4,8 @@ import { hash } from 'bcryptjs'
 import { z } from 'zod'
 import { dynamoDBUsers } from '@/lib/dynamodb'
 import { maskEmail } from '@/lib/safe-logger'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { getRequestIp } from '@/lib/request-ip'
 
 export const runtime = 'nodejs'
 
@@ -23,6 +25,28 @@ const signupSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     console.log('[Signup] Request received')
+
+    const rateLimit = await checkRateLimit(getRequestIp(req.headers), 'auth:login')
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many signup attempts',
+          message: 'Please wait before creating another account.',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      )
+    }
 
     const body = await req.json()
     console.log('[Signup] Request body parsed:', { email: maskEmail(body.email), hasPassword: !!body.password })

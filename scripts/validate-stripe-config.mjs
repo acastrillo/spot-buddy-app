@@ -6,7 +6,7 @@ import { config } from 'dotenv';
 // Load environment variables
 config();
 
-const TIERS = ['starter', 'pro', 'elite'];
+const TIERS = ['core', 'pro', 'elite'];
 
 async function validateStripeConfig() {
   console.log('═══════════════════════════════════════════════════════════');
@@ -60,7 +60,7 @@ async function validateStripeConfig() {
   console.log('💰 Price ID Validation:\n');
 
   const envKeys = {
-    starter: ['STRIPE_PRICE_STARTER', 'NEXT_PUBLIC_STRIPE_PRICE_STARTER'],
+    core: ['STRIPE_PRICE_CORE', 'NEXT_PUBLIC_STRIPE_PRICE_CORE'],
     pro: ['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
     elite: ['STRIPE_PRICE_ELITE', 'NEXT_PUBLIC_STRIPE_PRICE_ELITE'],
   };

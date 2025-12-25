@@ -11,6 +11,9 @@ import { dynamoDBUsers } from "@/lib/dynamodb";
 import { randomUUID } from "crypto";
 import { compare } from "bcryptjs";
 import { maskEmail } from "@/lib/safe-logger";
+import { normalizeSubscriptionTier } from "@/lib/subscription-tiers";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getRequestIp } from "@/lib/request-ip";
 
 type GoogleProfile = {
   sub?: string;
@@ -40,7 +43,6 @@ const {
   EMAIL_SERVER_PORT,
   EMAIL_SERVER_USER,
   EMAIL_SERVER_PASSWORD,
-  EMAIL_SERVER_SECURE,
   EMAIL_FROM,
 } = process.env;
 
@@ -57,9 +59,6 @@ if (isRuntime && !AUTH_SECRET) {
 if (isRuntime && !hasGoogle && !hasFacebook && !hasEmail) {
   console.error("At least one auth provider must be configured (Google, Facebook, or Email)");
 }
-
-const emailPort = Number(EMAIL_SERVER_PORT);
-const emailSecure = EMAIL_SERVER_SECURE === "true" || emailPort === 465;
 
 // Build providers array based on what's configured
 const providers = [];
@@ -120,13 +119,19 @@ providers.push(
       email: { label: "Email", type: "email", placeholder: "your@email.com" },
       password: { label: "Password", type: "password" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, req) {
       if (!credentials?.email || !credentials?.password) {
         console.log('[Credentials] Missing email or password');
         return null;
       }
 
       try {
+        const rateLimit = await checkRateLimit(getRequestIp(req?.headers ?? null), 'auth:login');
+        if (!rateLimit.success) {
+          console.warn('[Credentials] Rate limit exceeded for login attempt');
+          return null;
+        }
+
         // Look up user by email
         const user = await dynamoDBUsers.getByEmail(credentials.email);
 
@@ -282,7 +287,7 @@ export const authOptions: NextAuthOptions = {
      * signIn callback - runs BEFORE jwt callback
      * This is where we prevent duplicate user creation by checking DynamoDB first
      */
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       try {
         // Skip for credentials provider (dev login handles its own logic)
         if (account?.provider === 'dev-credentials' || account?.provider === 'credentials') {
@@ -301,6 +306,7 @@ export const authOptions: NextAuthOptions = {
         if (existingUser) {
           // User exists! Use their existing ID
           user.id = existingUser.id;
+          const normalizedTier = normalizeSubscriptionTier(existingUser.subscriptionTier);
           console.log(`[Auth:SignIn] ✓ Existing user found for ${maskEmail(user.email)} - ID: ${existingUser.id} (provider: ${account?.provider})`);
           console.log(`[Auth:SignIn] User created at: ${existingUser.createdAt}, last updated: ${existingUser.updatedAt}`);
 
@@ -312,7 +318,7 @@ export const authOptions: NextAuthOptions = {
             firstName: (user as any).firstName || existingUser.firstName || null,
             lastName: (user as any).lastName || existingUser.lastName || null,
             // Preserve existing subscription data
-            subscriptionTier: existingUser.subscriptionTier,
+            subscriptionTier: normalizedTier,
             subscriptionStatus: existingUser.subscriptionStatus,
             subscriptionStartDate: existingUser.subscriptionStartDate,
             subscriptionEndDate: existingUser.subscriptionEndDate,
@@ -463,13 +469,14 @@ export const authOptions: NextAuthOptions = {
 
           if (existingUserForJWT) {
             // User exists - preserve ALL subscription and usage data
+            const normalizedTier = normalizeSubscriptionTier(existingUserForJWT.subscriptionTier);
             await dynamoDBUsers.upsert({
               id: token.id as string,
               email: token.email as string,
               firstName: (token.firstName as string | null) ?? null,
               lastName: (token.lastName as string | null) ?? null,
               // Preserve existing subscription data
-              subscriptionTier: existingUserForJWT.subscriptionTier,
+              subscriptionTier: normalizedTier,
               subscriptionStatus: existingUserForJWT.subscriptionStatus,
               subscriptionStartDate: existingUserForJWT.subscriptionStartDate,
               subscriptionEndDate: existingUserForJWT.subscriptionEndDate,
@@ -511,7 +518,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await dynamoDBUsers.get(token.id as string);
           if (dbUser) {
-            token.subscriptionTier = dbUser.subscriptionTier;
+            token.subscriptionTier = normalizeSubscriptionTier(dbUser.subscriptionTier);
             token.subscriptionStatus = dbUser.subscriptionStatus;
             token.ocrQuotaUsed = dbUser.ocrQuotaUsed;
             token.ocrQuotaLimit = dbUser.ocrQuotaLimit;
@@ -552,7 +559,9 @@ export const authOptions: NextAuthOptions = {
           email: (token.email as string | undefined) ?? session.user?.email ?? "",
           firstName: (token.firstName as string | undefined) ?? null,
           lastName: (token.lastName as string | undefined) ?? null,
-          subscriptionTier: (token.subscriptionTier as string | undefined) ?? "free",
+          subscriptionTier: normalizeSubscriptionTier(
+            typeof token.subscriptionTier === "string" ? token.subscriptionTier : undefined
+          ),
           subscriptionStatus: (token.subscriptionStatus as string | undefined) ?? "active",
           ocrQuotaUsed: (token.ocrQuotaUsed as number | undefined) ?? 0,
           ocrQuotaLimit: (token.ocrQuotaLimit as number | undefined) ?? 2,

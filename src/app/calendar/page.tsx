@@ -49,7 +49,6 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [workouts, setWorkouts] = useState<DynamoDBWorkout[]>([])
   const [scheduledWorkouts, setScheduledWorkouts] = useState<DynamoDBWorkout[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedWorkoutForSchedule, setSelectedWorkoutForSchedule] = useState<string | null>(null)
   const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0])
@@ -59,8 +58,6 @@ export default function CalendarPage() {
   useEffect(() => {
     async function loadWorkouts() {
       if (!user?.id) return
-
-      setIsLoading(true)
       try {
         // Fetch all workouts
         const workoutsResponse = await fetch('/api/workouts')
@@ -78,8 +75,6 @@ export default function CalendarPage() {
         // Fallback to localStorage
         const cached = JSON.parse(localStorage.getItem('workouts') || '[]')
         setWorkouts(cached)
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -500,7 +495,7 @@ export default function CalendarPage() {
                     </div>
                     
                     <p className="text-xs text-text-secondary">
-                      Keep going! You're on track to reach your weekly goal.
+                      Keep going! You&apos;re on track to reach your weekly goal.
                     </p>
                   </div>
                 </CardContent>

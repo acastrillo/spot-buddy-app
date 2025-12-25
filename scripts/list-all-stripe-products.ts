@@ -47,12 +47,12 @@ async function main() {
   console.log('\n==========================================');
   console.log('💡 INSTRUCTIONS:');
   console.log('==========================================');
-  console.log('1. Find your Starter, Pro, and Elite products above');
+  console.log('1. Find your Core, Pro, and Elite products above');
   console.log('2. Copy the PRICE IDs (not product IDs)');
   console.log('3. Update your .env.local with the price IDs');
   console.log('4. Format should be:');
-  console.log('   STRIPE_PRICE_STARTER=price_xxxxx');
-  console.log('   NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_xxxxx');
+  console.log('   STRIPE_PRICE_CORE=price_xxxxx');
+  console.log('   NEXT_PUBLIC_STRIPE_PRICE_CORE=price_xxxxx');
   console.log('\n');
 }
 

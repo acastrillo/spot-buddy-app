@@ -80,7 +80,7 @@ Phase 6 introduces AI-powered features to enhance workout creation, parsing, and
 **API Token Usage**:
 - Track AI requests per user (new field: `aiRequestsUsed`)
 - Free: 0 AI requests/month
-- Starter: 5 AI requests/month
+- Core: 5 AI requests/month
 - Pro: 50 AI requests/month
 - Elite: Unlimited AI requests
 
@@ -217,7 +217,7 @@ Output format: JSON with exercises, sets, reps, weights, form cues
 
 **Feature Gating**:
 - Free: No access (show upgrade prompt)
-- Starter: 5 AI-generated workouts/month
+- Core: 5 AI-generated workouts/month
 - Pro: 50 AI-generated workouts/month
 - Elite: Unlimited
 
@@ -339,7 +339,7 @@ Output format: JSON with exercises, sets, reps, weights, form cues
 
 **Feature Gating**:
 - Free: No access
-- Starter: No access
+- Core: No access
 - Pro: No access
 - Elite: Full AI coach access
 
@@ -473,7 +473,7 @@ N8N_API_KEY=...
 
 ## 💰 Subscription Tier Updates
 
-| Feature | Free | Starter ($7.99) | Pro ($14.99) | Elite ($34.99) |
+| Feature | Free | Core ($7.99) | Pro ($14.99) | Elite ($34.99) |
 |---------|------|---------|-----|-------|
 | AI Workout Enhancement | ❌ | 10/month | 30/month | 100/month |
 | AI Workout Generator | ❌ | 10/month | 30/month | 100/month |
@@ -520,8 +520,8 @@ N8N_API_KEY=...
   - Average user satisfaction (thumbs up/down)
 
 - **Conversion**:
-  - Free-to-Starter conversion from AI feature exposure
-  - Starter-to-Pro upgrade for more AI requests
+  - Free-to-Core conversion from AI feature exposure
+  - Core-to-Pro upgrade for more AI requests
 
 - **Engagement**:
   - WOD completion rate

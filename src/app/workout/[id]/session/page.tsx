@@ -21,17 +21,14 @@ import {
 import { WorkoutTimer } from "@/components/timer/workout-timer"
 import AMRAPSessionView from "./amrap-session-view"
 import {
-  ArrowLeft,
   Timer,
   Sparkles,
   CheckCircle,
-  Circle,
   Clock,
   Trophy,
   Loader2,
   X,
   ChevronLeft,
-  ChevronRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -239,6 +236,8 @@ export default function WorkoutSessionPage() {
           totalDuration: dbWorkout.totalDuration || 0,
           difficulty: dbWorkout.difficulty || 'medium',
           timerConfig: dbWorkout.timerConfig,
+          workoutType: dbWorkout.workoutType,
+          structure: dbWorkout.structure,
         }
         setWorkout(transformedWorkout)
         setWorkoutCards(flattenExercisesToCards(transformedWorkout.exercises))
@@ -331,11 +330,18 @@ export default function WorkoutSessionPage() {
       const todayIso = completedAt.split('T')[0]
       const durationMinutes = Math.floor(sessionDuration / 60)
 
-      // Use provided notes or fall back to workoutNotes state
-      const completionNotes = notes !== undefined ? notes : workoutNotes
+      // Normalize notes to avoid accidental event objects being stringified
+      const rawNotes = typeof notes === 'string' ? notes : workoutNotes
+      const normalizedNotes = typeof rawNotes === 'string' ? rawNotes.trim() : ''
+      const safeNotes = normalizedNotes.length > 0 ? normalizedNotes : null
 
       // Save to localStorage
-      const existing = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+      let existing: any[] = []
+      try {
+        existing = JSON.parse(localStorage.getItem('completedWorkouts') || '[]')
+      } catch {
+        existing = []
+      }
       const newEntry = {
         id: Date.now().toString(),
         workoutId: workout.id,
@@ -343,7 +349,7 @@ export default function WorkoutSessionPage() {
         completedDate: todayIso,
         durationSeconds: sessionDuration,
         durationMinutes,
-        notes: completionNotes || null,
+        notes: safeNotes,
       }
       const updated = [...existing, newEntry]
       localStorage.setItem('completedWorkouts', JSON.stringify(updated))
@@ -351,7 +357,7 @@ export default function WorkoutSessionPage() {
       // Save to DynamoDB
       if (user?.id) {
         try {
-          await fetch('/api/workouts/completions', {
+          const completionResponse = await fetch('/api/workouts/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -360,11 +366,16 @@ export default function WorkoutSessionPage() {
               completedDate: todayIso,
               durationSeconds: sessionDuration,
               durationMinutes,
-              notes: completionNotes || null,
+              notes: safeNotes,
             }),
           })
 
-          await fetch(`/api/workouts/${workout.id}/complete`, {
+          if (!completionResponse.ok) {
+            const errorData = await completionResponse.json().catch(() => ({}))
+            throw new Error(errorData.error || 'Failed to save workout completion')
+          }
+
+          const completeResponse = await fetch(`/api/workouts/${workout.id}/complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -373,8 +384,14 @@ export default function WorkoutSessionPage() {
               durationSeconds: sessionDuration,
             }),
           })
+
+          if (!completeResponse.ok) {
+            const errorData = await completeResponse.json().catch(() => ({}))
+            throw new Error(errorData.error || 'Failed to mark workout as complete')
+          }
         } catch (error) {
           console.error('Error saving completion:', error)
+          throw error // Re-throw to be caught by outer catch block
         }
       }
 
@@ -385,26 +402,34 @@ export default function WorkoutSessionPage() {
       setSaveSuccess(true)
       setIsSaving(false)
 
-      // Wait 1.5 seconds to show success celebration, then navigate to dashboard
+      // Wait 1.5 seconds to show success celebration, then navigate to calendar
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/calendar')
       }, 1500)
 
     } catch (error) {
       console.error('Error saving workout:', error)
       setIsSaving(false)
-      alert('Failed to save workout. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save workout. Please try again.'
+      alert(errorMessage)
     }
   }
 
   const handleEndWorkout = () => {
+    // For AMRAP workouts, navigate directly to calendar
+    if (workout?.workoutType === 'amrap') {
+      if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
+      router.push('/calendar')
+      return
+    }
+    // For other workouts, show end dialog
     setShowEndDialog(true)
   }
 
   const handleDiscardWorkout = () => {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
     if (restIntervalRef.current) clearInterval(restIntervalRef.current)
-    router.push(`/workout/${workout!.id}`)
+    router.push('/calendar')
   }
 
   const formatTime = (seconds: number) => {
@@ -665,7 +690,7 @@ export default function WorkoutSessionPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4 text-center text-text-secondary">
-                Taking you to your dashboard...
+                Taking you to your calendar...
               </div>
             </>
           ) : (
@@ -729,7 +754,7 @@ export default function WorkoutSessionPage() {
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
-                  onClick={handleMarkCompleted}
+                  onClick={() => handleMarkCompleted()}
                   className="w-full bg-green-600 hover:bg-green-700"
                   size="lg"
                   disabled={isSaving}
@@ -767,7 +792,7 @@ export default function WorkoutSessionPage() {
           <DialogHeader>
             <DialogTitle>End Workout?</DialogTitle>
             <DialogDescription>
-              You've completed {completedCards.size} out of {workoutCards.length} exercises.
+              You&apos;ve completed {completedCards.size} out of {workoutCards.length} exercises.
               Do you want to save your progress?
             </DialogDescription>
           </DialogHeader>
@@ -799,7 +824,7 @@ export default function WorkoutSessionPage() {
               Continue Workout
             </Button>
             <Button
-              onClick={handleMarkCompleted}
+              onClick={() => handleMarkCompleted()}
               className="w-full sm:w-auto"
             >
               Save & End

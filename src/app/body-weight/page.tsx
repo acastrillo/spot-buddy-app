@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -36,11 +36,7 @@ export default function BodyWeightPage() {
   const [notes, setNotes] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
-  useEffect(() => {
-    loadEntries()
-  }, [user?.id])
-
-  async function loadEntries() {
+  const loadEntries = useCallback(async () => {
     if (!user?.id) return
 
     setIsLoading(true)
@@ -52,7 +48,11 @@ export default function BodyWeightPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user?.id])
+
+  useEffect(() => {
+    loadEntries()
+  }, [loadEntries])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

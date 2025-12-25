@@ -232,7 +232,7 @@
 
 ### 6.3 Subscription Tiers
 - **Free**: 2 OCR/week, basic workout tracking, 5 crew members
-- **Starter** ($4.99/mo): 10 OCR/week, analytics, 20 crew members
+- **Core** ($4.99/mo): 10 OCR/week, analytics, 20 crew members
 - **Pro** ($9.99/mo): Unlimited OCR, advanced analytics, AI insights, unlimited crew
 - **Elite** ($19.99/mo): All pro features + custom programming
 

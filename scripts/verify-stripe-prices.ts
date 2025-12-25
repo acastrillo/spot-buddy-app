@@ -20,9 +20,10 @@ async function verifyPrice(priceId: string, tierName: string) {
     console.log(`   Amount: $${(price.unit_amount! / 100).toFixed(2)}/${price.recurring?.interval}`);
     console.log(`   Active: ${price.active}`);
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ ${tierName}: ${priceId}`);
-    console.error(`   Error: ${error.message}`);
+    console.error(`   Error: ${message}`);
     return false;
   }
 }
@@ -50,7 +51,7 @@ async function main() {
   console.log('==========================================\n');
 
   const priceIds = {
-    starter: process.env.STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    core: process.env.STRIPE_PRICE_CORE || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE,
     pro: process.env.STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
     elite: process.env.STRIPE_PRICE_ELITE || process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE,
   };
@@ -58,7 +59,7 @@ async function main() {
   console.log('Checking configured price IDs:\n');
 
   const results = await Promise.all([
-    verifyPrice(priceIds.starter!, 'STARTER'),
+    verifyPrice(priceIds.core!, 'CORE'),
     verifyPrice(priceIds.pro!, 'PRO'),
     verifyPrice(priceIds.elite!, 'ELITE'),
   ]);

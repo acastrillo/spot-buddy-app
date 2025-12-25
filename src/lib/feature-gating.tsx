@@ -1,8 +1,12 @@
 import React from "react"
 import { useAuthStore } from "@/store"
-import { SUBSCRIPTION_TIERS, hasFeatureAccess, getQuotaLimit } from "./subscription-tiers"
-
-export type SubscriptionTier = 'free' | 'core' | 'pro' | 'elite'
+import {
+  SUBSCRIPTION_TIERS,
+  hasFeatureAccess,
+  getQuotaLimit,
+  normalizeSubscriptionTier,
+  type SubscriptionTier,
+} from "./subscription-tiers"
 
 export interface FeatureGateResult {
   allowed: boolean
@@ -15,7 +19,7 @@ export interface FeatureGateResult {
  */
 export function useFeatureAccess(feature: string): FeatureGateResult {
   const { user } = useAuthStore()
-  const tier = (user?.subscriptionTier || 'free') as SubscriptionTier
+  const tier = normalizeSubscriptionTier(user?.subscriptionTier)
 
   const allowed = hasFeatureAccess(tier, feature)
 
@@ -35,7 +39,7 @@ export function useFeatureAccess(feature: string): FeatureGateResult {
  */
 export function useQuotaCheck(quotaType: 'ocrQuotaWeekly' | 'workoutsMax' | 'aiRequestsMonthly'): FeatureGateResult {
   const { user } = useAuthStore()
-  const tier = (user?.subscriptionTier || 'free') as SubscriptionTier
+  const tier = normalizeSubscriptionTier(user?.subscriptionTier)
 
   const limit = getQuotaLimit(tier, quotaType)
 

@@ -23,7 +23,7 @@ import {
 } from '@/lib/training-profile';
 
 export default function TrainingProfilePage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   const [profile, setProfile] = useState<TrainingProfile | null>(null);
@@ -85,6 +85,7 @@ export default function TrainingProfilePage() {
         setMessage({ type: 'error', text: data.error || 'Failed to save profile' });
       }
     } catch (error) {
+      console.error('Error saving profile:', error);
       setMessage({ type: 'error', text: 'Network error' });
     } finally {
       setSaving(false);
@@ -121,6 +122,7 @@ export default function TrainingProfilePage() {
         setMessage({ type: 'error', text: data.error });
       }
     } catch (error) {
+      console.error('Error adding PR:', error);
       setMessage({ type: 'error', text: 'Failed to add PR' });
     }
   };
@@ -137,6 +139,7 @@ export default function TrainingProfilePage() {
         setMessage({ type: 'success', text: 'PR deleted' });
       }
     } catch (error) {
+      console.error('Error deleting PR:', error);
       setMessage({ type: 'error', text: 'Failed to delete PR' });
     }
   };

@@ -8,6 +8,7 @@ import {
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import type { TrainingProfile } from "./training-profile";
+import { normalizeSubscriptionTier } from "./subscription-tiers";
 
 // Lazy-initialized DynamoDB client singleton
 let dynamoDbInstance: DynamoDBDocumentClient | null = null;
@@ -46,7 +47,7 @@ export interface DynamoDBUser {
   updatedAt: string;
 
   // Subscription & Billing
-  subscriptionTier: "free" | "starter" | "pro" | "elite";
+  subscriptionTier: "free" | "core" | "pro" | "elite";
   subscriptionStatus: "active" | "inactive" | "trialing" | "canceled" | "past_due";
   subscriptionStartDate?: string | null;
   subscriptionEndDate?: string | null;
@@ -190,7 +191,7 @@ export const dynamoDBUsers = {
       updatedAt: now,
 
       // Subscription defaults
-      subscriptionTier: user.subscriptionTier || "free",
+      subscriptionTier: normalizeSubscriptionTier(user.subscriptionTier),
       subscriptionStatus: user.subscriptionStatus || "active",
       subscriptionStartDate: user.subscriptionStartDate || null,
       subscriptionEndDate: user.subscriptionEndDate || null,
@@ -245,7 +246,7 @@ export const dynamoDBUsers = {
   async updateSubscription(
     userId: string,
     subscription: {
-      tier?: "free" | "starter" | "pro" | "elite";
+      tier?: "free" | "core" | "pro" | "elite";
       status?: "active" | "inactive" | "trialing" | "canceled" | "past_due";
       stripeCustomerId?: string | null;
       stripeSubscriptionId?: string | null;
@@ -264,7 +265,7 @@ export const dynamoDBUsers = {
 
     if (hasProp("tier")) {
       updateParts.push("subscriptionTier = :tier");
-      attributeValues[":tier"] = subscription.tier ?? null;
+      attributeValues[":tier"] = normalizeSubscriptionTier(subscription.tier);
     }
 
     if (hasProp("status")) {
@@ -319,7 +320,7 @@ export const dynamoDBUsers = {
     });
 
     try {
-      const result = await getDynamoDb().send(
+      await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
@@ -742,10 +743,23 @@ export interface DynamoDBWorkout {
   structure?: {
     rounds?: number; // Number of rounds (EMOM, Rounds)
     timePerRound?: number; // Seconds per round (EMOM)
-    timeLimit?: number; // Seconds total (AMRAP)
+    timeLimit?: number; // Seconds total (AMRAP - single block, backward compatible)
     totalTime?: number; // Total workout time in seconds
     pattern?: string; // Rep pattern for ladder workouts (e.g., "21-15-9")
   } | null;
+
+  // Multi-Block AMRAP Support (Phase 7+)
+  amrapBlocks?: Array<{
+    id: string; // Unique block identifier
+    label: string; // "Part A", "Block 1", etc.
+    timeLimit: number; // Seconds for this block
+    order: number; // Sequence order
+    exercises: DynamoDBExercise[]; // Exercises specific to this block
+    completed?: boolean; // Completion status
+    completedAt?: string; // ISO timestamp
+    roundsCompleted?: number; // Rounds completed in this block
+    notes?: string; // Block-specific notes
+  }> | null;
 
   // Timer System Integration (Phase 5)
   timerConfig?: {
@@ -784,6 +798,40 @@ export const dynamoDBWorkouts = {
       return (result.Items as DynamoDBWorkout[]) || [];
     } catch (error) {
       console.error("Error listing workouts from DynamoDB:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get all workouts for a user (paginated)
+   */
+  async getAllByUser(userId: string): Promise<DynamoDBWorkout[]> {
+    try {
+      const workouts: DynamoDBWorkout[] = [];
+      let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+      do {
+        const result = await getDynamoDb().send(
+          new QueryCommand({
+            TableName: WORKOUTS_TABLE,
+            KeyConditionExpression: "userId = :userId",
+            ExpressionAttributeValues: {
+              ":userId": userId,
+            },
+            ExclusiveStartKey: lastEvaluatedKey,
+          })
+        );
+
+        if (result.Items?.length) {
+          workouts.push(...(result.Items as DynamoDBWorkout[]));
+        }
+
+        lastEvaluatedKey = result.LastEvaluatedKey;
+      } while (lastEvaluatedKey);
+
+      return workouts;
+    } catch (error) {
+      console.error("Error listing all workouts from DynamoDB:", error);
       return [];
     }
   },
@@ -839,6 +887,15 @@ export const dynamoDBWorkouts = {
       scheduledDate: workout.scheduledDate ?? null,
       status: workout.status ?? null,
       completedDate: workout.completedDate ?? null,
+      // Workout structure fields
+      workoutType: workout.workoutType ?? null,
+      structure: workout.structure ?? null,
+      timerConfig: workout.timerConfig ?? null,
+      blockTimers: workout.blockTimers ?? null,
+      // AI enhancement fields
+      aiEnhanced: workout.aiEnhanced ?? null,
+      aiNotes: workout.aiNotes ?? null,
+      muscleGroups: workout.muscleGroups ?? null,
     };
 
     try {
@@ -872,6 +929,13 @@ export const dynamoDBWorkouts = {
       scheduledDate?: string | null;
       status?: 'scheduled' | 'completed' | 'skipped' | null;
       completedDate?: string | null;
+      workoutType?: 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata' | null;
+      structure?: DynamoDBWorkout['structure'];
+      timerConfig?: DynamoDBWorkout['timerConfig'];
+      blockTimers?: DynamoDBWorkout['blockTimers'];
+      aiEnhanced?: boolean | null;
+      aiNotes?: string[] | null;
+      muscleGroups?: string[] | null;
     }
   ): Promise<void> {
     try {
@@ -918,6 +982,39 @@ export const dynamoDBWorkouts = {
       if (updates.completedDate !== undefined) {
         updateExpressions.push("completedDate = :completedDate");
         attributeValues[":completedDate"] = updates.completedDate;
+      }
+      if (updates.workoutType !== undefined) {
+        updateExpressions.push("workoutType = :workoutType");
+        attributeValues[":workoutType"] = updates.workoutType;
+      }
+      if (updates.structure !== undefined) {
+        updateExpressions.push("#structure = :structure");
+        attributeValues[":structure"] = updates.structure;
+        attributeNames["#structure"] = "structure"; // May be reserved
+      }
+      if (updates.timerConfig !== undefined) {
+        updateExpressions.push("timerConfig = :timerConfig");
+        attributeValues[":timerConfig"] = updates.timerConfig;
+      }
+      if (updates.blockTimers !== undefined) {
+        updateExpressions.push("blockTimers = :blockTimers");
+        attributeValues[":blockTimers"] = updates.blockTimers;
+      }
+      if (updates.aiEnhanced !== undefined) {
+        updateExpressions.push("aiEnhanced = :aiEnhanced");
+        attributeValues[":aiEnhanced"] = updates.aiEnhanced;
+      }
+      if (updates.aiNotes !== undefined) {
+        updateExpressions.push("aiNotes = :aiNotes");
+        attributeValues[":aiNotes"] = updates.aiNotes;
+      }
+      if (updates.muscleGroups !== undefined) {
+        updateExpressions.push("muscleGroups = :muscleGroups");
+        attributeValues[":muscleGroups"] = updates.muscleGroups;
+      }
+
+      if (updateExpressions.length === 0) {
+        return;
       }
 
       await getDynamoDb().send(
