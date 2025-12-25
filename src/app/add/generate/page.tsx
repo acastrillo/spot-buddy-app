@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Header } from "@/components/layout/header"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Sparkles, ArrowRight, Info, Zap, TrendingUp, Crown } from "lucide-react"
-import { getAIRequestLimit, normalizeSubscriptionTier } from "@/lib/stripe"
+import { getAIRequestLimit, normalizeSubscriptionTier, type SubscriptionTierInput } from "@/lib/subscription-tiers"
 import Link from "next/link"
 
 interface GenerateWorkoutResponse {
@@ -43,7 +43,7 @@ export default function GenerateWorkoutPage() {
   const [isQuotaError, setIsQuotaError] = useState(false)
 
   // Calculate user's AI quota
-  const tier = normalizeSubscriptionTier(user?.subscriptionTier || 'free')
+  const tier = normalizeSubscriptionTier((user?.subscriptionTier ?? 'free') as SubscriptionTierInput)
   const aiLimit = getAIRequestLimit(tier)
   const aiUsed = (user as any)?.aiRequestsUsed || 0
   const currentQuotaRemaining = aiLimit - aiUsed
