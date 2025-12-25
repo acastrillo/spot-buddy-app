@@ -2,7 +2,7 @@
  * AWS Bedrock Client for AI-Powered Features
  *
  * This module provides a centralized client for interacting with Amazon Bedrock
- * using Claude Sonnet 4.5 for workout enhancements, generation, and AI features.
+ * using Claude 4.5 models for workout enhancements, generation, and AI features.
  *
  * Features:
  * - Smart Workout Parser (enhance messy OCR text)
@@ -13,6 +13,12 @@
  * - Prompt caching (90% cost savings on repeated context)
  * - Batch processing (50% cost savings on large operations)
  * - Streaming responses for better UX
+ *
+ * Model Updates (December 2024):
+ * - Updated to Claude 4.5 models (latest as of 2025)
+ * - Sonnet 4.5: Best for coding and complex agents
+ * - Haiku 4.5: Optimized for performance and cost
+ * - Opus 4.5: Most intelligent, for sophisticated tasks
  */
 
 import {
@@ -27,12 +33,13 @@ const BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION 
 // Cross-region inference profiles are required for on-demand throughput
 // This provides automatic routing to the best available region for optimal performance
 const MODEL_IDS = {
-  sonnet: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0', // Default: Sonnet 4.5
-  haiku: 'us.anthropic.claude-3-5-haiku-20241022-v1:0', // Haiku 3.5 (cheaper, faster)
+  opus: 'us.anthropic.claude-opus-4-5-20251101-v1:0', // Opus 4.5 (most intelligent, premium)
+  sonnet: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', // Default: Sonnet 4.5 (best for coding)
+  haiku: 'us.anthropic.claude-haiku-4-5-20251001-v1:0', // Haiku 4.5 (cheaper, faster)
 } as const;
 const DEFAULT_MODEL = 'sonnet';
 
-// Cost tracking (approximate)
+// Cost tracking (approximate) - Claude 4.5 Sonnet pricing
 const COST_PER_INPUT_TOKEN = 0.000003; // $3 per 1M tokens
 const COST_PER_OUTPUT_TOKEN = 0.000015; // $15 per 1M tokens
 const COST_WITH_CACHE = 0.0000003; // 90% savings with prompt caching
@@ -76,7 +83,7 @@ export interface BedrockInvokeParams {
   temperature?: number;
   topP?: number;
   stopSequences?: string[];
-  model?: 'sonnet' | 'haiku'; // Model selection for cost/performance tradeoff
+  model?: 'opus' | 'sonnet' | 'haiku'; // Model selection for cost/performance tradeoff
 }
 
 /**
