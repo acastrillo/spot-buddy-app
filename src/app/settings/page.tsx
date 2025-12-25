@@ -362,15 +362,15 @@ function SettingsContent() {
                         <>
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
-                              item.destructive ? 'bg-destructive/10' : 'bg-surface'
+                              (item as any).destructive ? 'bg-destructive/10' : 'bg-surface'
                             }`}>
                               <Icon className={`h-4 w-4 ${
-                                item.destructive ? 'text-destructive' : 'text-text-secondary'
+                                (item as any).destructive ? 'text-destructive' : 'text-text-secondary'
                               }`} />
                             </div>
                             <div>
                               <h3 className={`font-medium ${
-                                item.destructive ? 'text-destructive' : 'text-text-primary'
+                                (item as any).destructive ? 'text-destructive' : 'text-text-primary'
                               }`}>
                                 {item.title}
                               </h3>
