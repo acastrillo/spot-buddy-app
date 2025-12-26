@@ -219,7 +219,9 @@ export function validateGeneratedWorkout(workout: WorkoutData): {
       if (!exercise.name) {
         errors.push(`Exercise ${index + 1} is missing a name`);
       }
-      if (!exercise.sets || exercise.sets < 1) {
+      // Normalize sets to number for validation
+      const sets = typeof exercise.sets === 'string' ? parseInt(exercise.sets, 10) : exercise.sets;
+      if (!exercise.sets || isNaN(sets) || sets < 1) {
         errors.push(`Exercise "${exercise.name}" has invalid sets: ${exercise.sets}`);
       }
       if (!exercise.reps) {

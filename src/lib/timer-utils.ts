@@ -4,6 +4,7 @@
  */
 
 import { setCachedItem, getCachedItem, TTL } from './cache-utils';
+import { getAudioContext } from '@/types/browser-compat';
 
 export interface TimerState {
   duration: number; // Total duration in seconds
@@ -121,18 +122,26 @@ export async function requestNotificationPermission(): Promise<boolean> {
 /**
  * Show notification
  */
+/**
+ * Extended notification options with experimental vibrate API
+ */
+interface ExtendedNotificationOptions extends NotificationOptions {
+  vibrate?: number[];
+}
+
 export function showNotification(title: string, options?: NotificationOptions): void {
   if (!('Notification' in window) || Notification.permission !== 'granted') {
     return;
   }
 
   try {
-    new Notification(title, {
+    const extendedOptions: ExtendedNotificationOptions = {
       icon: '/icon-192x192.png',
       badge: '/icon-96x96.png',
       vibrate: [200, 100, 200],
       ...options,
-    });
+    };
+    new Notification(title, extendedOptions as NotificationOptions);
   } catch (error) {
     console.error('Failed to show notification:', error);
   }
@@ -143,7 +152,7 @@ export function showNotification(title: string, options?: NotificationOptions): 
  */
 function generateBeep(): void {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = getAudioContext();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 

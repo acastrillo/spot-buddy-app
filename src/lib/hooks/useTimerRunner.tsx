@@ -26,6 +26,7 @@ import {
   getRemainingInSegmentMs,
   getTotalRemainingMs,
 } from '@/timers';
+import { getAudioContext } from '@/types/browser-compat';
 
 // ============================================================================
 // Browser API Utilities
@@ -36,7 +37,7 @@ import {
  */
 function playAlertSound(): void {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = getAudioContext();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -65,7 +66,7 @@ function playAlertSound(): void {
  */
 function playCountdownBeep(secondsRemaining: number): void {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = getAudioContext();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 

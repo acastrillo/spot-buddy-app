@@ -36,9 +36,14 @@ interface Exercise {
   name: string
   sets: number
   reps: string | number
-  weight?: string
-  restSeconds?: number
-  notes?: string
+  weight?: string | null
+  restSeconds?: number | null
+  notes?: string | null
+  setDetails?: Array<{
+    id?: string | null
+    reps?: string | number | null
+    weight?: string | number | null
+  }> | null
 }
 
 interface Workout {

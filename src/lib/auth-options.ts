@@ -15,6 +15,16 @@ import { normalizeSubscriptionTier } from "@/lib/subscription-tiers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request-ip";
 
+// Extended user type for OAuth providers
+interface OAuthUser {
+  id?: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  image?: string | null;
+}
+
 type GoogleProfile = {
   sub?: string;
   email?: string;
@@ -312,11 +322,12 @@ export const authOptions: NextAuthOptions = {
 
           // Update with latest profile info from OAuth provider
           // CRITICAL: Preserve subscription data to prevent wiping out paid tier!
+          const oauthUser = user as OAuthUser;
           await dynamoDBUsers.upsert({
             id: existingUser.id,
             email: user.email,
-            firstName: (user as any).firstName || existingUser.firstName || null,
-            lastName: (user as any).lastName || existingUser.lastName || null,
+            firstName: oauthUser.firstName || existingUser.firstName || null,
+            lastName: oauthUser.lastName || existingUser.lastName || null,
             // Preserve existing subscription data
             subscriptionTier: normalizedTier,
             subscriptionStatus: existingUser.subscriptionStatus,
@@ -345,12 +356,13 @@ export const authOptions: NextAuthOptions = {
 
           // Create user in DynamoDB with race condition protection
           // ConditionExpression ensures we don't overwrite if another request created this user concurrently
+          const oauthUser = user as OAuthUser;
           try {
             await dynamoDBUsers.upsert({
               id: newUserId,
               email: user.email,
-              firstName: (user as any).firstName || null,
-              lastName: (user as any).lastName || null,
+              firstName: oauthUser.firstName || null,
+              lastName: oauthUser.lastName || null,
             }, {
               ConditionExpression: 'attribute_not_exists(#id)',
               ExpressionAttributeNames: { '#id': 'id' },

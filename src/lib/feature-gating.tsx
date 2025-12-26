@@ -6,6 +6,7 @@ import {
   getQuotaLimit,
   normalizeSubscriptionTier,
   type SubscriptionTier,
+  type LimitKey,
 } from "./subscription-tiers"
 
 export interface FeatureGateResult {
@@ -17,7 +18,7 @@ export interface FeatureGateResult {
 /**
  * Hook to check if user has access to a specific feature
  */
-export function useFeatureAccess(feature: string): FeatureGateResult {
+export function useFeatureAccess(feature: LimitKey): FeatureGateResult {
   const { user } = useAuthStore()
   const tier = normalizeSubscriptionTier(user?.subscriptionTier)
 
@@ -52,7 +53,7 @@ export function useQuotaCheck(quotaType: 'ocrQuotaWeekly' | 'workoutsMax' | 'aiR
   const currentUsage = quotaType === 'ocrQuotaWeekly'
     ? user?.ocrQuotaUsed || 0
     : quotaType === 'aiRequestsMonthly'
-    ? (user as any)?.aiRequestsUsed || 0
+    ? user?.aiRequestsUsed || 0
     : user?.workoutsSaved || 0
 
   if (currentUsage >= limit) {
@@ -73,7 +74,7 @@ export function useQuotaCheck(quotaType: 'ocrQuotaWeekly' | 'workoutsMax' | 'aiR
 /**
  * Get the minimum tier required for a feature
  */
-function getMinimumTierForFeature(feature: string): string {
+function getMinimumTierForFeature(feature: LimitKey): string {
   const tiers: SubscriptionTier[] = ['free', 'core', 'pro', 'elite']
 
   for (const tier of tiers) {
@@ -89,7 +90,7 @@ function getMinimumTierForFeature(feature: string): string {
  * Feature gate component props
  */
 export interface FeatureGateProps {
-  feature: string
+  feature: LimitKey
   fallback?: React.ReactNode
   children: React.ReactNode
 }

@@ -33,10 +33,38 @@ async function updateIAMPolicy() {
             "bedrock:InvokeModelWithResponseStream"
           ],
           Resource: [
-            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
             "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
-            `arn:aws:bedrock:us-east-1:${AWS_ACCOUNT_ID}:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0`,
             `arn:aws:bedrock:*:${AWS_ACCOUNT_ID}:inference-profile/*`
+          ]
+        },
+        {
+          Effect: "Allow",
+          Action: [
+            "bedrock:CreateModelInvocationJob",
+            "bedrock:GetModelInvocationJob",
+            "bedrock:ListModelInvocationJobs",
+            "bedrock:StopModelInvocationJob"
+          ],
+          Resource: "*"
+        },
+        {
+          Effect: "Allow",
+          Action: [
+            "s3:ListBucket"
+          ],
+          Resource: [
+            "arn:aws:s3:::spotter-ai-prompt-cache"
+          ]
+        },
+        {
+          Effect: "Allow",
+          Action: [
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:DeleteObject"
+          ],
+          Resource: [
+            "arn:aws:s3:::spotter-ai-prompt-cache/*"
           ]
         },
         {

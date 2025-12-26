@@ -56,9 +56,19 @@ $BedrockPolicy = @"
                 "bedrock:InvokeModelWithResponseStream"
             ],
             "Resource": [
-                "arn:aws:bedrock:$($Region)::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
-                "arn:aws:bedrock:$($Region)::foundation-model/anthropic.claude-3-5-sonnet-*"
+                "arn:aws:bedrock:$($Region)::foundation-model/anthropic.claude-*",
+                "arn:aws:bedrock:*:$($AccountId):inference-profile/*"
             ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:CreateModelInvocationJob",
+                "bedrock:GetModelInvocationJob",
+                "bedrock:ListModelInvocationJobs",
+                "bedrock:StopModelInvocationJob"
+            ],
+            "Resource": "*"
         },
         {
             "Effect": "Allow",
@@ -74,6 +84,26 @@ $BedrockPolicy = @"
                 "arn:aws:dynamodb:$($Region):$($AccountId):table/spotter-workouts",
                 "arn:aws:dynamodb:$($Region):$($AccountId):table/spotter-users",
                 "arn:aws:dynamodb:$($Region):$($AccountId):table/spotter-body-metrics"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::spotter-ai-prompt-cache"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::spotter-ai-prompt-cache/*"
             ]
         }
     ]
@@ -91,8 +121,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Bedrock permissions added successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "SpotterTaskRole now has permission to:" -ForegroundColor Green
-Write-Host "  - Invoke Claude 3.5 Sonnet models on Bedrock" -ForegroundColor White
+Write-Host "  - Invoke Claude models on Bedrock (including 4.5 via inference profiles)" -ForegroundColor White
+Write-Host "  - Run Bedrock batch inference jobs" -ForegroundColor White
 Write-Host "  - Access DynamoDB tables (workouts, users, body-metrics)" -ForegroundColor White
+Write-Host "  - Read/write batch inputs/outputs in spotter-ai-prompt-cache" -ForegroundColor White
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. The ECS task will automatically use the updated permissions" -ForegroundColor White

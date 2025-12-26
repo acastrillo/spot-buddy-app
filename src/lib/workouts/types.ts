@@ -1,6 +1,9 @@
 import type { DynamoDBExercise, DynamoDBWorkout } from "../dynamodb";
 import type { TimerParams } from "@/timers";
 
+// Re-export DynamoDB types for use in other files
+export type { DynamoDBWorkout, DynamoDBExercise };
+
 export interface EditableSet {
   id: string;
   reps: string;
@@ -46,7 +49,7 @@ export interface EditableWorkoutState {
 }
 
 export interface SetDetail {
-  id?: string;
+  id?: string | null;
   reps?: string | number | null;
   weight?: string | number | null;
 }
@@ -107,7 +110,7 @@ const normaliseSetDetails = (
       }));
 
   return details.map((detail) => ({
-    id: detail?.id ?? generateId(),
+    id: ('id' in detail && detail.id) ? detail.id : generateId(),
     reps: coerceString(detail?.reps ?? exercise.reps ?? ""),
     weight: coerceString(detail?.weight ?? exercise.weight ?? ""),
   }));

@@ -13,10 +13,10 @@ export interface Exercise {
   restSeconds?: number | null
   notes?: string | null
   setDetails?: Array<{
-    id?: string
+    id?: string | null
     reps?: string | number | null
     weight?: string | number | null
-  }>
+  }> | null
 }
 
 /**

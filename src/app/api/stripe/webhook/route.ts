@@ -5,6 +5,21 @@ import { dynamoDBUsers, dynamoDBWebhookEvents } from '@/lib/dynamodb'
 import { PaidTier, normalizePaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
 import { AppMetrics } from '@/lib/metrics'
 import { SUBSCRIPTION_TIERS } from '@/lib/stripe'
+import type {
+  StripeCheckoutSessionExtended,
+  StripeInvoiceExtended,
+  StripeSubscriptionWithMetadata,
+} from '@/types/stripe-extended'
+import {
+  getCustomerId,
+  getCustomerEmail,
+  getSubscriptionId,
+  getInvoiceCustomerEmail,
+  getInvoiceSubscriptionMetadata,
+  getSubscriptionDate,
+  extractUserId,
+  extractTier,
+} from '@/types/stripe-extended'
 
 export const runtime = 'nodejs'
 
@@ -74,10 +89,12 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId: string) {
-  const userId = session.metadata?.userId
-  const tier = normalizePaidTier(session.metadata?.tier)
-  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
-  const customerEmail = session.customer_email || session.customer_details?.email
+  const extended = session as StripeCheckoutSessionExtended
+  const userId = extractUserId(extended.metadata)
+  const tierRaw = extractTier(extended.metadata)
+  const tier = normalizePaidTier(tierRaw)
+  const customerId = getCustomerId(session.customer)
+  const customerEmail = extended.customer_email || session.customer_details?.email || null
 
   console.log(`[Webhook:${eventId}] checkout.session.completed:`, {
     sessionId: session.id,
@@ -94,10 +111,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
 
   await ensureUserExists(userId)
 
-  const subscriptionId =
-    typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id || null
+  const subscriptionId = getSubscriptionId(session.subscription)
 
   console.log(`[Webhook:${eventId}] Updating user ${userId} to tier=${tier}, status=active, subscriptionId=${subscriptionId}`)
 
@@ -122,9 +136,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
 }
 
 async function handleSubscriptionUpsert(subscription: Stripe.Subscription, eventId: string) {
-  let userId = subscription.metadata?.userId
-  const tierMeta = normalizePaidTier(subscription.metadata?.tier)
-  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id || null
+  const extended = subscription as StripeSubscriptionWithMetadata
+  let userId = extractUserId(extended.metadata)
+  const tierRaw = extractTier(extended.metadata)
+  const tierMeta = normalizePaidTier(tierRaw)
+  const customerId = getCustomerId(subscription.customer)
 
   console.log(`[Webhook:${eventId}] subscription.upsert:`, {
     subscriptionId: subscription.id,
@@ -148,14 +164,13 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
   await ensureUserExists(userId)
 
   const tier = tierMeta
-  const sub = subscription as any
   const update: Parameters<typeof dynamoDBUsers.updateSubscription>[1] = {
     status: mapStripeStatus(subscription.status),
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscription.id,
-    startDate: toDate(sub.current_period_start),
-    endDate: sub.cancel_at ? toDate(sub.cancel_at) : null,
-    trialEndsAt: sub.trial_end ? toDate(sub.trial_end) : null,
+    startDate: getSubscriptionDate(extended.current_period_start),
+    endDate: getSubscriptionDate(extended.cancel_at),
+    trialEndsAt: getSubscriptionDate(extended.trial_end),
   }
 
   if (tier) update.tier = tier
@@ -166,8 +181,9 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eventId: string) {
-  const userId = subscription.metadata?.userId
-  const tier = normalizePaidTier(subscription.metadata?.tier)
+  const userId = extractUserId(subscription.metadata)
+  const tierRaw = extractTier(subscription.metadata)
+  const tier = normalizePaidTier(tierRaw)
 
   if (!userId) {
     console.warn(`[Webhook:${eventId}] Subscription cancellation missing userId; skipping`)
@@ -179,7 +195,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eve
   await dynamoDBUsers.updateSubscription(userId, {
     tier: 'free',
     status: 'canceled',
-    stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : null,
+    stripeCustomerId: getCustomerId(subscription.customer),
     stripeSubscriptionId: subscription.id,
     endDate: new Date(),
   })
@@ -192,12 +208,12 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eve
 }
 
 async function handleInvoicePayment(invoice: Stripe.Invoice, result: 'succeeded' | 'failed', eventId: string) {
-  const inv = invoice as any
+  const extended = invoice as StripeInvoiceExtended;
   console.log(`[Webhook:${eventId}] invoice.payment.${result}:`, {
     invoiceId: invoice.id,
-    customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id,
-    customerEmail: inv.customer_email,
-    subscriptionId: typeof inv.subscription === 'string' ? inv.subscription : inv.subscription?.id,
+    customerId: getCustomerId(invoice.customer),
+    customerEmail: getInvoiceCustomerEmail(invoice),
+    subscriptionId: getSubscriptionId(extended.subscription),
   })
 
   const context = await resolveInvoiceContext(invoice)
@@ -239,10 +255,7 @@ function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): 'active' | '
   }
 }
 
-function toDate(timestamp?: number | null): Date | null {
-  if (!timestamp) return null
-  return new Date(timestamp * 1000)
-}
+// Removed toDate - now using getSubscriptionDate from stripe-extended
 
 async function ensureUserExists(userId: string) {
   const user = await dynamoDBUsers.get(userId).catch(() => null)
@@ -258,41 +271,38 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   customerId: string | null
   tier: PaidTier | null
 }> {
-  const inv = invoice as any
-  const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null
-  const subscriptionId =
-    typeof inv.subscription === 'string'
-      ? inv.subscription
-      : inv.subscription?.id || null
+  const extended = invoice as StripeInvoiceExtended
+  const customerId = getCustomerId(invoice.customer)
+  const subscriptionId = getSubscriptionId(extended.subscription)
 
-  // Prefer metadata from invoice payload if present
-  const metaTier =
-    inv.subscription_details?.metadata?.tier ||
-    inv?.parent?.subscription_details?.metadata?.tier ||
-    invoice.metadata?.tier
-  const parsedTier = normalizePaidTier(metaTier) ?? null
+  // Get metadata from invoice using type-safe helper
+  const invoiceMetadata = getInvoiceSubscriptionMetadata(invoice)
+  const metaTierRaw = extractTier(invoiceMetadata || invoice.metadata || undefined)
+  const parsedTier = normalizePaidTier(metaTierRaw) ?? null
 
-  const userIdFromInvoice =
-    inv.subscription_details?.metadata?.userId ||
-    // Newer payloads sometimes nest under parent.subscription_details
-    inv?.parent?.subscription_details?.metadata?.userId ||
-    invoice.metadata?.userId
+  // Try to get userId from invoice metadata
+  const userIdFromInvoice = extractUserId(invoiceMetadata || invoice.metadata || undefined)
   if (userIdFromInvoice) {
-    return { userId: userIdFromInvoice as string, subscriptionId, customerId, tier: parsedTier }
+    return { userId: userIdFromInvoice, subscriptionId, customerId, tier: parsedTier }
   }
 
   // Fallback: try line item metadata
-  const lineWithMeta =
-    invoice.lines?.data?.find((line) => (line.metadata as Record<string, string> | undefined)?.userId) || null
-  const userIdFromLine = (lineWithMeta?.metadata as Record<string, string> | undefined)?.userId
-  if (userIdFromLine) {
-    const lineTierRaw = (lineWithMeta?.metadata as Record<string, string> | undefined)?.tier
-    const lineTier = normalizePaidTier(lineTierRaw) ?? parsedTier
-    return { userId: userIdFromLine as string, subscriptionId, customerId, tier: lineTier }
+  const lineWithMeta = invoice.lines?.data?.find(
+    (line) => line.metadata && extractUserId(line.metadata as Record<string, string | undefined>)
+  ) || null
+
+  if (lineWithMeta?.metadata) {
+    const userIdFromLine = extractUserId(lineWithMeta.metadata as Record<string, string | undefined>)
+    if (userIdFromLine) {
+      const lineTierRaw = extractTier(lineWithMeta.metadata as Record<string, string | undefined>)
+      const lineTier = normalizePaidTier(lineTierRaw) ?? parsedTier
+      return { userId: userIdFromLine, subscriptionId, customerId, tier: lineTier }
+    }
   }
 
   if (!subscriptionId) {
-    const resolved = await resolveUserByCustomer(customerId, parsedTier ?? undefined, inv.customer_email || undefined)
+    const customerEmail = getInvoiceCustomerEmail(invoice)
+    const resolved = await resolveUserByCustomer(customerId, parsedTier ?? undefined, customerEmail)
     return {
       userId: resolved?.userId || null,
       subscriptionId,
@@ -302,17 +312,20 @@ async function resolveInvoiceContext(invoice: Stripe.Invoice): Promise<{
   }
 
   // Fetch subscription to retrieve metadata reliably
-  const subscription =
-    typeof inv.subscription === 'string'
-      ? await getStripe().subscriptions.retrieve(inv.subscription)
-      : (inv.subscription as Stripe.Subscription)
+  const subscription = typeof extended.subscription === 'string'
+    ? await getStripe().subscriptions.retrieve(extended.subscription)
+    : extended.subscription
+
+  const customerEmail = getInvoiceCustomerEmail(invoice)
+  const subscriptionCustomerEmail = subscription ? getCustomerEmail(subscription.customer) : null
+  const emailHint = customerEmail || subscriptionCustomerEmail
 
   const resolved = await resolveUserByCustomer(
-    subscription.customer,
+    subscription?.customer || null,
     parsedTier ?? undefined,
-    inv.customer_email || (typeof subscription.customer === 'string' ? undefined : (subscription.customer as Stripe.Customer).email) || undefined
+    emailHint
   )
-  const resolvedUserId = subscription.metadata?.userId || resolved?.userId || null
+  const resolvedUserId = subscription?.metadata?.userId || resolved?.userId || null
 
   return {
     userId: resolvedUserId,
@@ -327,7 +340,7 @@ async function resolveUserByCustomer(
   tier?: PaidTier,
   emailHint?: string | null
 ): Promise<{ userId: string; tier: PaidTier | undefined } | null> {
-  const stripeCustomerId = typeof customer === 'string' ? customer : customer?.id || null
+  const stripeCustomerId = getCustomerId(customer)
   if (!stripeCustomerId) {
     console.log('[resolveUserByCustomer] No stripeCustomerId provided')
     return null
@@ -346,11 +359,9 @@ async function resolveUserByCustomer(
     console.warn('[resolveUserByCustomer] stripeCustomerId lookup failed (GSI may not exist):', err)
   }
 
-  const directEmail =
-    emailHint ||
-    (customer && typeof customer !== 'string' && 'email' in customer ? (customer as Stripe.Customer).email || undefined : undefined)
+  const directEmail = emailHint || getCustomerEmail(customer)
 
-  const tryLookupByEmail = async (email: string | undefined) => {
+  const tryLookupByEmail = async (email: string | undefined | null) => {
     if (!email) return null
     console.log(`[resolveUserByCustomer] Trying email lookup: ${email}`)
     const user = await dynamoDBUsers.getByEmail(email)
@@ -367,8 +378,8 @@ async function resolveUserByCustomer(
               ConditionExpression: 'attribute_not_exists(stripeCustomerId)',
             }
           )
-        } catch (error: any) {
-          if (error.name === 'ConditionalCheckFailedException') {
+        } catch (error: unknown) {
+          if (error && typeof error === 'object' && 'name' in error && error.name === 'ConditionalCheckFailedException') {
             console.log(`[resolveUserByCustomer] ⚠️  stripeCustomerId already set for user=${user.id} (concurrent webhook)`)
           } else {
             throw error
@@ -386,7 +397,7 @@ async function resolveUserByCustomer(
   // 3. Fetch customer from Stripe and try their email
   try {
     const cust = await getStripe().customers.retrieve(stripeCustomerId)
-    const custEmail = (cust as Stripe.Customer).email || undefined
+    const custEmail = getCustomerEmail(cust)
     console.log(`[resolveUserByCustomer] Stripe customer email: ${custEmail}`)
     const byCust = await tryLookupByEmail(custEmail)
     if (byCust) return byCust

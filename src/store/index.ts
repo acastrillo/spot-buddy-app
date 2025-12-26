@@ -13,6 +13,8 @@ interface SessionUser {
   subscriptionStatus?: string;
   ocrQuotaUsed?: number;
   ocrQuotaLimit?: number;
+  workoutsSaved?: number;
+  aiRequestsUsed?: number;
 }
 
 interface User {
@@ -24,6 +26,8 @@ interface User {
   subscriptionStatus?: string;
   ocrQuotaUsed?: number;
   ocrQuotaLimit?: number;
+  workoutsSaved?: number;
+  aiRequestsUsed?: number;
 }
 
 type AuthProvider = "google" | "facebook";
@@ -56,6 +60,8 @@ export const useAuthStore = (): AuthState => {
         subscriptionStatus: sessionUser.subscriptionStatus ?? "active",
         ocrQuotaUsed: sessionUser.ocrQuotaUsed ?? 0,
         ocrQuotaLimit: sessionUser.ocrQuotaLimit ?? 2,
+        workoutsSaved: sessionUser.workoutsSaved ?? 0,
+        aiRequestsUsed: sessionUser.aiRequestsUsed ?? 0,
       }
     : null;
 

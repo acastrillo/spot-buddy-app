@@ -12,6 +12,7 @@
     "db:generate": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.958.0",
     "@aws-sdk/client-bedrock-runtime": "^3.916.0",
     "@aws-sdk/client-dynamodb": "^3.899.0",
     "@aws-sdk/client-s3": "^3.901.0",

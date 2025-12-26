@@ -216,9 +216,9 @@ export const dynamoDBUsers = {
 
     // Remove stripeCustomerId from item if it's null/undefined to avoid GSI validation errors
     // (DynamoDB GSI requires non-null values for index keys)
-    const itemToWrite = { ...userData };
+    const itemToWrite: Partial<typeof userData> = { ...userData };
     if (!itemToWrite.stripeCustomerId) {
-      delete (itemToWrite as any).stripeCustomerId;
+      delete itemToWrite.stripeCustomerId;
     }
 
     try {
@@ -888,14 +888,14 @@ export const dynamoDBWorkouts = {
       status: workout.status ?? null,
       completedDate: workout.completedDate ?? null,
       // Workout structure fields
-      workoutType: workout.workoutType ?? null,
+      workoutType: workout.workoutType,
       structure: workout.structure ?? null,
       timerConfig: workout.timerConfig ?? null,
       blockTimers: workout.blockTimers ?? null,
       // AI enhancement fields
-      aiEnhanced: workout.aiEnhanced ?? null,
+      aiEnhanced: workout.aiEnhanced,
       aiNotes: workout.aiNotes ?? null,
-      muscleGroups: workout.muscleGroups ?? null,
+      muscleGroups: workout.muscleGroups,
     };
 
     try {

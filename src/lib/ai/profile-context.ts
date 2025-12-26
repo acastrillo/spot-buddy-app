@@ -77,7 +77,6 @@ export async function buildAIProfileContext(
 
     // Extract exercise history and PRs
     const allWorkouts = await dynamoDBWorkouts.list(userId);
-    const exerciseHistory = getExerciseHistory(allWorkouts);
 
     // Format recent workouts for AI context
     context.recentWorkouts = recentWorkouts.slice(0, 10).map((workout) => ({
@@ -87,20 +86,39 @@ export async function buildAIProfileContext(
       muscleGroups: workout.muscleGroups || [],
     }));
 
-    // Format PRs for AI context (top 10 by weight)
-    context.personalRecords = Object.entries(exerciseHistory)
-      .map(([exercise, history]) => {
-        const pr = history.personalRecord;
-        if (!pr) return null;
+    // Build PR list from all workouts
+    // Simplified approach: just extract the best performance for each exercise
+    const exercisePRs = new Map<string, { exercise: string; weight: number; reps: number }>();
 
-        return {
-          exercise,
-          weight: pr.weight || 0,
-          reps: pr.reps || 0,
-          estimatedOneRepMax: pr.estimatedOneRepMax || 0,
-        };
-      })
-      .filter((pr): pr is NonNullable<typeof pr> => pr !== null)
+    allWorkouts.forEach(workout => {
+      workout.exercises?.forEach(ex => {
+        const exerciseName = ex.name.toLowerCase().trim();
+        const weight = typeof ex.weight === 'string' ? parseFloat(ex.weight) : (ex.weight || 0);
+        const reps = typeof ex.reps === 'string' ? parseInt(ex.reps, 10) : (ex.reps || 0);
+
+        // Simple heuristic: weight * reps for comparison
+        const score = weight * reps;
+        const existing = exercisePRs.get(exerciseName);
+        const existingScore = existing ? existing.weight * existing.reps : 0;
+
+        if (!existing || score > existingScore) {
+          exercisePRs.set(exerciseName, {
+            exercise: ex.name,
+            weight,
+            reps
+          });
+        }
+      });
+    });
+
+    // Format PRs for AI context (top 10 by weight)
+    context.personalRecords = Array.from(exercisePRs.values())
+      .map(pr => ({
+        exercise: pr.exercise,
+        weight: pr.weight,
+        reps: pr.reps,
+        estimatedOneRepMax: pr.weight * (1 + pr.reps / 30), // Simple Epley formula
+      }))
       .sort((a, b) => b.estimatedOneRepMax - a.estimatedOneRepMax)
       .slice(0, 10);
   } catch (error) {

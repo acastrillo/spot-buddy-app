@@ -124,22 +124,33 @@ export const SUBSCRIPTION_TIERS = {
 } as const
 
 export type SubscriptionTier = keyof typeof SUBSCRIPTION_TIERS
-export type SubscriptionTierInput = SubscriptionTier | 'starter' | null | undefined
+export type SubscriptionTierInput = SubscriptionTier | 'starter' | string | null | undefined
 
 export function normalizeSubscriptionTier(tier: SubscriptionTierInput): SubscriptionTier {
   if (!tier) return 'free'
   if (tier === 'starter') return 'core'
-  return Object.prototype.hasOwnProperty.call(SUBSCRIPTION_TIERS, tier) ? tier : 'free'
+  // Type guard: check if tier is a valid key in SUBSCRIPTION_TIERS
+  if (Object.prototype.hasOwnProperty.call(SUBSCRIPTION_TIERS, tier)) {
+    return tier as SubscriptionTier
+  }
+  return 'free'
 }
+
+// Type for all possible limit keys across all tiers
+export type LimitKey = keyof typeof SUBSCRIPTION_TIERS.free.limits |
+  keyof typeof SUBSCRIPTION_TIERS.core.limits |
+  keyof typeof SUBSCRIPTION_TIERS.pro.limits |
+  keyof typeof SUBSCRIPTION_TIERS.elite.limits
 
 // Helper to check if user has access to a feature
 export function hasFeatureAccess(
   tier: SubscriptionTierInput,
-  feature: keyof typeof SUBSCRIPTION_TIERS.pro.limits
+  feature: LimitKey
 ): boolean {
   const normalizedTier = normalizeSubscriptionTier(tier)
-  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as any
-  return tierLimits[feature] === true || tierLimits[feature] === null
+  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as Record<string, unknown>
+  const value = tierLimits[feature]
+  return value === true || value === null
 }
 
 // Helper to get quota limit for a tier
@@ -155,8 +166,12 @@ export function getQuotaLimit(
     | 'ocrQuotaWeekly'
 ): number | null {
   const normalizedTier = normalizeSubscriptionTier(tier)
-  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as any
-  return tierLimits[quota] ?? null
+  const tierLimits = SUBSCRIPTION_TIERS[normalizedTier].limits as Record<string, number | null | boolean | undefined>
+  const value = tierLimits[quota]
+  if (typeof value === 'number' || value === null) {
+    return value
+  }
+  return null
 }
 
 // Helper to get AI request limit for a tier

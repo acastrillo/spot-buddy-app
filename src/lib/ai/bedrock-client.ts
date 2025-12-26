@@ -2,7 +2,7 @@
  * AWS Bedrock Client for AI-Powered Features
  *
  * This module provides a centralized client for interacting with Amazon Bedrock
- * using Claude 3.x models for workout enhancements, generation, and AI features.
+ * using Claude models for workout enhancements, generation, and AI features.
  *
  * Features:
  * - Smart Workout Parser (enhance messy OCR text)
@@ -15,9 +15,9 @@
  * - Streaming responses for better UX
  *
  * Model Updates:
- * - Claude 3.5 Sonnet (balanced quality and cost)
- * - Claude 3.5 Haiku (fast, cost-efficient)
- * - Claude 3 Opus (highest accuracy, premium)
+ * - Claude Sonnet 4.5 (balanced quality and cost)
+ * - Claude Haiku 4.5 (fast, cost-efficient)
+ * - Claude Opus 4.5 (highest accuracy, premium)
  */
 
 import {
@@ -34,18 +34,34 @@ const BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION 
 export type ClaudeModel = 'opus' | 'sonnet' | 'haiku';
 
 const MODEL_IDS: Record<ClaudeModel, string> = {
-  opus: process.env.AWS_BEDROCK_MODEL_OPUS || 'us.anthropic.claude-3-opus-20240229-v1:0',
-  sonnet: process.env.AWS_BEDROCK_MODEL_SONNET || 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
-  haiku: process.env.AWS_BEDROCK_MODEL_HAIKU || 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  opus: process.env.AWS_BEDROCK_MODEL_OPUS || 'us.anthropic.claude-opus-4-5-20251101-v1:0',
+  sonnet: process.env.AWS_BEDROCK_MODEL_SONNET || 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  haiku: process.env.AWS_BEDROCK_MODEL_HAIKU || 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
 };
 const DEFAULT_MODEL: ClaudeModel = 'sonnet';
 
-const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
+// Update these defaults to match current Bedrock pricing for your enabled models.
+const MODEL_PRICING_DEFAULT: Record<ClaudeModel, { input: number; output: number }> = {
   opus: { input: 0.000015, output: 0.000075 }, // $15 / $75 per 1M tokens
   sonnet: { input: 0.000003, output: 0.000015 }, // $3 / $15 per 1M tokens
   haiku: { input: 0.00000025, output: 0.00000125 }, // $0.25 / $1.25 per 1M tokens
 };
 const CACHE_READ_DISCOUNT = 0.1; // Cached reads billed at 10% of input price
+
+function resolveModelPricing(model: ClaudeModel): { input: number; output: number } {
+  const defaultPricing = MODEL_PRICING_DEFAULT[model];
+  const prefix = model.toUpperCase();
+  const inputOverride = process.env[`AWS_BEDROCK_PRICE_${prefix}_INPUT`];
+  const outputOverride = process.env[`AWS_BEDROCK_PRICE_${prefix}_OUTPUT`];
+
+  const input = inputOverride ? Number(inputOverride) : defaultPricing.input;
+  const output = outputOverride ? Number(outputOverride) : defaultPricing.output;
+
+  return {
+    input: Number.isFinite(input) ? input : defaultPricing.input,
+    output: Number.isFinite(output) ? output : defaultPricing.output,
+  };
+}
 
 /**
  * Bedrock client singleton
@@ -219,7 +235,7 @@ function buildUsage(usage: any): BedrockResponse['usage'] {
 }
 
 function calculateCost(usage: BedrockResponse['usage'], model: ClaudeModel): BedrockResponse['cost'] {
-  const pricing = MODEL_PRICING[model];
+  const pricing = resolveModelPricing(model);
   const hasCacheUsage = !!(usage.cacheCreationInputTokens || usage.cacheReadInputTokens);
 
   const inputCost = hasCacheUsage
@@ -417,7 +433,7 @@ export function estimateCost(
   options: { model?: ClaudeModel; cachedInputTokens?: number } = {}
 ): number {
   const model = options.model || DEFAULT_MODEL;
-  const pricing = MODEL_PRICING[model];
+  const pricing = resolveModelPricing(model);
   const cachedInputTokens = options.cachedInputTokens || 0;
   const uncachedInputTokens = Math.max(estimatedInputTokens - cachedInputTokens, 0);
   const inputCost = (uncachedInputTokens * pricing.input) +

@@ -216,7 +216,7 @@ export default function PersonalRecordsPage() {
                                 <div>
                                   <p className="text-xs text-text-secondary mb-1">Est. 1RM</p>
                                   <p className="text-base font-semibold text-primary">
-                                    {Math.round(estimated1RM.value)} {pr.unit}
+                                    {Math.round(estimated1RM)} {pr.unit}
                                   </p>
                                 </div>
                               </div>

@@ -64,7 +64,8 @@ prisma/prisma
 prisma/migrations/
 
 # Agent and planning docs
-data/
+data/docs/
+# Keep spotter_glossary.json - needed for workout parsing
 
 # Archive
 docs/archive/

@@ -34,7 +34,8 @@ function hiitConfigToTimerParams(config: HIITConfig): IntervalWorkRestParams {
     workSeconds: config.workDuration,
     restSeconds: config.restDuration,
     totalRounds: config.rounds,
-    prepSeconds: config.prepTime,
+    // Note: prepSeconds is not supported by IntervalWorkRestParams yet
+    // TODO: Add prep time support to timer engine if needed
   };
 }
 

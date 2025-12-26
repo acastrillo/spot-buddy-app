@@ -118,21 +118,23 @@ function SubscriptionContent() {
 
   const tiers = [
     {
-      key: 'free',
+      key: 'free' as const,
       icon: Zap,
       color: 'text-text-secondary',
       bgColor: 'bg-surface',
+      popular: false,
       ...SUBSCRIPTION_TIERS.free,
     },
     {
-      key: 'core',
+      key: 'core' as const,
       icon: Sparkles,
       color: 'text-secondary',
       bgColor: 'bg-secondary/10',
+      popular: false,
       ...SUBSCRIPTION_TIERS.core,
     },
     {
-      key: 'pro',
+      key: 'pro' as const,
       icon: Crown,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
@@ -140,10 +142,11 @@ function SubscriptionContent() {
       ...SUBSCRIPTION_TIERS.pro,
     },
     {
-      key: 'elite',
+      key: 'elite' as const,
       icon: Crown,
       color: 'text-rest',
       bgColor: 'bg-rest/10',
+      popular: false,
       ...SUBSCRIPTION_TIERS.elite,
     },
   ]

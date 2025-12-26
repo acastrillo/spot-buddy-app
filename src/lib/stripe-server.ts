@@ -1,6 +1,6 @@
 import Stripe from 'stripe'
 
-const API_VERSION: Stripe.LatestApiVersion = '2024-12-18.acacia'
+const API_VERSION: Stripe.LatestApiVersion = '2025-09-30.clover'
 const PAID_TIERS = ['core', 'pro', 'elite'] as const
 
 export type PaidTier = (typeof PAID_TIERS)[number]

@@ -38,6 +38,7 @@ import {
   EditableWorkoutState,
   normaliseWorkoutForEditing,
   type StoredWorkout,
+  type DynamoDBWorkout,
 } from "@/lib/workouts/types";
 import { TIMER_TEMPLATES } from "@/timers";
 

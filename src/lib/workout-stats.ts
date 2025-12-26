@@ -289,7 +289,7 @@ function calculateVolumeByMonth(
 /**
  * Parse weight string to number (handles "185 lbs", "80kg", etc.)
  */
-function parseWeight(weight: string | null | undefined): number {
+function parseWeight(weight: string | number | null | undefined): number {
   if (!weight) return 0;
   const match = weight.toString().match(/[\d.]+/);
   return match ? parseFloat(match[0]) : 0;

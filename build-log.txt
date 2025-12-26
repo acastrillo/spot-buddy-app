@@ -1,0 +1,131 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 DONE 0.0s
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.32kB done
+#1 DONE 0.0s
+
+#2 [auth] library/node:pull token for registry-1.docker.io
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:18-alpine
+#3 DONE 0.3s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 1.02kB done
+#4 DONE 0.0s
+
+#5 [base 1/1] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 169.25kB 0.0s done
+#6 DONE 0.0s
+
+#7 [deps 1/4] RUN apk add --no-cache libc6-compat
+#7 CACHED
+
+#8 [deps 3/4] COPY package.json package-lock.json* ./
+#8 CACHED
+
+#9 [builder 1/6] WORKDIR /app
+#9 CACHED
+
+#10 [deps 2/4] WORKDIR /app
+#10 CACHED
+
+#11 [deps 4/4] RUN npm ci
+#11 CACHED
+
+#12 [builder 2/6] COPY --from=deps /app/node_modules ./node_modules
+#12 CACHED
+
+#13 [builder 3/6] COPY . .
+#13 DONE 0.1s
+
+#14 [builder 4/6] RUN npx prisma generate
+#14 1.428 Prisma schema loaded from prisma/schema.prisma
+#14 2.262 
+#14 2.262 ✔ Generated Prisma Client (v6.16.1) to ./node_modules/@prisma/client in 74ms
+#14 2.262 
+#14 2.262 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#14 2.262 
+#14 2.262 Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+#14 2.262 
+#14 2.279 npm notice
+#14 2.279 npm notice New major version of npm available! 10.8.2 -> 11.7.0
+#14 2.279 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+#14 2.279 npm notice To update run: npm install -g npm@11.7.0
+#14 2.279 npm notice
+#14 DONE 2.3s
+
+#15 [builder 5/6] RUN npm run build
+#15 0.314 
+#15 0.314 > spot-buddy@0.1.0 build
+#15 0.314 > next build
+#15 0.314 
+#15 0.905 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#15 0.906 This information is used to shape Next.js' roadmap and prioritize features.
+#15 0.906 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#15 0.906 https://nextjs.org/telemetry
+#15 0.906 
+#15 0.973    ▲ Next.js 15.5.7
+#15 0.973    - Experiments (use with caution):
+#15 0.973      · optimizePackageImports
+#15 0.973 
+#15 1.053    Creating an optimized production build ...
+#15 24.78  ✓ Compiled successfully in 21.8s
+#15 24.78    Linting and checking validity of types ...
+#15 27.77 
+#15 27.77 ./src/app/workout/[id]/session/amrap-session-view.tsx
+#15 27.77 61:3  Warning: 'exercises' is defined but never used.  @typescript-eslint/no-unused-vars
+#15 27.77 62:3  Warning: 'timeLimit' is defined but never used.  @typescript-eslint/no-unused-vars
+#15 27.77 94:5  Warning: React Hook useMemo has an unnecessary dependency: 'currentBlock.id'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+#15 27.77 118:6  Warning: React Hook useEffect has missing dependencies: 'blockStates', 'currentBlock.id', and 'timer'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+#15 27.77 224:22  Warning: 'idx' is defined but never used.  @typescript-eslint/no-unused-vars
+#15 27.77 
+#15 27.77 ./src/lib/smartWorkoutParser.ts
+#15 27.77 205:11  Warning: 'lower' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+#15 27.77 
+#15 27.77 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+#15 31.86 Failed to compile.
+#15 31.86 
+#15 31.86 ./src/app/api/stripe/webhook/route.ts:215:47
+#15 31.86 Type error: Property 'subscription' does not exist on type 'Invoice'.
+#15 31.86 
+#15 31.86 [0m [90m 213 |[39m     customerId[33m:[39m getCustomerId(invoice[33m.[39mcustomer)[33m,[39m
+#15 31.86  [90m 214 |[39m     customerEmail[33m:[39m getInvoiceCustomerEmail(invoice)[33m,[39m
+#15 31.86 [31m[1m>[22m[39m[90m 215 |[39m     subscriptionId[33m:[39m getSubscriptionId(invoice[33m.[39msubscription)[33m,[39m
+#15 31.86  [90m     |[39m                                               [31m[1m^[22m[39m
+#15 31.86  [90m 216 |[39m   })
+#15 31.86  [90m 217 |[39m
+#15 31.86  [90m 218 |[39m   [36mconst[39m context [33m=[39m [36mawait[39m resolveInvoiceContext(invoice)[0m
+#15 31.90 Next.js build worker exited with code: 1 and signal: null
+#15 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+------
+ > [builder 5/6] RUN npm run build:
+31.86 Type error: Property 'subscription' does not exist on type 'Invoice'.
+31.86 
+31.86 [0m [90m 213 |[39m     customerId[33m:[39m getCustomerId(invoice[33m.[39mcustomer)[33m,[39m
+31.86  [90m 214 |[39m     customerEmail[33m:[39m getInvoiceCustomerEmail(invoice)[33m,[39m
+31.86 [31m[1m>[22m[39m[90m 215 |[39m     subscriptionId[33m:[39m getSubscriptionId(invoice[33m.[39msubscription)[33m,[39m
+31.86  [90m     |[39m                                               [31m[1m^[22m[39m
+31.86  [90m 216 |[39m   })
+31.86  [90m 217 |[39m
+31.86  [90m 218 |[39m   [36mconst[39m context [33m=[39m [36mawait[39m resolveInvoiceContext(invoice)[0m
+31.90 Next.js build worker exited with code: 1 and signal: null
+------
+Dockerfile:23
+--------------------
+  21 |     
+  22 |     # Build the application
+  23 | >>> RUN npm run build
+  24 |     
+  25 |     # Prepare production SQLite database for NextAuth (schema only)
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/bdixmjyiq8ulixw71omp4nhq8
