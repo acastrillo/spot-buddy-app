@@ -442,7 +442,7 @@ export default function ImportWorkoutPage() {
           {/* AI Generator Card - Featured */}
           <Card className="mb-6 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 rounded-lg bg-primary/20">
@@ -455,14 +455,14 @@ export default function ImportWorkoutPage() {
                   <p className="text-sm text-text-secondary mb-4">
                     Describe your perfect workout in natural language and let AI create a personalized training plan with exercises, sets, reps, and weight suggestions based on your training profile.
                   </p>
-                  <div className="flex flex-wrap gap-2 text-xs text-text-secondary mb-4">
+                  <div className="flex flex-wrap gap-2 text-xs text-text-secondary mb-4 md:mb-0">
                     <span className="px-2 py-1 bg-surface rounded-md">✨ Personalized to your PRs</span>
                     <span className="px-2 py-1 bg-surface rounded-md">🎯 Equipment-aware</span>
                     <span className="px-2 py-1 bg-surface rounded-md">🔥 Goal-optimized</span>
                   </div>
                 </div>
-                <Link href="/add/generate" className="shrink-0">
-                  <Button size="lg" className="gap-2">
+                <Link href="/add/generate" className="w-full md:w-auto md:shrink-0">
+                  <Button size="lg" className="gap-2 w-full md:w-auto">
                     <Sparkles className="h-4 w-4" />
                     Generate Workout
                     <ChevronRight className="h-4 w-4" />
