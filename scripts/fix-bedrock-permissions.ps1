@@ -63,6 +63,14 @@ $BedrockPolicy = @"
         {
             "Effect": "Allow",
             "Action": [
+                "aws-marketplace:ViewSubscriptions",
+                "aws-marketplace:Subscribe"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "bedrock:CreateModelInvocationJob",
                 "bedrock:GetModelInvocationJob",
                 "bedrock:ListModelInvocationJobs",
