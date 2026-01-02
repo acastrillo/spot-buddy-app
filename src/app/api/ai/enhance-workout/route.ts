@@ -151,8 +151,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     const aiLimit = getAIRequestLimit(tier);
     const aiUsed = user.aiRequestsUsed || 0;
 
-    // Check if user has AI quota remaining
-    if (aiUsed >= aiLimit) {
+    // ADMIN BYPASS: Admins have unlimited AI quotas
+    const isAdmin = user.isAdmin === true;
+
+    // Check if user has AI quota remaining (skip for admins)
+    if (!isAdmin && aiUsed >= aiLimit) {
       const upgradeMessage = aiLimit === 0
         ? 'AI features are not available on the free tier. Upgrade to Core ($8.99/mo) for 10 AI requests per month.'
         : `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
@@ -352,8 +355,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       finalWorkout = newWorkout as DynamoDBWorkout;
     }
 
-    // Increment AI usage counter
-    await dynamoDBUsers.incrementAIUsage(userId);
+    // Increment AI usage counter (skip for admins)
+    if (!isAdmin) {
+      await dynamoDBUsers.incrementAIUsage(userId);
+    }
 
     // Calculate cost
     const cost = estimateEnhancementCost(textToEnhance.length);
@@ -372,7 +377,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         outputTokens: result.bedrockResponse.usage.outputTokens,
         estimatedCost: result.bedrockResponse.cost?.total || cost,
       },
-      quotaRemaining: aiLimit - aiUsed - 1,
+      quotaRemaining: isAdmin ? 999999 : aiLimit - aiUsed - 1,
     });
   } catch (error) {
     console.error('[AI Enhance] Error:', error);

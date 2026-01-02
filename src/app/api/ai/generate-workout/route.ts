@@ -112,8 +112,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateWorko
     const aiLimit = getAIRequestLimit(tier);
     const aiUsed = user.aiRequestsUsed || 0;
 
-    // Check if user has AI quota remaining
-    if (aiUsed >= aiLimit) {
+    // ADMIN BYPASS: Admins have unlimited AI quotas
+    const isAdmin = user.isAdmin === true;
+
+    // Check if user has AI quota remaining (skip for admins)
+    if (!isAdmin && aiUsed >= aiLimit) {
       const upgradeMessage = aiLimit === 0
         ? 'AI workout generation is not available on the free tier. Upgrade to Core ($8.99/mo) for 10 AI requests per month.'
         : `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
@@ -197,8 +200,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateWorko
     await dynamoDBWorkouts.upsert(userId, newWorkout as DynamoDBWorkout);
     const savedWorkout = newWorkout as DynamoDBWorkout;
 
-    // Increment AI usage counter
-    await dynamoDBUsers.incrementAIUsage(userId);
+    // Increment AI usage counter (skip for admins to keep their count at 0)
+    if (!isAdmin) {
+      await dynamoDBUsers.incrementAIUsage(userId);
+    }
 
     console.log('[AI Generate] Success!');
     console.log('[AI Generate] Workout:', savedWorkout.title);
@@ -214,7 +219,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateWorko
         outputTokens: result.bedrockResponse.usage.outputTokens,
         estimatedCost: result.bedrockResponse.cost?.total || 0,
       },
-      quotaRemaining: aiLimit - aiUsed - 1,
+      quotaRemaining: isAdmin ? 999999 : aiLimit - aiUsed - 1,
       rationale: result.rationale,
       alternatives: result.alternatives,
     });

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { parseWorkoutContent } from '@/lib/smartWorkoutParser'
+import { dynamoDBUsers } from '@/lib/dynamodb'
+import { getQuotaLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers'
 
 interface ApifyInstagramResult {
   url?: string
@@ -50,6 +52,43 @@ export async function POST(request: NextRequest) {
             'X-RateLimit-Reset': rateLimit.reset.toString(),
           },
         }
+      );
+    }
+
+    // Check Instagram import quota
+    const user = await dynamoDBUsers.get(userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // ADMIN BYPASS: Admins have unlimited quotas
+    const isAdmin = user.isAdmin === true;
+
+    // Get quota limit based on subscription tier
+    const tier = normalizeSubscriptionTier(user.subscriptionTier);
+
+    // Free tier has monthly limit (instagramSavesMonthly)
+    // Core tier has weekly limit (instagramSavesWeekly)
+    // Pro/Elite have unlimited (null)
+    const monthlyLimit = getQuotaLimit(tier, 'instagramSavesMonthly');
+    const weeklyLimit = getQuotaLimit(tier, 'instagramSavesWeekly');
+
+    // Use whichever limit is defined for this tier
+    const limit = monthlyLimit !== null ? monthlyLimit : weeklyLimit;
+    const importsUsed = user.instagramImportsUsed || 0;
+
+    // Check if user has quota remaining (skip for admins or unlimited tiers)
+    if (!isAdmin && limit !== null && importsUsed >= limit) {
+      const limitPeriod = monthlyLimit !== null ? 'month' : 'week';
+      return NextResponse.json(
+        {
+          error: 'Instagram import quota exceeded',
+          message: `You have reached your Instagram import limit (${importsUsed}/${limit} per ${limitPeriod}). Upgrade your subscription for more imports.`,
+          quotaUsed: importsUsed,
+          quotaLimit: limit,
+          subscriptionTier: user.subscriptionTier
+        },
+        { status: 429 }
       );
     }
 
@@ -234,7 +273,26 @@ export async function POST(request: NextRequest) {
             },
           }
 
-          return NextResponse.json(workoutData)
+          // Increment Instagram import usage (skip for admins)
+          if (!isAdmin) {
+            try {
+              await dynamoDBUsers.incrementInstagramUsage(userId);
+            } catch (error) {
+              console.error('[Instagram] CRITICAL: Failed to increment Instagram usage:', error);
+              // Continue anyway since we already fetched the data
+            }
+          }
+
+          // Add quota info to response
+          const updatedUser = await dynamoDBUsers.get(userId);
+          const currentLimit = isAdmin ? null : limit;
+
+          return NextResponse.json({
+            ...workoutData,
+            quotaUsed: updatedUser?.instagramImportsUsed || importsUsed + (isAdmin ? 0 : 1),
+            quotaLimit: currentLimit,
+            isUnlimited: isAdmin || currentLimit === null
+          })
 
         } else if (statusData.status === 'FAILED') {
           console.error('Run failed:', statusData.statusMessage)

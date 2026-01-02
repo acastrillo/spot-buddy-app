@@ -66,11 +66,19 @@ export interface DynamoDBUser {
   aiRequestsLimit?: number;
   lastAiRequestReset?: string | null;
 
+  // Instagram Import Quotas
+  instagramImportsUsed?: number;
+  instagramImportsLimit?: number;
+  lastInstagramImportReset?: string | null;
+
   // Training Profile (Phase 6) - Full profile from training-profile.ts
   trainingProfile?: TrainingProfile;
 
   // Experience level (quick access, also in trainingProfile)
   experience?: 'beginner' | 'intermediate' | 'advanced';
+
+  // Admin/Test User Flag
+  isAdmin?: boolean;
 }
 
 // User operations
@@ -434,6 +442,54 @@ export const dynamoDBUsers = {
   },
 
   /**
+   * Increment Instagram import usage counter
+   */
+  async incrementInstagramUsage(userId: string): Promise<void> {
+    try {
+      await getDynamoDb().send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: "SET instagramImportsUsed = if_not_exists(instagramImportsUsed, :zero) + :inc, updatedAt = :updatedAt",
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":zero": 0,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error incrementing Instagram usage in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reset Instagram import quota (weekly reset for core tier, monthly for free tier)
+   */
+  async resetInstagramQuota(userId: string): Promise<void> {
+    try {
+      const now = new Date().toISOString();
+      await getDynamoDb().send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression:
+            "SET instagramImportsUsed = :zero, lastInstagramImportReset = :resetDate, updatedAt = :updatedAt",
+          ExpressionAttributeValues: {
+            ":zero": 0,
+            ":resetDate": now,
+            ":updatedAt": now,
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error resetting Instagram quota in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Update training profile (Phase 6)
    */
   async updateTrainingProfile(
@@ -689,6 +745,52 @@ export const dynamoDBUsers = {
     } catch (error) {
       console.error("Error deleting user from DynamoDB:", error);
       throw error;
+    }
+  },
+
+  /**
+   * Set admin status for a user
+   * Admins have unlimited quotas for all features
+   *
+   * @param userId - User ID or email
+   * @param isAdmin - Admin status (true/false)
+   */
+  async setAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+    try {
+      await getDynamoDb().send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: `SET isAdmin = :isAdmin, updatedAt = :updatedAt`,
+          ExpressionAttributeValues: {
+            ":isAdmin": isAdmin,
+            ":updatedAt": new Date().toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Error setting admin status in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if user is an admin
+   * Helper function for quota bypass logic
+   *
+   * @param user - DynamoDBUser object or user ID
+   * @returns true if user is admin, false otherwise
+   */
+  async isAdmin(user: DynamoDBUser | string): Promise<boolean> {
+    try {
+      if (typeof user === 'string') {
+        const userData = await this.get(user);
+        return userData?.isAdmin === true;
+      }
+      return user.isAdmin === true;
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      return false;
     }
   },
 };

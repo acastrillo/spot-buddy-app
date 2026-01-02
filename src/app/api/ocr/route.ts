@@ -56,12 +56,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // ADMIN BYPASS: Admins have unlimited quotas
+    const isAdmin = user.isAdmin === true;
+
     // Get quota limit based on subscription tier
     const tier = normalizeSubscriptionTier(user.subscriptionTier);
     const weeklyLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
 
-    // Check if user has unlimited quota (null limit means unlimited for pro/elite)
-    if (weeklyLimit !== null && user.ocrQuotaUsed >= weeklyLimit) {
+    // Check if user has unlimited quota (null limit means unlimited for pro/elite, or admin)
+    if (!isAdmin && weeklyLimit !== null && user.ocrQuotaUsed >= weeklyLimit) {
       return NextResponse.json(
         {
           error: 'OCR quota exceeded',
@@ -101,29 +104,32 @@ export async function POST(req: Request) {
         : undefined;
 
     // Increment OCR usage (CRITICAL: Must succeed to prevent quota abuse)
-    try {
-      await dynamoDBUsers.incrementOCRUsage(userId);
-    } catch (error) {
-      console.error('[OCR] CRITICAL: Failed to increment OCR usage - blocking request:', error);
-      return NextResponse.json(
-        {
-          error: 'Quota tracking failed',
-          message: 'Unable to track OCR usage. Please try again.',
-        },
-        { status: 503 } // Service unavailable - temporary issue
-      );
+    // Admins are tracked but not blocked
+    if (!isAdmin) {
+      try {
+        await dynamoDBUsers.incrementOCRUsage(userId);
+      } catch (error) {
+        console.error('[OCR] CRITICAL: Failed to increment OCR usage - blocking request:', error);
+        return NextResponse.json(
+          {
+            error: 'Quota tracking failed',
+            message: 'Unable to track OCR usage. Please try again.',
+          },
+          { status: 503 } // Service unavailable - temporary issue
+        );
+      }
     }
 
     // Get updated quota info
     const updatedUser = await dynamoDBUsers.get(userId);
-    const currentLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
+    const currentLimit = isAdmin ? null : getQuotaLimit(tier, 'ocrQuotaWeekly');
 
     return NextResponse.json({
       text,
       confidence,
-      quotaUsed: updatedUser?.ocrQuotaUsed ?? user.ocrQuotaUsed + 1,
+      quotaUsed: updatedUser?.ocrQuotaUsed ?? user.ocrQuotaUsed + (isAdmin ? 0 : 1),
       quotaLimit: currentLimit,
-      isUnlimited: currentLimit === null
+      isUnlimited: isAdmin || currentLimit === null
     });
   } catch (err: unknown) {
     return NextResponse.json({ error: String((err as Error)?.message || err) }, { status: 500 });
