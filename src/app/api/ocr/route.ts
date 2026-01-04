@@ -6,6 +6,20 @@ import { getAuthenticatedUserId } from '@/lib/api-auth';
 import { dynamoDBUsers } from '@/lib/dynamodb';
 import { getQuotaLimit, normalizeSubscriptionTier } from '@/lib/stripe';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { hasRole } from '@/lib/rbac';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Textract sync limit)
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+function validateDocumentSignature(header: Uint8Array): boolean {
+  // JPEG
+  if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) return true;
+  // PNG
+  if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47) return true;
+  // PDF
+  if (header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46) return true;
+  return false;
+}
 
 // Helper function to create Textract client lazily
 function getTextractClient() {
@@ -57,19 +71,20 @@ export async function POST(req: Request) {
     }
 
     // ADMIN BYPASS: Admins have unlimited quotas
-    const isAdmin = user.isAdmin === true;
+    const isAdmin = hasRole(user, 'admin');
 
     // Get quota limit based on subscription tier
     const tier = normalizeSubscriptionTier(user.subscriptionTier);
     const weeklyLimit = getQuotaLimit(tier, 'ocrQuotaWeekly');
 
-    // Check if user has unlimited quota (null limit means unlimited for pro/elite, or admin)
-    if (!isAdmin && weeklyLimit !== null && user.ocrQuotaUsed >= weeklyLimit) {
+    const ocrUsed = user.ocrQuotaUsed || 0;
+
+    if (!isAdmin && weeklyLimit !== null && weeklyLimit <= 0) {
       return NextResponse.json(
         {
           error: 'OCR quota exceeded',
           message: 'You have reached your weekly OCR limit. Upgrade your subscription for more scans.',
-          quotaUsed: user.ocrQuotaUsed,
+          quotaUsed: ocrUsed,
           quotaLimit: weeklyLimit,
           subscriptionTier: user.subscriptionTier
         },
@@ -83,7 +98,57 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'file is required' }, { status: 400 });
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          error: 'File too large',
+          message: `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid file type',
+          message: 'Only JPEG, PNG, and PDF files are allowed',
+        },
+        { status: 400 }
+      );
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const header = new Uint8Array(arrayBuffer.slice(0, 4));
+    if (!validateDocumentSignature(header)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid document file',
+          message: 'File does not appear to be a valid image or PDF',
+        },
+        { status: 400 }
+      );
+    }
+
+    const bytes = Buffer.from(arrayBuffer);
+
+    let ocrUsedAfter = ocrUsed;
+    if (!isAdmin && weeklyLimit !== null) {
+      const consumeResult = await dynamoDBUsers.consumeQuota(userId, 'ocrQuotaUsed', weeklyLimit);
+      if (!consumeResult.success) {
+        return NextResponse.json(
+          {
+            error: 'OCR quota exceeded',
+            message: 'You have reached your weekly OCR limit. Upgrade your subscription for more scans.',
+            quotaUsed: ocrUsed,
+            quotaLimit: weeklyLimit,
+            subscriptionTier: user.subscriptionTier
+          },
+          { status: 429 }
+        );
+      }
+      ocrUsedAfter = consumeResult.newValue ?? ocrUsed + 1;
+    }
     const cmd = new DetectDocumentTextCommand({
       Document: { Bytes: bytes }, // Textract allows bytes or S3Object
     });
@@ -103,31 +168,13 @@ export async function POST(req: Request) {
         ? Math.round((lines.reduce((s, l) => s + (l.conf ?? 0), 0) / lines.length) * 10) / 10
         : undefined;
 
-    // Increment OCR usage (CRITICAL: Must succeed to prevent quota abuse)
-    // Admins are tracked but not blocked
-    if (!isAdmin) {
-      try {
-        await dynamoDBUsers.incrementOCRUsage(userId);
-      } catch (error) {
-        console.error('[OCR] CRITICAL: Failed to increment OCR usage - blocking request:', error);
-        return NextResponse.json(
-          {
-            error: 'Quota tracking failed',
-            message: 'Unable to track OCR usage. Please try again.',
-          },
-          { status: 503 } // Service unavailable - temporary issue
-        );
-      }
-    }
-
     // Get updated quota info
-    const updatedUser = await dynamoDBUsers.get(userId);
     const currentLimit = isAdmin ? null : getQuotaLimit(tier, 'ocrQuotaWeekly');
 
     return NextResponse.json({
       text,
       confidence,
-      quotaUsed: updatedUser?.ocrQuotaUsed ?? user.ocrQuotaUsed + (isAdmin ? 0 : 1),
+      quotaUsed: isAdmin ? ocrUsed : ocrUsedAfter,
       quotaLimit: currentLimit,
       isUnlimited: isAdmin || currentLimit === null
     });

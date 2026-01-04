@@ -547,7 +547,11 @@ REMEMBER: Return ONLY the JSON object. No explanations, no markdown code blocks,
   ];
 
   if (dynamicPrompt) {
-    blocks.push({ type: 'text', text: dynamicPrompt });
+    blocks.push({
+      type: 'text',
+      text: dynamicPrompt,
+      cache_control: { type: 'ephemeral' },
+    });
   }
 
   return blocks;
@@ -569,7 +573,7 @@ export async function enhanceWorkout(
   const userMessage = `Please enhance this workout:\n\n${rawText}`;
 
   try {
-    // Call Bedrock
+    // Call Bedrock with latency optimization enabled
     const response = await invokeClaude({
       messages: [
         { role: 'user', content: userMessage },
@@ -577,6 +581,7 @@ export async function enhanceWorkout(
       systemPrompt,
       maxTokens: 4096,
       temperature: 0.3, // Lower temperature for more consistent parsing
+      latencyOptimized: true, // 42-77% faster responses
     });
 
     // Log usage
@@ -645,7 +650,7 @@ export async function structureWorkout(
   const userMessage = `Please structure this workout:\n\n${exerciseText}${notesText}${structureHint}`;
 
   try {
-    // Call Bedrock with Sonnet model for better reasoning
+    // Call Bedrock with Sonnet model and latency optimization
     const response = await invokeClaude({
       messages: [
         { role: 'user', content: userMessage },
@@ -654,6 +659,7 @@ export async function structureWorkout(
       maxTokens: 4096,
       temperature: 0.3,
       model: 'sonnet', // Use Sonnet for better structuring
+      latencyOptimized: true, // 42-77% faster responses
     });
 
     // Log usage
@@ -818,7 +824,11 @@ REMEMBER: Return ONLY the JSON object. No explanations, no markdown, no extra te
   ];
 
   if (dynamicPrompt) {
-    blocks.push({ type: 'text', text: dynamicPrompt });
+    blocks.push({
+      type: 'text',
+      text: dynamicPrompt,
+      cache_control: { type: 'ephemeral' },
+    });
   }
 
   return blocks;

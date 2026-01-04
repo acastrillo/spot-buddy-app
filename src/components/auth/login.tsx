@@ -19,6 +19,8 @@ export function Login() {
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
   const [mode, setMode] = useState<AuthMode>("signin");
   const isDev = process.env.NODE_ENV === "development";
+  const allowDevLogin = process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN === "true";
+  const showDevLogin = isDev && allowDevLogin;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -140,8 +142,10 @@ export function Login() {
         const result = await signup(trimmedEmail, trimmedPassword);
         if (!result.success) {
           setAuthError(result.error || "Signup failed");
+          return;
         }
-        // Auto-redirects on success
+        setEmailStatus(result.message || "Account created. Please sign in.");
+        setMode("signin");
       } else {
         // Sign in
         await loginWithCredentials(trimmedEmail, trimmedPassword);
@@ -209,7 +213,7 @@ export function Login() {
           </div>
 
           {/* Dev Login - Only visible in development */}
-          {isDev && (
+          {showDevLogin && (
             <div className="space-y-2">
               <Button
                 onClick={handleDevLogin}

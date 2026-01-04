@@ -1,18 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { parseWorkoutContent } from "@/lib/smartWorkoutParser";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+
+const ingestSchema = z
+  .object({
+    caption: z.string().min(1).max(20000),
+  })
+  .strip();
 
 export async function POST(req: NextRequest){
   try {
     // SECURITY FIX: Use new auth utility
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) return auth.error;
+    const { userId } = auth;
 
-    const { caption } = await req.json();
-
-    if (!caption) {
-      return NextResponse.json({ error: "Caption is required" }, { status: 400 });
+    const rateLimit = await checkRateLimit(userId, 'api:write');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
     }
+
+    const body = await req.json();
+    const parsed = ingestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message || "Invalid request body" },
+        { status: 400 }
+      );
+    }
+    const { caption } = parsed.data;
 
     // Use smart workout parser
     const parsedWorkout = parseWorkoutContent(caption);

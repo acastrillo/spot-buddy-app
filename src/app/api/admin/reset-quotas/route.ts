@@ -16,6 +16,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedSession } from '@/lib/api-auth';
 import { dynamoDBUsers } from '@/lib/dynamodb';
+import { hasPermission } from '@/lib/rbac';
+import { writeAuditLog } from '@/lib/audit-log';
+import { getRequestIp } from '@/lib/request-ip';
 
 interface ResetQuotasRequest {
   userId?: string;
@@ -35,9 +38,9 @@ export async function POST(req: NextRequest) {
     }
     const { userId: adminUserId } = auth;
 
-    // Check if requesting user is admin
+    // Check if requesting user is authorized
     const adminUser = await dynamoDBUsers.get(adminUserId);
-    if (!adminUser || !adminUser.isAdmin) {
+    if (!adminUser || !hasPermission(adminUser, 'admin:reset-quotas')) {
       return NextResponse.json(
         {
           success: false,
@@ -134,6 +137,19 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Admin] Quotas reset by ${adminUser.email} for user ${targetUser!.email}`);
     console.log(`[Admin] Reset types: ${Object.keys(resetResults).join(', ')}`);
+
+    await writeAuditLog({
+      action: 'admin.reset-quotas',
+      actorId: adminUserId,
+      actorEmail: adminUser.email,
+      targetId: targetUserId,
+      targetEmail: targetUser?.email || null,
+      ipAddress: getRequestIp(req.headers),
+      metadata: {
+        quotaType,
+        reset: resetResults,
+      },
+    });
 
     return NextResponse.json({
       success: true,

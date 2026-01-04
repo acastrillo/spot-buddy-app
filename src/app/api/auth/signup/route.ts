@@ -62,28 +62,29 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password, firstName, lastName } = parsed.data
+    const responseMessage = 'If this email is available, your account has been created. Please sign in.'
+
+    // Hash password before existence check to reduce timing differences
+    console.log('[Signup] Hashing password...')
+    const passwordHash = await hash(password, 12)
+    console.log('[Signup] Password hashed successfully')
 
     // Check if user already exists
     console.log('[Signup] Checking for existing user:', maskEmail(email))
     const existingUser = await dynamoDBUsers.getByEmail(email)
     if (existingUser) {
-      console.log('[Signup] User already exists:', maskEmail(email))
+      console.log('[Signup] Signup completed (existing email):', maskEmail(email))
       return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
+        { success: true, message: responseMessage },
+        { status: 201 }
       )
     }
-
-    // Hash password
-    console.log('[Signup] Hashing password...')
-    const passwordHash = await hash(password, 12)
-    console.log('[Signup] Password hashed successfully')
 
     // Create user in DynamoDB
     const userId = randomUUID()
     console.log('[Signup] Creating user in DynamoDB:', userId, maskEmail(email))
 
-    const user = await dynamoDBUsers.upsert({
+    await dynamoDBUsers.upsert({
       id: userId,
       email,
       passwordHash,
@@ -94,16 +95,10 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Signup] ✓ Created new user: ${userId} (${maskEmail(email)})`)
 
-    // Return success (don't include passwordHash in response)
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-    }, { status: 201 })
+    return NextResponse.json(
+      { success: true, message: responseMessage },
+      { status: 201 }
+    )
 
   } catch (error) {
     console.error('[Signup] Error details:', error)

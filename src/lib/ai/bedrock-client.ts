@@ -121,6 +121,7 @@ export interface BedrockInvokeParams {
   stopSequences?: string[];
   model?: ClaudeModel; // Model selection for cost/performance tradeoff
   cache?: PromptCacheConfig;
+  latencyOptimized?: boolean; // Enable latency-optimized inference (42-77% faster)
 }
 
 /**
@@ -264,12 +265,21 @@ export async function invokeClaude(
   const { modelId, requestBody, model } = buildRequestBody(params);
 
   try {
-    const command = new InvokeModelCommand({
+    const commandParams: any = {
       modelId,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify(requestBody),
-    });
+    };
+
+    // Add latency optimization if requested (42-77% faster responses)
+    if (params.latencyOptimized) {
+      commandParams.performanceConfig = {
+        latency: 'optimized',
+      };
+    }
+
+    const command = new InvokeModelCommand(commandParams);
 
     const response = await client.send(command);
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
@@ -304,12 +314,21 @@ export async function invokeClaudeStream(
   const { modelId, requestBody, model } = buildRequestBody(params);
 
   try {
-    const command = new InvokeModelWithResponseStreamCommand({
+    const commandParams: any = {
       modelId,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify(requestBody),
-    });
+    };
+
+    // Add latency optimization if requested (42-77% faster responses)
+    if (params.latencyOptimized) {
+      commandParams.performanceConfig = {
+        latency: 'optimized',
+      };
+    }
+
+    const command = new InvokeModelWithResponseStreamCommand(commandParams);
 
     const response = await client.send(command);
 

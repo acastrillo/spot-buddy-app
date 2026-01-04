@@ -172,7 +172,7 @@ export async function organizeWorkoutContent(
   const userMessage = `Please organize this workout text:\n\n${rawText}`;
 
   try {
-    // Call Bedrock with Haiku model for cost efficiency
+    // Call Bedrock with Haiku model for cost efficiency and latency optimization
     const response = await invokeClaude({
       messages: [
         { role: 'user', content: userMessage },
@@ -182,6 +182,7 @@ export async function organizeWorkoutContent(
       temperature: 0.1, // Very low temperature for consistent filtering
       model: 'haiku', // Use cheaper model
       cache: { system: true },
+      latencyOptimized: true, // 42-77% faster responses
     });
 
     // Parse JSON response

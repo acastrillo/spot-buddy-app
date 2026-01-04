@@ -188,7 +188,7 @@ export async function suggestTimerForWorkout(
 
   const userPrompt = `Analyze this workout and suggest an appropriate timer configuration:\n\n${JSON.stringify(workoutSummary, null, 2)}`;
 
-  // Call Bedrock with Haiku (fast and cheap for this task)
+  // Call Bedrock with Haiku (fast and cheap for this task) and latency optimization
   const bedrockResponse = await invokeClaude({
     systemPrompt: TIMER_SUGGESTER_PROMPT,
     messages: [
@@ -197,6 +197,7 @@ export async function suggestTimerForWorkout(
     model: 'haiku',
     maxTokens: 1000,
     cache: { system: true },
+    latencyOptimized: true, // 42-77% faster responses
   });
 
   // Parse the JSON response

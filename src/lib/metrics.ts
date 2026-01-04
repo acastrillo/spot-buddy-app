@@ -6,6 +6,11 @@
  */
 
 import { logger } from "./logger";
+import {
+  CloudWatchClient,
+  PutMetricDataCommand,
+  StandardUnit,
+} from "@aws-sdk/client-cloudwatch";
 
 export interface Metric {
   name: string;
@@ -13,6 +18,36 @@ export interface Metric {
   unit: "count" | "milliseconds" | "bytes" | "percent";
   timestamp: string;
   dimensions?: Record<string, string>;
+}
+
+/**
+ * Convert our metric unit to CloudWatch StandardUnit
+ */
+function toCloudWatchUnit(unit: Metric["unit"]): StandardUnit {
+  switch (unit) {
+    case "count":
+      return StandardUnit.Count;
+    case "milliseconds":
+      return StandardUnit.Milliseconds;
+    case "bytes":
+      return StandardUnit.Bytes;
+    case "percent":
+      return StandardUnit.Percent;
+  }
+}
+
+/**
+ * Get CloudWatch client (lazy initialization)
+ */
+let cloudWatchClient: CloudWatchClient | null = null;
+
+function getCloudWatchClient(): CloudWatchClient {
+  if (!cloudWatchClient) {
+    cloudWatchClient = new CloudWatchClient({
+      region: process.env.AWS_REGION || "us-east-1",
+    });
+  }
+  return cloudWatchClient;
 }
 
 class MetricsCollector {
@@ -85,13 +120,59 @@ class MetricsCollector {
   /**
    * Flush metrics to logging/monitoring system
    */
-  flush() {
+  async flush() {
     if (this.metrics.length === 0) return;
 
-    // In production, send to CloudWatch or your monitoring service
+    // In production, send to CloudWatch
     if (process.env.NODE_ENV === "production") {
-      // TODO: Send to CloudWatch
-      logger.info("Flushing metrics", {
+      try {
+        const cloudwatch = getCloudWatchClient();
+        const namespace = process.env.CLOUDWATCH_NAMESPACE || "SpotBuddy";
+
+        // CloudWatch has a limit of 1000 metrics per request
+        // Split into batches of 20 for safety (recommended batch size)
+        const batchSize = 20;
+        for (let i = 0; i < this.metrics.length; i += batchSize) {
+          const batch = this.metrics.slice(i, i + batchSize);
+
+          const metricData = batch.map((metric) => ({
+            MetricName: metric.name,
+            Value: metric.value,
+            Unit: toCloudWatchUnit(metric.unit),
+            Timestamp: new Date(metric.timestamp),
+            Dimensions: metric.dimensions
+              ? Object.entries(metric.dimensions).map(([name, value]) => ({
+                  Name: name,
+                  Value: value,
+                }))
+              : undefined,
+          }));
+
+          await cloudwatch.send(
+            new PutMetricDataCommand({
+              Namespace: namespace,
+              MetricData: metricData,
+            })
+          );
+        }
+
+        logger.info(`Sent ${this.metrics.length} metrics to CloudWatch`, {
+          namespace,
+        });
+      } catch (error) {
+        logger.error(
+          "Failed to send metrics to CloudWatch",
+          error instanceof Error ? error : new Error(String(error))
+        );
+        // Log metrics locally as fallback
+        logger.info("Metrics (CloudWatch failed)", {
+          count: this.metrics.length,
+          metrics: this.metrics,
+        });
+      }
+    } else {
+      // In development, just log
+      logger.debug("Metrics flush", {
         count: this.metrics.length,
         metrics: this.metrics,
       });

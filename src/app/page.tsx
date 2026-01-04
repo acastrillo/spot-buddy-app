@@ -7,20 +7,25 @@ import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { 
-  Calendar, 
-  Target, 
-  TrendingUp, 
+import {
+  Calendar,
+  Target,
+  TrendingUp,
   Dumbbell,
   Plus,
   Library,
   Clock,
-  Award
+  Award,
+  Sparkles,
+  Loader2,
+  ChevronRight
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuthStore()
+  const router = useRouter()
   const [workoutStats, setWorkoutStats] = useState({
     thisWeek: 0,
     total: 0,
@@ -28,6 +33,37 @@ export default function HomePage() {
     streak: 0
   })
   const [recentWorkouts, setRecentWorkouts] = useState<any[]>([])
+  const [workoutOfWeek, setWorkoutOfWeek] = useState<any | null>(null)
+  const [isLoadingWOW, setIsLoadingWOW] = useState(false)
+
+  // Load Workout of the Week
+  useEffect(() => {
+    const loadWOW = async () => {
+      if (!user?.id) return
+
+      setIsLoadingWOW(true)
+
+      try {
+        const response = await fetch('/api/ai/workout-of-the-week')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.workout) {
+            setWorkoutOfWeek(data.workout)
+          }
+        } else if (response.status === 403) {
+          // User doesn't have access to Workout of the Week (paid feature)
+        } else {
+          console.error('Failed to load Workout of the Week')
+        }
+      } catch (error) {
+        console.error('Error loading Workout of the Week:', error)
+      } finally {
+        setIsLoadingWOW(false)
+      }
+    }
+
+    loadWOW()
+  }, [user?.id])
 
   useEffect(() => {
     const loadWorkouts = async () => {
@@ -211,6 +247,94 @@ export default function HomePage() {
               Ready to crush your fitness goals today?
             </p>
           </div>
+
+          {/* Workout of the Week */}
+          {(workoutOfWeek || isLoadingWOW) && (
+            <Card className="mb-8 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/20">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Workout of the Week</CardTitle>
+                      <CardDescription>
+                        {isLoadingWOW
+                          ? 'Loading your personalized workout...'
+                          : 'Premium weekly workout based on your training profile'}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {workoutOfWeek && (
+                    <Button
+                      onClick={() => router.push(`/workout/${workoutOfWeek.workoutId}`)}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <span>Start Workout</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              {isLoadingWOW ? (
+                <CardContent>
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                </CardContent>
+              ) : workoutOfWeek ? (
+                <CardContent>
+                  <div
+                    onClick={() => router.push(`/workout/${workoutOfWeek.workoutId}`)}
+                    className="cursor-pointer hover:bg-surface/50 rounded-lg p-4 transition-colors border border-border/50"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-text-primary mb-1">
+                          {workoutOfWeek.title}
+                        </h3>
+                        {workoutOfWeek.description && (
+                          <p className="text-sm text-text-secondary mb-2">
+                            {workoutOfWeek.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-text-secondary">
+                      <div className="flex items-center gap-1">
+                        <Dumbbell className="h-4 w-4" />
+                        <span>{workoutOfWeek.exercises?.length || 0} exercises</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{workoutOfWeek.totalDuration} min</span>
+                      </div>
+                      {workoutOfWeek.difficulty && (
+                        <div className="flex items-center gap-1">
+                          <Target className="h-4 w-4" />
+                          <span className="capitalize">{workoutOfWeek.difficulty}</span>
+                        </div>
+                      )}
+                    </div>
+                    {workoutOfWeek.tags && workoutOfWeek.tags.length > 0 && (
+                      <div className="flex gap-2 flex-wrap mt-3">
+                        {workoutOfWeek.tags.slice(0, 4).map((tag: string, idx: number) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              ) : null}
+            </Card>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

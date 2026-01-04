@@ -29,6 +29,7 @@ import {
 } from '@/lib/ai/timer-suggester';
 import { getAIRequestLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { hasRole } from '@/lib/rbac';
 
 interface EnhanceWorkoutRequest {
   // Either workoutId (enhance existing) or rawText (parse new)
@@ -152,10 +153,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     const aiUsed = user.aiRequestsUsed || 0;
 
     // ADMIN BYPASS: Admins have unlimited AI quotas
-    const isAdmin = user.isAdmin === true;
+    const isAdmin = hasRole(user, 'admin');
 
     // Check if user has AI quota remaining (skip for admins)
-    if (!isAdmin && aiUsed >= aiLimit) {
+    if (!isAdmin && aiLimit <= 0) {
       const upgradeMessage = aiLimit === 0
         ? 'AI features are not available on the free tier. Upgrade to Core ($8.99/mo) for 10 AI requests per month.'
         : `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
@@ -171,6 +172,26 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         },
         { status: 403 }
       );
+    }
+
+    let aiUsedAfter = aiUsed;
+    if (!isAdmin) {
+      const consumeResult = await dynamoDBUsers.consumeQuota(userId, 'aiRequestsUsed', aiLimit);
+      if (!consumeResult.success) {
+        const upgradeMessage = `You've reached your AI request limit (${aiUsed}/${aiLimit} used this month). Upgrade to Pro for more AI requests.`;
+        return NextResponse.json(
+          {
+            success: false,
+            error: upgradeMessage,
+            quotaRemaining: 0,
+            tier,
+            aiUsed,
+            aiLimit,
+          },
+          { status: 403 }
+        );
+      }
+      aiUsedAfter = consumeResult.newValue ?? aiUsed + 1;
     }
 
     // Determine what we're enhancing: existing workout or raw text
@@ -205,7 +226,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
 
     console.log('[AI Enhance] Starting two-step agentic workflow...');
     console.log('[AI Enhance] Enhancement type:', enhancementType);
-    console.log('[AI Enhance] Quota remaining:', aiLimit - aiUsed);
+    console.log('[AI Enhance] Quota remaining:', isAdmin ? 'unlimited' : aiLimit - aiUsedAfter);
 
     // Build training context (TODO: Get PRs from user profile)
     const trainingContext: TrainingContext = {
@@ -355,11 +376,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       finalWorkout = newWorkout as DynamoDBWorkout;
     }
 
-    // Increment AI usage counter (skip for admins)
-    if (!isAdmin) {
-      await dynamoDBUsers.incrementAIUsage(userId);
-    }
-
     // Calculate cost
     const cost = estimateEnhancementCost(textToEnhance.length);
 
@@ -377,7 +393,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
         outputTokens: result.bedrockResponse.usage.outputTokens,
         estimatedCost: result.bedrockResponse.cost?.total || cost,
       },
-      quotaRemaining: isAdmin ? 999999 : aiLimit - aiUsed - 1,
+      quotaRemaining: isAdmin ? 999999 : Math.max(0, aiLimit - aiUsedAfter),
     });
   } catch (error) {
     console.error('[AI Enhance] Error:', error);

@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { parseWorkoutContent } from '@/lib/smartWorkoutParser'
 import { dynamoDBUsers } from '@/lib/dynamodb'
 import { getQuotaLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers'
+import { hasRole } from '@/lib/rbac'
 
 interface ApifyInstagramResult {
   url?: string
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ADMIN BYPASS: Admins have unlimited quotas
-    const isAdmin = user.isAdmin === true;
+    const isAdmin = hasRole(user, 'admin');
 
     // Get quota limit based on subscription tier
     const tier = normalizeSubscriptionTier(user.subscriptionTier);
@@ -76,21 +77,6 @@ export async function POST(request: NextRequest) {
     // Use whichever limit is defined for this tier
     const limit = monthlyLimit !== null ? monthlyLimit : weeklyLimit;
     const importsUsed = user.instagramImportsUsed || 0;
-
-    // Check if user has quota remaining (skip for admins or unlimited tiers)
-    if (!isAdmin && limit !== null && importsUsed >= limit) {
-      const limitPeriod = monthlyLimit !== null ? 'month' : 'week';
-      return NextResponse.json(
-        {
-          error: 'Instagram import quota exceeded',
-          message: `You have reached your Instagram import limit (${importsUsed}/${limit} per ${limitPeriod}). Upgrade your subscription for more imports.`,
-          quotaUsed: importsUsed,
-          quotaLimit: limit,
-          subscriptionTier: user.subscriptionTier
-        },
-        { status: 429 }
-      );
-    }
 
     const { url }: InstagramFetchRequest = await request.json()
 
@@ -108,6 +94,39 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid Instagram URL format' },
         { status: 400 }
       )
+    }
+
+    let importsUsedAfter = importsUsed;
+    if (!isAdmin && limit !== null) {
+      if (limit <= 0) {
+        const limitPeriod = monthlyLimit !== null ? 'month' : 'week';
+        return NextResponse.json(
+          {
+            error: 'Instagram import quota exceeded',
+            message: `You have reached your Instagram import limit (${importsUsed}/${limit} per ${limitPeriod}). Upgrade your subscription for more imports.`,
+            quotaUsed: importsUsed,
+            quotaLimit: limit,
+            subscriptionTier: user.subscriptionTier
+          },
+          { status: 429 }
+        );
+      }
+
+      const consumeResult = await dynamoDBUsers.consumeQuota(userId, 'instagramImportsUsed', limit);
+      if (!consumeResult.success) {
+        const limitPeriod = monthlyLimit !== null ? 'month' : 'week';
+        return NextResponse.json(
+          {
+            error: 'Instagram import quota exceeded',
+            message: `You have reached your Instagram import limit (${importsUsed}/${limit} per ${limitPeriod}). Upgrade your subscription for more imports.`,
+            quotaUsed: importsUsed,
+            quotaLimit: limit,
+            subscriptionTier: user.subscriptionTier
+          },
+          { status: 429 }
+        );
+      }
+      importsUsedAfter = consumeResult.newValue ?? importsUsed + 1;
     }
 
     const apifyApiToken = process.env.APIFY_API_TOKEN
@@ -273,23 +292,12 @@ export async function POST(request: NextRequest) {
             },
           }
 
-          // Increment Instagram import usage (skip for admins)
-          if (!isAdmin) {
-            try {
-              await dynamoDBUsers.incrementInstagramUsage(userId);
-            } catch (error) {
-              console.error('[Instagram] CRITICAL: Failed to increment Instagram usage:', error);
-              // Continue anyway since we already fetched the data
-            }
-          }
-
           // Add quota info to response
-          const updatedUser = await dynamoDBUsers.get(userId);
           const currentLimit = isAdmin ? null : limit;
 
           return NextResponse.json({
             ...workoutData,
-            quotaUsed: updatedUser?.instagramImportsUsed || importsUsed + (isAdmin ? 0 : 1),
+            quotaUsed: isAdmin ? importsUsed : importsUsedAfter,
             quotaLimit: currentLimit,
             isUnlimited: isAdmin || currentLimit === null
           })

@@ -1,0 +1,174 @@
+{
+  "family": "spotter-app-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/SpotterTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/SpotterTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "spotter-web",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/spotter-app:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "NEXTAUTH_URL",
+          "value": "https://spotter.cannashieldct.com"
+        },
+        {
+          "name": "AUTH_TRUST_HOST",
+          "value": "true"
+        },
+        {
+          "name": "DYNAMODB_USERS_TABLE",
+          "value": "spotter-users"
+        },
+        {
+          "name": "DYNAMODB_WORKOUTS_TABLE",
+          "value": "spotter-workouts"
+        },
+        {
+          "name": "DYNAMODB_BODY_METRICS_TABLE",
+          "value": "spotter-body-metrics"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "file:/tmp/prisma/prod.db"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AUTH_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/AUTH_SECRET"
+        },
+        {
+          "name": "STRIPE_ALLOW_TEST_IN_PRODUCTION",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_ALLOW_TEST_IN_PRODUCTION"
+        },
+        {
+          "name": "GOOGLE_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/GOOGLE_CLIENT_ID"
+        },
+        {
+          "name": "GOOGLE_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/GOOGLE_CLIENT_SECRET"
+        },
+        {
+          "name": "FACEBOOK_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/FACEBOOK_CLIENT_ID"
+        },
+        {
+          "name": "FACEBOOK_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/FACEBOOK_CLIENT_SECRET"
+        },
+        {
+          "name": "EMAIL_SERVER_HOST",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_SERVER_HOST"
+        },
+        {
+          "name": "EMAIL_SERVER_PORT",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_SERVER_PORT"
+        },
+        {
+          "name": "EMAIL_SERVER_USER",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_SERVER_USER"
+        },
+        {
+          "name": "EMAIL_SERVER_PASSWORD",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_SERVER_PASSWORD"
+        },
+        {
+          "name": "EMAIL_SERVER_SECURE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_SERVER_SECURE"
+        },
+        {
+          "name": "EMAIL_FROM",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/prod/EMAIL_FROM"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/AWS_REGION"
+        },
+        {
+          "name": "APIFY_API_TOKEN",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/APIFY_API_TOKEN"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_SECRET_KEY"
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_WEBHOOK_SECRET"
+        },
+        {
+          "name": "STRIPE_PUBLISHABLE_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PUBLISHABLE_KEY"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PUBLISHABLE_KEY"
+        },
+        {
+          "name": "STRIPE_PRICE_CORE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_CORE"
+        },
+        {
+          "name": "STRIPE_PRICE_CORE_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_CORE_ANNUAL"
+        },
+        {
+          "name": "STRIPE_PRICE_PRO",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
+        },
+        {
+          "name": "STRIPE_PRICE_ELITE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_CORE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_CORE"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_PRO",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_ELITE",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
+        },
+        {
+          "name": "UPSTASH_REDIS_REST_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/UPSTASH_REDIS_REST_URL"
+        },
+        {
+          "name": "UPSTASH_REDIS_REST_TOKEN",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/UPSTASH_REDIS_REST_TOKEN"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/spotter-app",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

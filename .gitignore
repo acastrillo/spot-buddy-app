@@ -15,6 +15,7 @@ package-lock.json
 # AWS Task Definitions (temporary/generated)
 task-def*.json
 aws-task-definition.json
+aws-task-definition-updated.json
 
 .env.production
 
@@ -25,10 +26,12 @@ playwright-report/
 test-results/
 
 # Temporary files and logs
+.session-cookie
 tmp-*.json
 tmp-*.txt
 tmp-*.log
 *.log
+build-log*.txt
 build.log
 deployment.log
 

@@ -9,7 +9,7 @@
       ],
       "Resource": [
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
-        "arn:aws:bedrock:*:920013187591:inference-profile/*"
+        "arn:aws:bedrock:*:YOUR_ACCOUNT_ID:inference-profile/*"
       ]
     },
     {
@@ -18,7 +18,12 @@
         "aws-marketplace:ViewSubscriptions",
         "aws-marketplace:Subscribe"
       ],
-      "Resource": "*"
+      "Resource": "*",
+      "Condition": {
+        "StringEqualsIfExists": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
     },
     {
       "Effect": "Allow",
@@ -28,7 +33,12 @@
         "bedrock:ListModelInvocationJobs",
         "bedrock:StopModelInvocationJob"
       ],
-      "Resource": "*"
+      "Resource": "*",
+      "Condition": {
+        "StringEqualsIfExists": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
     },
     {
       "Effect": "Allow",
@@ -61,11 +71,11 @@
         "dynamodb:Scan"
       ],
       "Resource": [
-        "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-workouts",
-        "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-users",
-        "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-body-metrics",
-        "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-workout-completions",
-        "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events"
+        "arn:aws:dynamodb:us-east-1:YOUR_ACCOUNT_ID:table/spotter-workouts",
+        "arn:aws:dynamodb:us-east-1:YOUR_ACCOUNT_ID:table/spotter-users",
+        "arn:aws:dynamodb:us-east-1:YOUR_ACCOUNT_ID:table/spotter-body-metrics",
+        "arn:aws:dynamodb:us-east-1:YOUR_ACCOUNT_ID:table/spotter-workout-completions",
+        "arn:aws:dynamodb:us-east-1:YOUR_ACCOUNT_ID:table/spotter-webhook-events"
       ]
     }
   ]

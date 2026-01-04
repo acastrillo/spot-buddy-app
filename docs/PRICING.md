@@ -1,6 +1,6 @@
 # Spot Buddy Pricing Guide
 
-**Last Updated**: December 9, 2024
+**Last Updated**: January 4, 2026
 **Status**: ✅ Implemented
 
 ## Current Pricing Structure
@@ -35,6 +35,7 @@ Spot Buddy uses a **3-tier subscription model** with both monthly and annual bil
 - ✅ Manual workout creation
 - ✅ Calendar view
 - ✅ Basic timers
+- ❌ No Workout of the Week (paid tier exclusive)
 
 ### Limits
 - `workoutsWeekly`: 3
@@ -58,6 +59,7 @@ Spot Buddy uses a **3-tier subscription model** with both monthly and annual bil
 - ✅ **Unlimited workouts**
 - ✅ **3 Instagram imports per week**
 - ✅ **10 AI requests per month**
+- ✅ **Workout of the Week** - AI-generated weekly workout recommendation
 - ✅ Unlimited history
 - ✅ PR tracking
 - ✅ Body metrics
@@ -85,6 +87,7 @@ Spot Buddy uses a **3-tier subscription model** with both monthly and annual bil
 
 ### Features
 - ✅ **Everything in Core**
+- ✅ **Workout of the Week** - AI-generated weekly workout recommendation
 - ✅ **Unlimited Instagram imports** (killer feature)
 - ✅ **30 AI requests per month** (1/day average)
 - ✅ Advanced analytics (volume trends, PR progression, 1RM calculations)
@@ -115,6 +118,7 @@ Spot Buddy uses a **3-tier subscription model** with both monthly and annual bil
 
 ### Features
 - ✅ **Everything in Pro**
+- ✅ **Workout of the Week** - AI-generated weekly workout recommendation
 - ✅ **100 AI requests per month** (3-4/day for power users)
 - ✅ Priority support (24-hour response)
 - ✅ Early access to new features

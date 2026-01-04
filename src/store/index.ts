@@ -39,7 +39,7 @@ interface AuthState {
   login: (provider?: AuthProvider) => Promise<void>;
   loginWithEmail: (email: string) => Promise<void>;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   devLogin: (email: string) => Promise<void>; // Dev-only login
   logout: () => Promise<void>;
 }
@@ -118,15 +118,7 @@ export const useAuthStore = (): AuthState => {
           return { success: false, error: data.error || "Signup failed" };
         }
 
-        // After successful signup, automatically log in
-        await nextAuthSignIn("credentials", {
-          email,
-          password,
-          callbackUrl: "/",
-          redirect: true,
-        });
-
-        return { success: true };
+        return { success: true, message: data.message };
       } catch (error) {
         console.error("Signup error:", error);
         return { success: false, error: "Network error. Please try again." };

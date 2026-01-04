@@ -10,7 +10,13 @@
 
 import { PrismaClient } from '@prisma/client';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, DeleteCommand, NativeAttributeValue } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  ScanCommand,
+  ScanCommandOutput,
+  DeleteCommand,
+  NativeAttributeValue
+} from '@aws-sdk/lib-dynamodb';
 
 const prisma = new PrismaClient();
 
@@ -56,7 +62,7 @@ async function scanAndDeleteTable(tableName: string, keyName: string, sortKeyNam
 
   try {
     do {
-      const scanResult = await dynamoDb.send(
+      const scanResult: ScanCommandOutput = await dynamoDb.send(
         new ScanCommand({
           TableName: tableName,
           ExclusiveStartKey: lastEvaluatedKey,

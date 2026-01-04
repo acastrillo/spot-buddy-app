@@ -168,20 +168,27 @@ export async function PATCH(
       return NextResponse.json({ error: "No updates provided" }, { status: 400 });
     }
 
+    // Transform exercises to match DynamoDBExercise type
+    const transformedExercises = exercises?.map(ex => ({
+      ...ex,
+      reps: ex.reps ?? "", // Convert null reps to empty string
+      weight: typeof ex.weight === 'number' ? String(ex.weight) : ex.weight // Convert number to string
+    })) as any; // Type assertion needed due to Zod passthrough
+
     await dynamoDBWorkouts.update(userId, id, {
       title,
       description: description ?? undefined, // Convert null to undefined for type safety
-      exercises,
+      exercises: transformedExercises ?? undefined, // Use transformed exercises
       totalDuration,
       difficulty,
-      tags,
-      workoutType,
+      tags: tags ?? undefined, // Convert null to undefined
+      workoutType: workoutType as 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata' | undefined,
       structure,
-      timerConfig,
+      timerConfig: timerConfig as { params: any; aiGenerated?: boolean; reason?: string } | null | undefined,
       blockTimers,
       aiEnhanced,
-      aiNotes,
-      muscleGroups,
+      aiNotes, // Accepts null
+      muscleGroups, // Accepts null
     });
 
     return NextResponse.json({ success: true });

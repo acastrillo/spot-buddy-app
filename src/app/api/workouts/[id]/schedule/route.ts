@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkouts } from "@/lib/dynamodb";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+
+const scheduleSchema = z
+  .object({
+    scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    status: z.enum(['scheduled', 'completed', 'skipped']).optional(),
+  })
+  .strip();
 
 /**
  * PATCH /api/workouts/[id]/schedule
@@ -15,27 +24,39 @@ export async function PATCH(
     if ('error' in auth) return auth.error;
     const { userId } = auth;
 
+    const rateLimit = await checkRateLimit(userId, 'api:write');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const { id } = await params;
 
     // Parse request body
     const body = await req.json();
-    const { scheduledDate, status } = body;
-
-    if (!scheduledDate) {
+    const parsed = scheduleSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "scheduledDate is required" },
+        { error: parsed.error.errors[0]?.message || "Invalid request body" },
         { status: 400 }
       );
     }
-
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(scheduledDate)) {
-      return NextResponse.json(
-        { error: "scheduledDate must be in YYYY-MM-DD format" },
-        { status: 400 }
-      );
-    }
+    const { scheduledDate, status } = parsed.data;
 
     // Schedule the workout
     await dynamoDBWorkouts.scheduleWorkout(
@@ -72,6 +93,27 @@ export async function DELETE(
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) return auth.error;
     const { userId } = auth;
+
+    const rateLimit = await checkRateLimit(userId, 'api:write');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
 
     const { id } = await params;
 

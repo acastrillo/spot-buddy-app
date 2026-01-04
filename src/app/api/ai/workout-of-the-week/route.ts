@@ -1,13 +1,14 @@
 /**
- * AI Workout of the Day API
+ * AI Workout of the Week API
  *
- * GET /api/ai/workout-of-the-day
+ * GET /api/ai/workout-of-the-week
  *
- * Generates a personalized "Workout of the Day" recommendation:
+ * Generates a personalized "Workout of the Week" recommendation:
  * - Uses training profile for personalization
  * - Considers recent workout history to avoid overtraining
  * - Varies workout types for balanced training
  * - Can return existing workout or generate new one
+ * - RESTRICTED TO PAID TIERS ONLY (Core and Pro)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedSession } from '@/lib/api-auth';
@@ -17,7 +18,7 @@ import { getAIRequestLimit, normalizeSubscriptionTier } from '@/lib/subscription
 import { checkRateLimit } from '@/lib/rate-limit';
 import { hasRole } from '@/lib/rbac';
 
-interface WorkoutOfTheDayResponse {
+interface WorkoutOfTheWeekResponse {
   success: boolean;
   workout?: DynamoDBWorkout;
   isNew?: boolean; // true if generated, false if existing
@@ -29,6 +30,18 @@ interface WorkoutOfTheDayResponse {
   };
   quotaRemaining?: number;
   error?: string;
+}
+
+/**
+ * Get the start date of the current week (Monday)
+ */
+function getWeekStartDate(): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust when day is Sunday
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  return monday.toISOString().split('T')[0];
 }
 
 /**
@@ -51,7 +64,7 @@ async function getRecentWorkouts(userId: string, days: number = 7): Promise<Dyna
         return dateB.getTime() - dateA.getTime();
       });
   } catch (error) {
-    console.error('[WOD] Error fetching recent workouts:', error);
+    console.error('[WOW] Error fetching recent workouts:', error);
     return [];
   }
 }
@@ -80,7 +93,7 @@ function determineWorkoutFocus(recentWorkouts: DynamoDBWorkout[]): string {
   }
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDayResponse>> {
+export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheWeekResponse>> {
   try {
     // Authentication
     const auth = await getAuthenticatedSession();
@@ -100,7 +113,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
     let user = await dynamoDBUsers.get(userId);
     if (!user) {
       // User not synced to DynamoDB yet - create with defaults
-      console.log('[WOD] User not found in DynamoDB, creating with defaults');
+      console.log('[WOW] User not found in DynamoDB, creating with defaults');
       try {
         const userEmail = session.user?.email || `user-${userId}@temp.com`;
         const firstName = (session.user as any)?.firstName || null;
@@ -115,7 +128,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
           aiRequestsLimit: 0,
         });
       } catch (createError) {
-        console.error('[WOD] Failed to create user:', createError);
+        console.error('[WOW] Failed to create user:', createError);
         return NextResponse.json(
           { success: false, error: 'User not found and could not be created' },
           { status: 500 }
@@ -123,33 +136,55 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
       }
     }
 
+    // PAID TIER CHECK: Workout of the Week is only available to Core and Pro subscribers
+    const tier = normalizeSubscriptionTier(user.subscriptionTier);
+    const isAdmin = hasRole(user, 'admin');
+
+    if (!isAdmin && tier === 'free') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Workout of the Week is only available to paid subscribers. Upgrade to Core ($8.99/mo) or Pro ($24.99/mo) to unlock this feature.',
+        },
+        { status: 403 }
+      );
+    }
+
     // Get recent workouts to analyze training patterns
     const recentWorkouts = await getRecentWorkouts(userId, 7);
 
-    // If not forcing generation, try to return today's scheduled workout
+    // If not forcing generation, try to return this week's scheduled workout
     if (!forceGenerate) {
-      const today = new Date().toISOString().split('T')[0];
-      const scheduledToday = await dynamoDBWorkouts.getScheduledForDate(userId, today);
+      const weekStart = getWeekStartDate();
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const weekEndStr = weekEnd.toISOString().split('T')[0];
 
-      if (scheduledToday.length > 0) {
-        console.log('[WOD] Returning scheduled workout for today');
+      // Check for any workout with 'workout-of-the-week' tag scheduled this week
+      const allScheduled = await dynamoDBWorkouts.list(userId);
+      const weeklyWorkout = allScheduled.find(w =>
+        w.tags?.includes('workout-of-the-week') &&
+        w.scheduledDate &&
+        w.scheduledDate >= weekStart &&
+        w.scheduledDate <= weekEndStr
+      );
+
+      if (weeklyWorkout) {
+        console.log('[WOW] Returning scheduled workout for this week');
         return NextResponse.json({
           success: true,
-          workout: scheduledToday[0],
+          workout: weeklyWorkout,
           isNew: false,
-          rationale: 'You have a workout scheduled for today. Complete this to stay on track with your training plan!',
+          rationale: 'You have a workout of the week already scheduled. Complete this to stay on track with your training plan!',
         });
       }
     }
 
     // Check AI quota
-    const tier = normalizeSubscriptionTier(user.subscriptionTier);
     const aiLimit = getAIRequestLimit(tier);
     const aiUsed = user.aiRequestsUsed || 0;
 
     // ADMIN BYPASS: Admins have unlimited AI quotas
-    const isAdmin = hasRole(user, 'admin');
-
     if (!isAdmin && aiLimit <= 0) {
       const upgradeMessage = aiLimit === 0
         ? 'AI workout generation is not available on the free tier. Upgrade to Core ($8.99/mo) for 10 AI requests per month.'
@@ -213,11 +248,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
 
     // Determine workout focus based on recent activity
     const workoutFocus = determineWorkoutFocus(recentWorkouts);
-    const prompt = `Create a ${workoutFocus} optimized for today. Duration: 45-60 minutes. Make it challenging but achievable.`;
+    const prompt = `Create a ${workoutFocus} optimized for this week. Duration: 45-60 minutes. Make it challenging but achievable.`;
 
-    console.log('[WOD] Generating workout of the day...');
-    console.log('[WOD] Focus:', workoutFocus);
-    console.log('[WOD] Recent workouts:', recentWorkouts.length);
+    console.log('[WOW] Generating workout of the week...');
+    console.log('[WOW] Focus:', workoutFocus);
+    console.log('[WOW] Recent workouts:', recentWorkouts.length);
 
     // Get user's training profile
     const trainingProfile = user.trainingProfile || undefined;
@@ -232,7 +267,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
     // Validate generated workout
     const validation = validateGeneratedWorkout(result.workout);
     if (!validation.valid) {
-      console.error('[WOD] Generated workout failed validation:', validation.errors);
+      console.error('[WOW] Generated workout failed validation:', validation.errors);
       return NextResponse.json(
         {
           success: false,
@@ -256,28 +291,28 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
     })) || [];
 
     // Create workout in DynamoDB
-    const today = new Date().toISOString().split('T')[0];
+    const weekStart = getWeekStartDate();
     const newWorkout: Partial<DynamoDBWorkout> = {
       userId,
-      workoutId: `wod_${Date.now()}`,
-      title: `Today's Workout - ${result.workout.title || 'AI Generated'}`,
+      workoutId: `wow_${Date.now()}`,
+      title: `This Week's Workout - ${result.workout.title || 'AI Generated'}`,
       description: result.workout.description || '',
       exercises,
       content: prompt,
-      tags: [...(result.workout.tags || []), 'workout-of-the-day'],
+      tags: [...(result.workout.tags || []), 'workout-of-the-week'],
       difficulty: result.workout.difficulty || 'intermediate',
       totalDuration: result.workout.duration || 60,
-      source: 'ai-wod',
+      source: 'ai-wow',
       type: 'manual',
       workoutType: 'standard',
       aiEnhanced: true,
       aiNotes: [
-        `Workout of the Day generated on ${today}`,
+        `Workout of the Week generated on ${weekStart}`,
         `Focus: ${workoutFocus}`,
         `Rationale: ${result.rationale}`,
       ],
       status: 'scheduled',
-      scheduledDate: today,
+      scheduledDate: weekStart,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -285,10 +320,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
     await dynamoDBWorkouts.upsert(userId, newWorkout as DynamoDBWorkout);
     const savedWorkout = newWorkout as DynamoDBWorkout;
 
-    console.log('[WOD] Success!');
-    console.log('[WOD] Workout:', savedWorkout.title);
-    console.log('[WOD] Exercises:', exercises.length);
-    console.log('[WOD] Focus:', workoutFocus);
+    console.log('[WOW] Success!');
+    console.log('[WOW] Workout:', savedWorkout.title);
+    console.log('[WOW] Exercises:', exercises.length);
+    console.log('[WOW] Focus:', workoutFocus);
 
     return NextResponse.json({
       success: true,
@@ -303,12 +338,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<WorkoutOfTheDa
       quotaRemaining: isAdmin ? 999999 : Math.max(0, aiLimit - aiUsedAfter),
     });
   } catch (error) {
-    console.error('[WOD] Error:', error);
+    console.error('[WOW] Error:', error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get workout of the day',
+        error: error instanceof Error ? error.message : 'Failed to get workout of the week',
       },
       { status: 500 }
     );

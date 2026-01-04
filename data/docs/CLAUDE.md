@@ -12,6 +12,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Check available MCP tools at the start of relevant tasks (infrastructure changes, GitHub operations, UI component work, etc.) and use them when they fit the task better than standard CLI commands.
 
+## Using Specialized Agents
+
+This project has specialized AI agents for different types of tasks. **When starting any non-trivial task, consult the [Agent Guide](../../docs/agents/AGENT-GUIDE.md) to determine which agent(s) to use.**
+
+**Quick Agent Reference:**
+- **nextjs-developer** - Next.js pages, Server Components, performance, SEO
+- **react-specialist** - React patterns, hooks, performance optimization
+- **typescript-pro** - TypeScript errors, type safety, build configuration
+- **ui-designer** - UI components, design systems, accessibility
+- **ux-researcher** - User flows, usability, journey mapping
+- **business-analyst** - Requirements, user stories, feature planning
+- **security-reviewer** - Security audits, authentication, vulnerability assessment
+- **fitness-branding-strategist** - Brand voice, marketing, positioning
+
+**See [docs/agents/AGENT-GUIDE.md](../../docs/agents/AGENT-GUIDE.md) for detailed guidance on when to use each agent and how they collaborate.**
+
 ## Project Overview
 
 Spot Buddy is a fitness tracking application built with Next.js 15.5.7, React 19.1.0, and TypeScript. It's designed to let users save Instagram workouts, upload workout screenshots, and track progress with OCR and AI features.
@@ -21,8 +37,7 @@ Spot Buddy is a fitness tracking application built with Next.js 15.5.7, React 19
 - **Database**: DynamoDB for workouts, users, and body metrics (production), SQLite/Prisma for development
 - **Infrastructure**: ECS Fargate, ALB with HTTPS, Route53 DNS
 - **Domain**: https://spotter.cannashieldct.com
-- **Phase 1-5 Complete**: Full app with monetization ready
-- **Phase 6 In Progress**: AI-powered features (40% complete)
+- **Phases 1-6 Complete**: Full app with monetization and AI features ready
 - **Development Strategy**: Multi-platform (Web, Android, iOS) with shared backend
 
 **Completed Phases** (January 2025):
@@ -31,13 +46,12 @@ Spot Buddy is a fitness tracking application built with Next.js 15.5.7, React 19
 - ✅ **Phase 3**: Smart Timers (Interval, HIIT, Rest Timer widget)
 - ✅ **Phase 4**: Enhanced Stats & PRs tracking with body metrics
 - ✅ **Phase 5**: Stripe integration with subscription tiers (Free, Core $7.99, Pro $14.99, Elite $34.99)
-
-**Phase 6 In Progress** (Started January 24, 2025):
-- ✅ AWS Bedrock client infrastructure with Claude Sonnet 4.5
-- ✅ Smart Workout Parser with AI enhancement
-- 🚧 Training Profile system
-- 🚧 AI Workout Generator
-- 🚧 Workout of the Day (WOD)
+- ✅ **Phase 6**: AI-powered features (Completed December 26, 2025)
+  - AWS Bedrock client infrastructure with Claude Sonnet 4.5
+  - Smart Workout Parser with AI enhancement
+  - Training Profile system
+  - AI Workout Generator
+  - Workout of the Day (WOD)
 
 **Recent Features** (December 2024):
 - ✅ **AMRAP Workouts**: As Many Rounds As Possible workout type with time limits
@@ -486,21 +500,22 @@ No test framework currently configured. When adding tests, consider:
 - **docs/DEPLOYMENT-SUMMARY.md** - AWS deployment procedures and troubleshooting
 
 **Phase Implementation Guides**:
-- **data/docs/PHASE-1-IMPLEMENTATION.md** - DynamoDB persistence with cross-device sync
-- **data/docs/PHASE-2-CALENDAR-IMPLEMENTATION.md** - Calendar & Scheduling system
-- **data/docs/PHASE-3-TIMERS-IMPLEMENTATION.md** - Smart Timers (Interval, HIIT, Rest)
-- **data/docs/PHASE-4-IMPLEMENTATION.md** - Stats & PRs tracking with body metrics
+- **data/docs/PHASE-1-IMPLEMENTATION.md** - DynamoDB persistence with cross-device sync (✅ Complete)
+- **data/docs/PHASE-2-CALENDAR-IMPLEMENTATION.md** - Calendar & Scheduling system (✅ Complete)
+- **data/docs/PHASE-3-TIMERS-IMPLEMENTATION.md** - Smart Timers (Interval, HIIT, Rest) (✅ Complete)
+- **data/docs/PHASE-4-IMPLEMENTATION.md** - Stats & PRs tracking with body metrics (✅ Complete)
 - **data/docs/PHASE-5-MONETIZATION.md** - Stripe integration and subscription tiers (✅ Complete)
 - **data/docs/PHASE-6-AI-FEATURES.md** - AI-powered features specification
-- **data/docs/PHASE-6-PROGRESS.md** - Phase 6 implementation progress (40% complete)
+- **data/docs/PHASE-6-PROGRESS.md** - Phase 6 implementation (✅ Complete - Dec 26, 2025)
 
 **Feature Documentation**:
 - **docs/features/amrap-manual-creation.md** - AMRAP workout type implementation
 
 **Agent Documentation** (for Claude Code specialized agents):
+- **📘 docs/agents/AGENT-GUIDE.md** - **START HERE** - Complete guide on when to use which agent
 - **docs/agents/nextjs-developer-agent.md** - Next.js development specialist
 - **docs/agents/react-specialist-agent.md** - React patterns and optimization
-- **docs/agents/typescript-pro.md** - TypeScript development expert
+- **docs/agents/typescript-agent.md** - TypeScript development expert
 - **docs/agents/fitness-branding-strategist.md** - Brand and marketing strategy
 - **docs/agents/ui-designer.md** - UI/UX design guidance
 - **docs/agents/business-analyst.md** - Business logic and requirements

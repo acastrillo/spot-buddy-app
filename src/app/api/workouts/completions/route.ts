@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
 import { dynamoDBWorkoutCompletions } from "@/lib/dynamodb";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+
+const completionCreateSchema = z
+  .object({
+    workoutId: z.string().min(1).max(200),
+    completedAt: z.string().max(100),
+    completedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    durationSeconds: z.number().int().min(0).max(86400).optional(),
+    durationMinutes: z.number().int().min(0).max(1440).optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .strip();
 
 /**
  * GET /api/workouts/completions
@@ -11,6 +24,27 @@ export async function GET(req: NextRequest) {
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) return auth.error;
     const { userId } = auth;
+
+    const rateLimit = await checkRateLimit(userId, 'api:read');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
 
     // Parse query parameters
     const { searchParams } = new URL(req.url);
@@ -50,17 +84,37 @@ export async function POST(req: NextRequest) {
     if ('error' in auth) return auth.error;
     const { userId } = auth;
 
+    const rateLimit = await checkRateLimit(userId, 'api:write');
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          limit: rateLimit.limit,
+          remaining: rateLimit.remaining,
+          reset: rateLimit.reset,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     // Parse request body
     const body = await req.json();
-    const { workoutId, completedAt, completedDate, durationSeconds, durationMinutes, notes } = body;
-
-    // Validate required fields
-    if (!workoutId || !completedAt || !completedDate) {
+    const parsed = completionCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing required fields: workoutId, completedAt, completedDate" },
+        { error: parsed.error.errors[0]?.message || "Invalid request body" },
         { status: 400 }
       );
     }
+    const { workoutId, completedAt, completedDate, durationSeconds, durationMinutes, notes } = parsed.data;
 
     // Generate completion ID (timestamp-based for sorting)
     const completionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

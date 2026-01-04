@@ -15,11 +15,12 @@ import { NextResponse } from 'next/server'
 export function middleware() {
   // Clone the response
   const response = NextResponse.next()
+  const isProduction = process.env.NODE_ENV === "production"
 
   // Strict-Transport-Security (HSTS)
   // Forces browsers to use HTTPS for all future requests (1 year)
   // Prevents MITM attacks by disallowing HTTP connections
-  if (process.env.NODE_ENV === "production") {
+  if (isProduction) {
     response.headers.set(
       'Strict-Transport-Security',
       'max-age=31536000; includeSubDomains; preload'
@@ -45,23 +46,60 @@ export function middleware() {
 
   // Content-Security-Policy (CSP)
   // Prevents XSS attacks by controlling what resources can load
-  // Note: Next.js requires 'unsafe-eval' for dynamic imports
-  // TODO: Tighten CSP as you identify safe sources
+  // Note: Next.js with Turbopack requires 'unsafe-eval' for HMR and dynamic imports
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline'",  // unsafe-inline needed for Next.js
-    "style-src 'self' 'unsafe-inline'",  // unsafe-inline needed for styled components
-    "img-src 'self' data: https: blob:",  // Allow images from HTTPS, data URIs, and blobs
-    "font-src 'self' data:",  // Allow fonts from self and data URIs
-    "media-src 'self' data: blob: https://ssl.gstatic.com",  // Allow audio cues hosted on gstatic
-    "connect-src 'self' https://*.amazonaws.com https://accounts.google.com https://www.facebook.com https://graph.facebook.com",  // Allow AWS, Google, and Facebook OAuth
-    "frame-ancestors 'none'",  // Equivalent to X-Frame-Options: DENY
-    "base-uri 'self'",  // Restrict <base> tag to same origin
-    "form-action 'self'",  // Allow form submissions to same origin
-    "upgrade-insecure-requests",  // Automatically upgrade HTTP to HTTPS
+    // Next.js requires 'unsafe-eval' for dynamic imports (Turbopack)
+    // 'unsafe-inline' is still needed for some Next.js internals
+    // Consider using nonces in production for better security
+    isProduction
+      ? "script-src 'self' 'unsafe-inline' https://js.stripe.com"
+      : "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
+    // 'unsafe-inline' needed for Tailwind and styled components
+    // Consider extracting critical CSS and using nonces for inline styles
+    "style-src 'self' 'unsafe-inline'",
+    // Tightened: Only allow images from specific trusted sources
+    "img-src 'self' data: blob: https://*.amazonaws.com https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com https://graph.facebook.com",
+    "font-src 'self' data:",
+    "media-src 'self' data: blob: https://ssl.gstatic.com",
+    // Added Stripe API domains for checkout and webhooks
+    "connect-src 'self' https://*.amazonaws.com https://accounts.google.com https://www.facebook.com https://graph.facebook.com https://api.stripe.com https://checkout.stripe.com",
+    // Prevent object/embed/applet elements (Flash, Java, etc.)
+    "object-src 'none'",
+    // Allow web workers from same origin
+    "worker-src 'self' blob:",
+    // Prevent framing (clickjacking protection)
+    "frame-ancestors 'none'",
+    // Allow Stripe checkout iframes
+    "frame-src https://js.stripe.com https://checkout.stripe.com",
+    "base-uri 'self'",
+    // Allow form submissions to self and Stripe
+    "form-action 'self' https://checkout.stripe.com",
+    "upgrade-insecure-requests",
   ].join('; ')
 
   response.headers.set('Content-Security-Policy', cspDirectives)
+
+  if (isProduction) {
+    const reportOnlyDirectives = [
+      "default-src 'self'",
+      "script-src 'self' https://js.stripe.com",
+      "style-src 'self'",
+      "img-src 'self' data: blob: https://*.amazonaws.com https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com https://graph.facebook.com",
+      "font-src 'self' data:",
+      "media-src 'self' data: blob: https://ssl.gstatic.com",
+      "connect-src 'self' https://*.amazonaws.com https://accounts.google.com https://www.facebook.com https://graph.facebook.com https://api.stripe.com https://checkout.stripe.com",
+      "object-src 'none'",
+      "worker-src 'self' blob:",
+      "frame-ancestors 'none'",
+      "frame-src https://js.stripe.com https://checkout.stripe.com",
+      "base-uri 'self'",
+      "form-action 'self' https://checkout.stripe.com",
+      "upgrade-insecure-requests",
+    ].join('; ')
+
+    response.headers.set('Content-Security-Policy-Report-Only', reportOnlyDirectives)
+  }
 
   // Permissions-Policy (formerly Feature-Policy)
   // Controls which browser features and APIs can be used

@@ -25,8 +25,15 @@ Write-Host "✅ AWS Account ID: $AccountId" -ForegroundColor Green
 
 # Update task definition with account ID
 Write-Host "📝 Updating task definition with account details..." -ForegroundColor Yellow
-$TaskDefContent = Get-Content "aws-task-definition.json" -Raw
+$TaskDefTemplatePath = "aws-task-definition.template.json"
+$TaskDefSourcePath = if (Test-Path $TaskDefTemplatePath) { $TaskDefTemplatePath } else { "aws-task-definition.json" }
+if (-not (Test-Path $TaskDefSourcePath)) {
+    Write-Error "❌ Task definition template not found: $TaskDefSourcePath"
+    exit 1
+}
+$TaskDefContent = Get-Content $TaskDefSourcePath -Raw
 $TaskDefContent = $TaskDefContent -replace "YOUR_ACCOUNT_ID", $AccountId
+$TaskDefContent = $TaskDefContent -replace "920013187591", $AccountId
 $TaskDefContent | Set-Content "aws-task-definition-updated.json"
 Write-Host "✅ Task definition updated" -ForegroundColor Green
 

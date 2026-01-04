@@ -17,7 +17,7 @@ async function main() {
   }
 
   const stripe = new Stripe(apiKey, {
-    apiVersion: '2024-12-18.acacia',
+    apiVersion: '2025-09-30.clover',
     typescript: true,
   });
 
@@ -35,7 +35,7 @@ async function main() {
     console.log(`  Display Name: ${account.settings?.dashboard?.display_name || 'N/A'}`);
     console.log(`  Business Name: ${account.business_profile?.name || 'N/A'}`);
     console.log(`  Country: ${account.country}`);
-    console.log(`  Created: ${new Date(account.created * 1000).toLocaleDateString()}\n`);
+    console.log(`  Created: ${account.created ? new Date(account.created * 1000).toLocaleDateString() : 'N/A'}\n`);
 
     console.log('Dashboard URL:');
     console.log(`  https://dashboard.stripe.com/${account.id}\n`);

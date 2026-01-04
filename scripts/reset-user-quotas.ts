@@ -41,7 +41,7 @@ async function getAllUsers() {
   });
 
   const users: any[] = [];
-  let lastEvaluatedKey;
+  let lastEvaluatedKey: Record<string, any> | undefined;
 
   do {
     const command = new ScanCommand({

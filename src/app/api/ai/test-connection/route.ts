@@ -3,10 +3,32 @@
  * GET /api/ai/test-connection
  */
 import { NextResponse } from 'next/server';
+import { getAuthenticatedSession } from '@/lib/api-auth';
+import { dynamoDBUsers } from '@/lib/dynamodb';
 import { getModelId, testBedrockConnection } from '@/lib/ai/bedrock-client';
+import { hasRole } from '@/lib/rbac';
 
 export async function GET() {
   try {
+    const auth = await getAuthenticatedSession();
+    if ('error' in auth) return auth.error;
+    const { userId } = auth;
+
+    const user = await dynamoDBUsers.get(userId);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (process.env.NODE_ENV === 'production' && !hasRole(user, 'admin')) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
     console.log('[AI Test] Testing Bedrock connection...');
 
     const isHealthy = await testBedrockConnection();

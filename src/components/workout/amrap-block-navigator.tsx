@@ -30,13 +30,13 @@ export function AMRAPBlockNavigator({
     <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-between gap-4">
       {/* Previous button */}
       <Button
-        variant="ghost"
-        size="sm"
+        variant="outline"
+        size="default"
         disabled={!canGoPrevious}
         onClick={() => onNavigate(currentIndex - 1)}
-        className="gap-1"
+        className="gap-1 sm:gap-2 min-w-[44px] sm:min-w-0"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
         <span className="hidden sm:inline">Previous</span>
       </Button>
 
@@ -80,14 +80,14 @@ export function AMRAPBlockNavigator({
 
       {/* Next button */}
       <Button
-        variant="ghost"
-        size="sm"
+        variant="outline"
+        size="default"
         disabled={!canGoNext}
         onClick={() => onNavigate(currentIndex + 1)}
-        className="gap-1"
+        className="gap-1 sm:gap-2 min-w-[44px] sm:min-w-0"
       >
         <span className="hidden sm:inline">Next</span>
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
       </Button>
     </div>
   )

@@ -7,14 +7,35 @@
  * Usage: node scripts/update-iam-for-completions.mjs
  */
 
+import { execSync } from "node:child_process";
 import { IAMClient, PutRolePolicyCommand } from "@aws-sdk/client-iam";
 
 const client = new IAMClient({ region: process.env.AWS_REGION || "us-east-1" });
 
 const ROLE_NAME = "SpotterTaskRole";
 const POLICY_NAME = "BedrockAndDynamoDBAccess";
-const AWS_ACCOUNT_ID = "920013187591"; // Your AWS account ID
 const REGION = process.env.AWS_REGION || "us-east-1";
+
+function resolveAccountId() {
+  const envAccountId = process.env.AWS_ACCOUNT_ID || process.env.AWS_ACCOUNT;
+  if (envAccountId) return envAccountId;
+
+  try {
+    return execSync("aws sts get-caller-identity --query Account --output text", {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return null;
+  }
+}
+
+const AWS_ACCOUNT_ID = resolveAccountId();
+if (!AWS_ACCOUNT_ID) {
+  console.error("AWS account ID not found. Set AWS_ACCOUNT_ID or configure AWS CLI.");
+  process.exit(1);
+}
 
 async function updateIAMPolicy() {
   console.log(`\n🔐 Updating IAM policy for workout completions table access`);

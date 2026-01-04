@@ -57,7 +57,12 @@ export async function POST(req: NextRequest) {
       })
       customerId = customer.id
 
-      await dynamoDBUsers.upsert({ id: userId, email: user.email, stripeCustomerId: customerId })
+      await dynamoDBUsers.upsert({
+        id: userId,
+        email: user.email,
+        stripeCustomerId: customerId,
+        emailVerified: user.emailVerified ?? null,
+      })
     }
 
     const priceId = getPriceIdForTier(tier, billingPeriod)
