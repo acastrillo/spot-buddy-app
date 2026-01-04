@@ -5,6 +5,7 @@ import { dynamoDBUsers, dynamoDBWebhookEvents } from '@/lib/dynamodb'
 import { PaidTier, normalizePaidTier, constructEventFromPayload, getStripe } from '@/lib/stripe-server'
 import { AppMetrics } from '@/lib/metrics'
 import { SUBSCRIPTION_TIERS } from '@/lib/stripe'
+import { maskEmail, maskToken, maskUserId } from '@/lib/safe-logger'
 import type {
   StripeCheckoutSessionExtended,
   StripeInvoiceExtended,
@@ -22,6 +23,10 @@ import {
 } from '@/types/stripe-extended'
 
 export const runtime = 'nodejs'
+
+const maskStripeId = (value: string | null | undefined) => maskToken(value ?? null)
+const maskMaybeEmail = (value: string | null | undefined) => maskEmail(value ?? null)
+const maskMaybeUserId = (value: string | null | undefined) => maskUserId(value ?? null)
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -96,13 +101,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
   const customerId = getCustomerId(session.customer)
   const customerEmail = extended.customer_email || session.customer_details?.email || null
 
+  const maskedUserId = maskMaybeUserId(userId)
+  const maskedCustomerId = maskStripeId(customerId)
+  const maskedCustomerEmail = maskMaybeEmail(customerEmail)
+  const maskedClientReferenceId = maskMaybeUserId(session.client_reference_id ?? null)
+
   console.log(`[Webhook:${eventId}] checkout.session.completed:`, {
     sessionId: session.id,
-    metadataUserId: userId,
+    metadataUserId: maskedUserId,
     metadataTier: tier,
-    customerId,
-    customerEmail,
-    clientReferenceId: session.client_reference_id,
+    customerId: maskedCustomerId,
+    customerEmail: maskedCustomerEmail,
+    clientReferenceId: maskedClientReferenceId,
   })
 
   if (!userId || !tier) {
@@ -113,7 +123,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
 
   const subscriptionId = getSubscriptionId(session.subscription)
 
-  console.log(`[Webhook:${eventId}] Updating user ${userId} to tier=${tier}, status=active, subscriptionId=${subscriptionId}`)
+  const maskedSubscriptionId = maskStripeId(subscriptionId)
+  console.log(`[Webhook:${eventId}] Updating user ${maskedUserId} to tier=${tier}, status=active, subscriptionId=${maskedSubscriptionId}`)
 
   // Determine billing period and price from session
   const tierData = SUBSCRIPTION_TIERS[tier]
@@ -132,7 +143,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, eventId
   // Track successful checkout completion for conversion analytics
   AppMetrics.subscriptionCheckoutCompleted(userId, tier, billingPeriod, amountTotal)
 
-  console.log(`[Webhook:${eventId}] Successfully updated user ${userId} subscription`)
+  console.log(`[Webhook:${eventId}] Successfully updated user ${maskedUserId} subscription`)
 }
 
 async function handleSubscriptionUpsert(subscription: Stripe.Subscription, eventId: string) {
@@ -142,11 +153,14 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
   const tierMeta = normalizePaidTier(tierRaw)
   const customerId = getCustomerId(subscription.customer)
 
+  const maskedCustomerId = maskStripeId(customerId)
+  const maskedSubscriptionId = maskStripeId(subscription.id)
+
   console.log(`[Webhook:${eventId}] subscription.upsert:`, {
-    subscriptionId: subscription.id,
-    metadataUserId: userId,
+    subscriptionId: maskedSubscriptionId,
+    metadataUserId: maskMaybeUserId(userId),
     metadataTier: tierMeta,
-    customerId,
+    customerId: maskedCustomerId,
     status: subscription.status,
   })
 
@@ -158,10 +172,11 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
       return
     }
     userId = fallback.userId
-    console.log(`[Webhook:${eventId}] Resolved userId via fallback: ${userId}`)
+    console.log(`[Webhook:${eventId}] Resolved userId via fallback: ${maskMaybeUserId(userId)}`)
   }
 
   await ensureUserExists(userId)
+  const maskedResolvedUserId = maskMaybeUserId(userId)
 
   const tier = tierMeta
   const update: Parameters<typeof dynamoDBUsers.updateSubscription>[1] = {
@@ -175,9 +190,14 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription, event
 
   if (tier) update.tier = tier
 
-  console.log(`[Webhook:${eventId}] Updating user ${userId}:`, update)
+  const logUpdate = {
+    ...update,
+    stripeCustomerId: maskStripeId(update.stripeCustomerId),
+    stripeSubscriptionId: maskStripeId(update.stripeSubscriptionId),
+  }
+  console.log(`[Webhook:${eventId}] Updating user ${maskedResolvedUserId}:`, logUpdate)
   await dynamoDBUsers.updateSubscription(userId, update)
-  console.log(`[Webhook:${eventId}] Successfully updated user ${userId} subscription`)
+  console.log(`[Webhook:${eventId}] Successfully updated user ${maskedResolvedUserId} subscription`)
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eventId: string) {
@@ -209,16 +229,25 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription, eve
 
 async function handleInvoicePayment(invoice: Stripe.Invoice, result: 'succeeded' | 'failed', eventId: string) {
   const extended = invoice as StripeInvoiceExtended;
+  const maskedInvoiceCustomerId = maskStripeId(getCustomerId(invoice.customer))
+  const maskedInvoiceEmail = maskMaybeEmail(getInvoiceCustomerEmail(invoice))
+  const maskedInvoiceSubscriptionId = maskStripeId(getSubscriptionId(extended.subscription))
   console.log(`[Webhook:${eventId}] invoice.payment.${result}:`, {
     invoiceId: invoice.id,
-    customerId: getCustomerId(invoice.customer),
-    customerEmail: getInvoiceCustomerEmail(invoice),
-    subscriptionId: getSubscriptionId(extended.subscription),
+    customerId: maskedInvoiceCustomerId,
+    customerEmail: maskedInvoiceEmail,
+    subscriptionId: maskedInvoiceSubscriptionId,
   })
 
   const context = await resolveInvoiceContext(invoice)
 
-  console.log(`[Webhook:${eventId}] Resolved invoice context:`, context)
+  const maskedContext = {
+    ...context,
+    userId: maskMaybeUserId(context.userId),
+    subscriptionId: maskStripeId(context.subscriptionId),
+    customerId: maskStripeId(context.customerId),
+  }
+  console.log(`[Webhook:${eventId}] Resolved invoice context:`, maskedContext)
 
   if (!context.userId) {
     console.warn(`[Webhook:${eventId}] Invoice ${invoice.id} missing userId; skipping status update`)
@@ -234,9 +263,14 @@ async function handleInvoicePayment(invoice: Stripe.Invoice, result: 'succeeded'
     ...(context.tier ? { tier: context.tier } : {}),
   }
 
-  console.log(`[Webhook:${eventId}] Updating user ${context.userId}:`, update)
+  const maskedUpdate = {
+    ...update,
+    stripeCustomerId: maskStripeId(update.stripeCustomerId),
+    stripeSubscriptionId: maskStripeId(update.stripeSubscriptionId),
+  }
+  console.log(`[Webhook:${eventId}] Updating user ${maskMaybeUserId(context.userId)}:`, maskedUpdate)
   await dynamoDBUsers.updateSubscription(context.userId, update)
-  console.log(`[Webhook:${eventId}] Successfully updated user ${context.userId} subscription`)
+  console.log(`[Webhook:${eventId}] Successfully updated user ${maskMaybeUserId(context.userId)} subscription`)
 }
 
 function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): 'active' | 'inactive' | 'trialing' | 'canceled' | 'past_due' {
@@ -258,7 +292,9 @@ function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): 'active' | '
 // Removed toDate - now using getSubscriptionDate from stripe-extended
 
 async function ensureUserExists(userId: string) {
-  const user = await dynamoDBUsers.get(userId).catch(() => null)
+  // PERFORMANCE NOTE: Use strong consistency here since we're processing webhook
+  // updates and need to ensure we have the latest user data immediately
+  const user = await dynamoDBUsers.get(userId, true).catch(() => null)
   if (!user) {
     throw new Error(`User ${userId} not found in DynamoDB`)
   }
@@ -346,13 +382,13 @@ async function resolveUserByCustomer(
     return null
   }
 
-  console.log(`[resolveUserByCustomer] Looking up user for stripeCustomerId=${stripeCustomerId}, emailHint=${emailHint}`)
+  console.log(`[resolveUserByCustomer] Looking up user for stripeCustomerId=${maskStripeId(stripeCustomerId)}, emailHint=${maskMaybeEmail(emailHint)}`)
 
   // 1. First try looking up by stripeCustomerId directly (fastest, most reliable)
   try {
     const userByCustomerId = await dynamoDBUsers.getByStripeCustomerId(stripeCustomerId)
     if (userByCustomerId) {
-      console.log(`[resolveUserByCustomer] Found user by stripeCustomerId: userId=${userByCustomerId.id}, email=${userByCustomerId.email}`)
+      console.log(`[resolveUserByCustomer] Found user by stripeCustomerId: userId=${maskMaybeUserId(userByCustomerId.id)}, email=${maskMaybeEmail(userByCustomerId.email)}`)
       return { userId: userByCustomerId.id, tier }
     }
   } catch (err) {
@@ -363,16 +399,21 @@ async function resolveUserByCustomer(
 
   const tryLookupByEmail = async (email: string | undefined | null) => {
     if (!email) return null
-    console.log(`[resolveUserByCustomer] Trying email lookup: ${email}`)
+    console.log(`[resolveUserByCustomer] Trying email lookup: ${maskMaybeEmail(email)}`)
     const user = await dynamoDBUsers.getByEmail(email)
     if (user) {
-      console.log(`[resolveUserByCustomer] Found user by email: userId=${user.id}`)
+      console.log(`[resolveUserByCustomer] Found user by email: userId=${maskMaybeUserId(user.id)}`)
       // Also update user's stripeCustomerId for future lookups (with race condition protection)
       if (!user.stripeCustomerId && stripeCustomerId) {
-        console.log(`[resolveUserByCustomer] Linking stripeCustomerId=${stripeCustomerId} to user=${user.id}`)
+        console.log(`[resolveUserByCustomer] Linking stripeCustomerId=${maskStripeId(stripeCustomerId)} to user=${maskMaybeUserId(user.id)}`)
         try {
           await dynamoDBUsers.upsert(
-            { id: user.id, email: user.email, stripeCustomerId },
+            {
+              id: user.id,
+              email: user.email,
+              stripeCustomerId,
+              emailVerified: user.emailVerified ?? null,
+            },
             {
               // Only link if stripeCustomerId doesn't exist yet (prevent concurrent webhooks from overwriting)
               ConditionExpression: 'attribute_not_exists(stripeCustomerId)',
@@ -380,7 +421,7 @@ async function resolveUserByCustomer(
           )
         } catch (error: unknown) {
           if (error && typeof error === 'object' && 'name' in error && error.name === 'ConditionalCheckFailedException') {
-            console.log(`[resolveUserByCustomer] ⚠️  stripeCustomerId already set for user=${user.id} (concurrent webhook)`)
+            console.log(`[resolveUserByCustomer] ⚠️  stripeCustomerId already set for user=${maskMaybeUserId(user.id)} (concurrent webhook)`)
           } else {
             throw error
           }
@@ -398,13 +439,13 @@ async function resolveUserByCustomer(
   try {
     const cust = await getStripe().customers.retrieve(stripeCustomerId)
     const custEmail = getCustomerEmail(cust)
-    console.log(`[resolveUserByCustomer] Stripe customer email: ${custEmail}`)
+    console.log(`[resolveUserByCustomer] Stripe customer email: ${maskMaybeEmail(custEmail)}`)
     const byCust = await tryLookupByEmail(custEmail)
     if (byCust) return byCust
   } catch (err) {
     console.warn('[resolveUserByCustomer] Failed to retrieve Stripe customer:', err)
   }
 
-  console.log(`[resolveUserByCustomer] Could not resolve user for stripeCustomerId=${stripeCustomerId}`)
+  console.log(`[resolveUserByCustomer] Could not resolve user for stripeCustomerId=${maskStripeId(stripeCustomerId)}`)
   return null
 }

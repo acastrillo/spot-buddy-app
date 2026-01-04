@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     reqLogger.log("Fetching workout stats", { userId })
 
     const perf = new PerformanceMonitor("api.workouts.stats", { userId })
-    const workouts = await dynamoDBWorkouts.list(userId)
+
+    // PERFORMANCE FIX: Limit to last 200 workouts to prevent overfetching on mobile
+    // Stats calculations only need recent data (last 12 months shown in charts)
+    const workouts = await dynamoDBWorkouts.list(userId, 200)
     const stats = calculateWorkoutStats(workouts)
     const duration = perf.finish()
 
@@ -34,7 +37,13 @@ export async function GET(request: NextRequest) {
     reqLogger.finish(200)
     AppMetrics.apiRequest("GET", "/api/workouts/stats", 200)
 
-    return NextResponse.json({ stats })
+    // PERFORMANCE FIX: Add HTTP caching for mobile performance
+    // Stats don't change frequently, cache for 5 minutes
+    return NextResponse.json({ stats }, {
+      headers: {
+        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     reqLogger.error("Error fetching workout stats", error as Error)
     reqLogger.finish(500)

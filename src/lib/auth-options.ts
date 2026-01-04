@@ -32,6 +32,7 @@ type GoogleProfile = {
   family_name?: string;
   name?: string;
   picture?: string;
+  email_verified?: boolean;
 };
 
 type FacebookProfile = {
@@ -41,6 +42,7 @@ type FacebookProfile = {
   first_name?: string;
   last_name?: string;
   picture?: { data?: { url?: string } };
+  verified?: boolean;
 };
 
 const {
@@ -55,6 +57,10 @@ const {
   EMAIL_SERVER_PASSWORD,
   EMAIL_FROM,
 } = process.env;
+
+const isProduction = process.env.NODE_ENV === "production";
+const allowDevLogin = process.env.ALLOW_DEV_LOGIN === "true";
+const enableDevLogin = !isProduction && allowDevLogin;
 
 // Check which providers are configured
 const hasGoogle = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
@@ -182,7 +188,7 @@ providers.push(
 );
 
 // Development-only credentials provider for local testing
-if (process.env.NODE_ENV === "development") {
+if (enableDevLogin) {
   providers.push(
     CredentialsProvider({
       id: "dev-credentials",
@@ -224,6 +230,7 @@ if (process.env.NODE_ENV === "development") {
             email,
             firstName: existingUser?.firstName || firstName,
             lastName: existingUser?.lastName || lastName,
+            emailVerified: existingUser?.emailVerified || new Date().toISOString(),
           });
         } catch (error) {
           console.error("Failed to create/update dev user in DynamoDB:", error);
@@ -253,38 +260,38 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: isProduction,
         maxAge: 30 * 24 * 60 * 60, // Must match session.maxAge - fixes incognito mode issues
-        domain: process.env.NODE_ENV === "production"
+        domain: isProduction
           ? ".cannashieldct.com"  // Allows spotter.cannashieldct.com and future subdomains
           : undefined,  // localhost doesn't need domain
       },
     },
     csrfToken: {
       // Note: Cannot use __Host- prefix when using domain attribute (cookies don't match on sign-out)
-      name: `next-auth.csrf-token`,
+      name: isProduction ? "__Secure-next-auth.csrf-token" : "next-auth.csrf-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production"
+        secure: isProduction,
+        domain: isProduction
           ? ".cannashieldct.com"  // Must match session token domain
           : undefined,
       },
     },
     callbackUrl: {
-      name: `next-auth.callback-url`,
+      name: isProduction ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
       options: {
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production"
+        secure: isProduction,
+        domain: isProduction
           ? ".cannashieldct.com"
           : undefined,
       },
@@ -297,7 +304,7 @@ export const authOptions: NextAuthOptions = {
      * signIn callback - runs BEFORE jwt callback
      * This is where we prevent duplicate user creation by checking DynamoDB first
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       try {
         // Skip for credentials provider (dev login handles its own logic)
         if (account?.provider === 'dev-credentials' || account?.provider === 'credentials') {
@@ -308,6 +315,21 @@ export const authOptions: NextAuthOptions = {
           console.error('[Auth:SignIn] No email provided - denying sign-in');
           return false;
         }
+
+        const provider = account?.provider;
+        const providerEmailVerified =
+          provider === "google"
+            ? (profile as GoogleProfile | undefined)?.email_verified
+            : provider === "facebook"
+              ? (profile as FacebookProfile | undefined)?.verified
+              : undefined;
+
+        if (providerEmailVerified === false) {
+          console.warn(`[Auth:SignIn] Provider email not verified for ${provider} - denying sign-in`);
+          return false;
+        }
+
+        const emailVerifiedAt = providerEmailVerified ? new Date().toISOString() : null;
 
         // Check if user already exists in DynamoDB by email
         // CRITICAL: This uses the email-index GSI which may have eventual consistency
@@ -328,6 +350,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             firstName: oauthUser.firstName || existingUser.firstName || null,
             lastName: oauthUser.lastName || existingUser.lastName || null,
+            emailVerified: existingUser.emailVerified || emailVerifiedAt || null,
             // Preserve existing subscription data
             subscriptionTier: normalizedTier,
             subscriptionStatus: existingUser.subscriptionStatus,
@@ -363,6 +386,7 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               firstName: oauthUser.firstName || null,
               lastName: oauthUser.lastName || null,
+              emailVerified: emailVerifiedAt || null,
             }, {
               ConditionExpression: 'attribute_not_exists(#id)',
               ExpressionAttributeNames: { '#id': 'id' },
@@ -477,7 +501,8 @@ export const authOptions: NextAuthOptions = {
       if (token.id && token.email) {
         try {
           // Fetch existing user first to preserve subscription data
-          const existingUserForJWT = await dynamoDBUsers.get(token.id as string).catch(() => null);
+          // PERFORMANCE NOTE: Use strong consistency to ensure we get latest subscription status
+          const existingUserForJWT = await dynamoDBUsers.get(token.id as string, true).catch(() => null);
 
           if (existingUserForJWT) {
             // User exists - preserve ALL subscription and usage data
@@ -487,6 +512,7 @@ export const authOptions: NextAuthOptions = {
               email: token.email as string,
               firstName: (token.firstName as string | null) ?? null,
               lastName: (token.lastName as string | null) ?? null,
+              emailVerified: existingUserForJWT.emailVerified ?? null,
               // Preserve existing subscription data
               subscriptionTier: normalizedTier,
               subscriptionStatus: existingUserForJWT.subscriptionStatus,
@@ -528,7 +554,9 @@ export const authOptions: NextAuthOptions = {
       // Fetch subscription tier from DynamoDB on every token refresh
       if (token.id) {
         try {
-          const dbUser = await dynamoDBUsers.get(token.id as string);
+          // PERFORMANCE NOTE: Use strong consistency to ensure we get latest subscription
+          // status immediately after webhook updates (e.g., subscription cancellation)
+          const dbUser = await dynamoDBUsers.get(token.id as string, true);
           if (dbUser) {
             token.subscriptionTier = normalizeSubscriptionTier(dbUser.subscriptionTier);
             token.subscriptionStatus = dbUser.subscriptionStatus;

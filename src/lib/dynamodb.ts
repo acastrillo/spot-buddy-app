@@ -79,21 +79,28 @@ export interface DynamoDBUser {
 
   // Admin/Test User Flag
   isAdmin?: boolean;
+  roles?: string[];
 }
 
 // User operations
 export const dynamoDBUsers = {
   /**
    * Get user by ID
+   *
+   * PERFORMANCE NOTE: Uses eventual consistency by default (2x cheaper, 10-20ms faster).
+   * Only use consistentRead=true for critical auth paths where immediate consistency is required
+   * (e.g., after subscription webhook, during authentication callback).
+   *
+   * @param userId - User ID to fetch
+   * @param consistentRead - Use strong consistency (default: false for better performance)
    */
-  async get(userId: string): Promise<DynamoDBUser | null> {
+  async get(userId: string, consistentRead = false): Promise<DynamoDBUser | null> {
     try {
       const result = await getDynamoDb().send(
         new GetCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
-          // Use strongly consistent reads so auth/session reflects webhook updates immediately
-          ConsistentRead: true,
+          ConsistentRead: consistentRead,
         })
       );
 
@@ -220,6 +227,9 @@ export const dynamoDBUsers = {
 
       // Training profile (Phase 6)
       trainingProfile: user.trainingProfile || undefined,
+
+      // RBAC roles (optional)
+      roles: user.roles || undefined,
     };
 
     // Remove stripeCustomerId from item if it's null/undefined to avoid GSI validation errors
@@ -389,6 +399,50 @@ export const dynamoDBUsers = {
       );
     } catch (error) {
       console.error("Error resetting OCR quota in DynamoDB:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atomically consume a quota unit with an upper limit.
+   * Returns success=false if the limit has been reached.
+   */
+  async consumeQuota(
+    userId: string,
+    field: keyof Pick<DynamoDBUser, 'ocrQuotaUsed' | 'aiRequestsUsed' | 'instagramImportsUsed'>,
+    limit: number
+  ): Promise<{ success: boolean; newValue?: number }> {
+    if (limit <= 0) {
+      return { success: false };
+    }
+
+    try {
+      const result = await getDynamoDb().send(
+        new UpdateCommand({
+          TableName: USERS_TABLE,
+          Key: { id: userId },
+          UpdateExpression: "SET #field = if_not_exists(#field, :zero) + :inc, updatedAt = :updatedAt",
+          ConditionExpression: "attribute_not_exists(#field) OR #field < :limit",
+          ExpressionAttributeNames: {
+            "#field": field,
+          },
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":zero": 0,
+            ":limit": limit,
+            ":updatedAt": new Date().toISOString(),
+          },
+          ReturnValues: "UPDATED_NEW",
+        })
+      );
+
+      const newValue = result.Attributes?.[field] as number | undefined;
+      return { success: true, newValue };
+    } catch (error: any) {
+      if (error?.name === "ConditionalCheckFailedException") {
+        return { success: false };
+      }
+      console.error(`Error consuming ${field} in DynamoDB:`, error);
       throw error;
     }
   },
@@ -757,13 +811,24 @@ export const dynamoDBUsers = {
    */
   async setAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
     try {
+      const existingUser = await this.get(userId);
+      const existingRoles = existingUser?.roles?.length
+        ? existingUser.roles
+        : existingUser?.isAdmin
+          ? ["admin"]
+          : ["user"];
+      const nextRoles = isAdmin
+        ? Array.from(new Set([...existingRoles, "admin"]))
+        : existingRoles.filter(role => role !== "admin");
+
       await getDynamoDb().send(
         new UpdateCommand({
           TableName: USERS_TABLE,
           Key: { id: userId },
-          UpdateExpression: `SET isAdmin = :isAdmin, updatedAt = :updatedAt`,
+          UpdateExpression: `SET isAdmin = :isAdmin, roles = :roles, updatedAt = :updatedAt`,
           ExpressionAttributeValues: {
             ":isAdmin": isAdmin,
+            ":roles": nextRoles.length ? nextRoles : ["user"],
             ":updatedAt": new Date().toISOString(),
           },
         })
@@ -785,9 +850,9 @@ export const dynamoDBUsers = {
     try {
       if (typeof user === 'string') {
         const userData = await this.get(user);
-        return userData?.isAdmin === true;
+        return userData?.roles?.includes("admin") || userData?.isAdmin === true;
       }
-      return user.isAdmin === true;
+      return user.roles?.includes("admin") || user.isAdmin === true;
     } catch (error) {
       console.error("Error checking admin status:", error);
       return false;
@@ -1781,6 +1846,9 @@ export const dynamoDBWorkoutCompletions = {
   /**
    * Get stats for a user (used by dashboard/home page)
    * Returns: thisWeek count, total count, streak, hours trained
+   *
+   * PERFORMANCE NOTE: Limited to last 200 completions for mobile performance.
+   * Total count and hours trained are based on this sample.
    */
   async getStats(userId: string): Promise<{
     thisWeek: number;
@@ -1789,8 +1857,9 @@ export const dynamoDBWorkoutCompletions = {
     hoursTrained: number;
   }> {
     try {
-      // Get all completions for the user
-      const completions = await this.list(userId);
+      // PERFORMANCE FIX: Limit to last 200 completions to prevent overfetching on mobile
+      // This is sufficient for streak calculation and provides accurate recent stats
+      const completions = await this.list(userId, 200);
 
       // Normalize completion dates so stats work even if only completedAt is present
       const getCompletionDate = (completion: DynamoDBWorkoutCompletion): string | null => {
