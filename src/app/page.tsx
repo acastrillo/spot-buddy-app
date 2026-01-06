@@ -36,33 +36,67 @@ export default function HomePage() {
   const [workoutOfWeek, setWorkoutOfWeek] = useState<any | null>(null)
   const [isLoadingWOW, setIsLoadingWOW] = useState(false)
 
-  // Load Workout of the Week
-  useEffect(() => {
-    const loadWOW = async () => {
-      if (!user?.id) return
+  // Helper to get the current week's Monday date
+  const getWeekStartDate = (): string => {
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(now)
+    monday.setDate(now.getDate() + diff)
+    return monday.toISOString().split('T')[0]
+  }
 
-      setIsLoadingWOW(true)
+  // Handler to generate Workout of the Week when user clicks
+  const handleGenerateWOW = async () => {
+    if (!user?.id) return
 
-      try {
-        const response = await fetch('/api/ai/workout-of-the-week')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.workout) {
-            setWorkoutOfWeek(data.workout)
-          }
-        } else if (response.status === 403) {
-          // User doesn't have access to Workout of the Week (paid feature)
-        } else {
-          console.error('Failed to load Workout of the Week')
+    setIsLoadingWOW(true)
+
+    try {
+      const response = await fetch('/api/ai/workout-of-the-week')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.workout) {
+          setWorkoutOfWeek(data.workout)
+          // Remember that user generated this week's workout
+          const weekKey = `wow_generated_${getWeekStartDate()}`
+          localStorage.setItem(weekKey, 'true')
         }
-      } catch (error) {
-        console.error('Error loading Workout of the Week:', error)
-      } finally {
-        setIsLoadingWOW(false)
+      } else if (response.status === 403) {
+        const data = await response.json()
+        console.error('WOW Error:', data.error)
+      } else {
+        console.error('Failed to load Workout of the Week')
+      }
+    } catch (error) {
+      console.error('Error loading Workout of the Week:', error)
+    } finally {
+      setIsLoadingWOW(false)
+    }
+  }
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const needsOnboarding = !user.onboardingCompleted;
+
+      if (needsOnboarding) {
+        router.push('/onboarding');
       }
     }
+  }, [isAuthenticated, user?.id, user?.onboardingCompleted, router]);
 
-    loadWOW()
+  // Check if user already generated this week's workout on mount
+  useEffect(() => {
+    if (!user?.id) return
+
+    const weekKey = `wow_generated_${getWeekStartDate()}`
+    const wasGenerated = localStorage.getItem(weekKey)
+
+    if (wasGenerated) {
+      // Auto-load from API cache (won't consume quota if already exists)
+      handleGenerateWOW()
+    }
   }, [user?.id])
 
   useEffect(() => {
@@ -248,8 +282,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Workout of the Week */}
-          {(workoutOfWeek || isLoadingWOW) && (
+          {/* Workout of the Week - Only show for paid users */}
+          {user?.subscriptionTier && user.subscriptionTier !== 'free' && (
             <Card className="mb-8 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -260,9 +294,7 @@ export default function HomePage() {
                     <div>
                       <CardTitle className="text-xl">Workout of the Week</CardTitle>
                       <CardDescription>
-                        {isLoadingWOW
-                          ? 'Loading your personalized workout...'
-                          : 'Premium weekly workout based on your training profile'}
+                        Your free AI-generated weekly workout plan
                       </CardDescription>
                     </div>
                   </div>
@@ -278,14 +310,37 @@ export default function HomePage() {
                   )}
                 </div>
               </CardHeader>
-              {isLoadingWOW ? (
-                <CardContent>
+
+              <CardContent>
+                {/* State 1: Loading */}
+                {isLoadingWOW && (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-3 text-text-secondary">Generating your personalized workout...</p>
                   </div>
-                </CardContent>
-              ) : workoutOfWeek ? (
-                <CardContent>
+                )}
+
+                {/* State 2: Empty (before generation) */}
+                {!workoutOfWeek && !isLoadingWOW && (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary mb-2">
+                      Get Your AI Workout
+                    </h3>
+                    <p className="text-text-secondary mb-6 max-w-md mx-auto">
+                      Personalized weekly workout based on your training profile and recent activity. Generated fresh every week!
+                    </p>
+                    <Button onClick={handleGenerateWOW} size="lg" className="gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      <span>Generate This Week&apos;s Workout</span>
+                    </Button>
+                  </div>
+                )}
+
+                {/* State 3: Generated workout */}
+                {workoutOfWeek && !isLoadingWOW && (
                   <div
                     onClick={() => router.push(`/workout/${workoutOfWeek.workoutId}`)}
                     className="cursor-pointer hover:bg-surface/50 rounded-lg p-4 transition-colors border border-border/50"
@@ -331,8 +386,8 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-                </CardContent>
-              ) : null}
+                )}
+              </CardContent>
             </Card>
           )}
 
