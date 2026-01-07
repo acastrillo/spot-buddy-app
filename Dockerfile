@@ -40,6 +40,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/BUILD_ID ./.next/BUILD_ID
 RUN mkdir -p /tmp/prisma && chown -R nextjs:nodejs /tmp/prisma
 COPY --from=builder --chown=nextjs:nodejs /tmp/prisma/prod.db /tmp/prisma/prod.db
 

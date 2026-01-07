@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Transform your fitness journey with AI-powered workout plans, smart tracking, and personalized guidance. Kinex Fit helps you achieve your fitness goals.",
 };
 
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

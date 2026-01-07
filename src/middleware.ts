@@ -90,8 +90,8 @@ export function middleware() {
   if (isProduction) {
     const reportOnlyDirectives = [
       "default-src 'self'",
-      "script-src 'self' https://js.stripe.com",
-      "style-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+      "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.amazonaws.com https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com https://graph.facebook.com",
       "font-src 'self' data:",
       "media-src 'self' data: blob: https://ssl.gstatic.com",
@@ -103,6 +103,7 @@ export function middleware() {
       "base-uri 'self'",
       "form-action 'self' https://checkout.stripe.com",
       "upgrade-insecure-requests",
+      "report-uri /api/csp-report",
     ].join('; ')
 
     response.headers.set('Content-Security-Policy-Report-Only', reportOnlyDirectives)
