@@ -29,7 +29,6 @@ export function middleware() {
   response.headers.set('Surrogate-Control', 'no-store')
   response.headers.set('Pragma', 'no-cache')
   response.headers.set('Expires', '0')
-  response.headers.set('X-Kinex-Middleware', 'active')
 
   // Strict-Transport-Security (HSTS)
   // Forces browsers to use HTTPS for all future requests (1 year)
