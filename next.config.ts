@@ -28,6 +28,40 @@ const nextConfig: NextConfig = {
   // Enable React compiler optimizations (Next.js 15)
   reactStrictMode: true,
 
+  // Cache headers for better deployment handling
+  async headers() {
+    return [
+      {
+        // HTML pages - don't cache to ensure fresh deployments are picked up
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+        // Only apply to HTML requests (not static assets)
+        has: [
+          {
+            type: 'header',
+            key: 'accept',
+            value: '(.*text/html.*)',
+          },
+        ],
+      },
+      {
+        // Static assets with hash in filename - cache immutably
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
+
   // Note: swcMinify is now default in Next.js 15+ and the option has been removed
 };
 
