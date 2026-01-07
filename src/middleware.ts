@@ -144,6 +144,7 @@ export const config = {
      * - favicon.ico (favicon)
      * - public files (images, etc.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp)).*)',
+    '/',  // Explicitly match root
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp)).+)',  // Changed .* to .+ to require at least one char
   ],
 }
