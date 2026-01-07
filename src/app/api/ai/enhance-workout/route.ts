@@ -30,6 +30,7 @@ import {
 import { getAIRequestLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { hasRole } from '@/lib/rbac';
+import { checkUsageCap } from '@/lib/ai/usage-tracking';
 
 interface EnhanceWorkoutRequest {
   // Either workoutId (enhance existing) or rawText (parse new)
@@ -174,6 +175,33 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
       );
     }
 
+    // Check usage caps (cost, tokens, requests) before consuming quota
+    if (!isAdmin) {
+      const capCheck = await checkUsageCap(userId, tier);
+      if (!capCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Usage cap exceeded: ${capCheck.reason}. Your plan will reset next month.`,
+            quotaRemaining: 0,
+            tier,
+            usage: capCheck.usage,
+            limits: capCheck.limits,
+          },
+          { status: 403 }
+        );
+      }
+
+      // Warn if approaching limits
+      if (capCheck.shouldWarn) {
+        console.warn(`[AI Enhance] User ${userId} approaching usage cap:`, {
+          usage: capCheck.usage,
+          limits: capCheck.limits,
+          percentages: capCheck.percentages,
+        });
+      }
+    }
+
     let aiUsedAfter = aiUsed;
     if (!isAdmin) {
       const consumeResult = await dynamoDBUsers.consumeQuota(userId, 'aiRequestsUsed', aiLimit);
@@ -232,6 +260,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnhanceWorkou
     const trainingContext: TrainingContext = {
       userId,
       experience: user.experience || 'intermediate',
+      subscriptionTier: tier,
+      workoutId: workoutId, // If enhancing existing workout
       // personalRecords: await getUserPRs(userId), // TODO: Implement
     };
 

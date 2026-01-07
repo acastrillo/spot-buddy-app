@@ -54,7 +54,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
           <Dumbbell className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-          <span className="font-bold text-lg md:text-xl text-text-primary">Spot Buddy</span>
+          <span className="font-bold text-lg md:text-xl text-text-primary">Kinex Fit</span>
         </Link>
 
         {/* Desktop Navigation */}

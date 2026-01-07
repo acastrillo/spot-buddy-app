@@ -15,6 +15,7 @@ import { generateWorkout, validateGeneratedWorkout } from '@/lib/ai/workout-gene
 import { getAIRequestLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { hasRole } from '@/lib/rbac';
+import { checkUsageCap } from '@/lib/ai/usage-tracking';
 
 interface GenerateWorkoutRequest {
   prompt: string;
@@ -135,6 +136,33 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateWorko
       );
     }
 
+    // Check usage caps (cost, tokens, requests) before consuming quota
+    if (!isAdmin) {
+      const capCheck = await checkUsageCap(userId, tier);
+      if (!capCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Usage cap exceeded: ${capCheck.reason}. Your plan will reset next month.`,
+            quotaRemaining: 0,
+            tier,
+            usage: capCheck.usage,
+            limits: capCheck.limits,
+          },
+          { status: 403 }
+        );
+      }
+
+      // Warn if approaching limits (80% for most tiers, 90% for Elite)
+      if (capCheck.shouldWarn) {
+        console.warn(`[AI Generate] User ${userId} approaching usage cap:`, {
+          usage: capCheck.usage,
+          limits: capCheck.limits,
+          percentages: capCheck.percentages,
+        });
+      }
+    }
+
     let aiUsedAfter = aiUsed;
     if (!isAdmin) {
       const consumeResult = await dynamoDBUsers.consumeQuota(userId, 'aiRequestsUsed', aiLimit);
@@ -171,6 +199,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateWorko
       prompt,
       trainingProfile,
       userId,
+      subscriptionTier: tier,
     });
 
     // Validate generated workout

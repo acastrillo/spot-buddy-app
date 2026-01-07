@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Authentication Flow Tests for Spot Buddy
+ * Authentication Flow Tests for Kinex Fit
  * Tests the Google OAuth sign-in flow on production
  */
 
@@ -13,7 +13,7 @@ test.describe('Production Authentication Flow', () => {
 
   test('should load the sign-in page correctly', async ({ page }) => {
     // Navigate to production site
-    await page.goto('https://spotter.cannashieldct.com');
+    await page.goto('https://kinexfit.com');
 
     // Check if the sign-in button is visible
     const signInButton = page.locator('button:has-text("Continue with Spotter")');
@@ -30,7 +30,7 @@ test.describe('Production Authentication Flow', () => {
 
   test('should redirect to Cognito when clicking sign-in', async ({ page }) => {
     // Navigate to production site
-    await page.goto('https://spotter.cannashieldct.com');
+    await page.goto('https://kinexfit.com');
 
     // Take screenshot before clicking
     await page.screenshot({ path: 'tests/screenshots/01-before-signin.png', fullPage: true });
@@ -50,7 +50,7 @@ test.describe('Production Authentication Flow', () => {
 
   test('should show Google sign-in option', async ({ page }) => {
     // Navigate to production site
-    await page.goto('https://spotter.cannashieldct.com');
+    await page.goto('https://kinexfit.com');
 
     // Click sign-in button
     await page.click('button:has-text("Continue with Spotter")');
@@ -77,7 +77,7 @@ test.describe('Production Authentication Flow', () => {
 
   test('should handle OAuth redirect flow timing', async ({ page }) => {
     // Navigate to production site
-    await page.goto('https://spotter.cannashieldct.com');
+    await page.goto('https://kinexfit.com');
 
     const startTime = Date.now();
 
@@ -115,7 +115,7 @@ test.describe('Production Authentication Flow', () => {
     });
 
     // Navigate to production site
-    await page.goto('https://spotter.cannashieldct.com');
+    await page.goto('https://kinexfit.com');
 
     // Click sign-in button
     await page.click('button:has-text("Continue with Spotter")');
@@ -153,7 +153,7 @@ test.describe('Production Authentication Flow', () => {
     ];
 
     for (const scenario of errorScenarios) {
-      await page.goto(`https://spotter.cannashieldct.com/auth/login?error=${scenario.error}`);
+      await page.goto(`https://kinexfit.com/auth/login?error=${scenario.error}`);
 
       // Check if error message is displayed
       const errorMessage = page.locator('[class*="destructive"]');

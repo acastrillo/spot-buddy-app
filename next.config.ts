@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    domains: ['localhost', 'spotter.cannashieldct.com', 'spotter-alb-56827129.us-east-1.elb.amazonaws.com'],
+    domains: ['localhost', 'kinexfit.com', 'www.kinexfit.com', 'spotter-alb-56827129.us-east-1.elb.amazonaws.com'],
   },
 
   // Performance optimizations

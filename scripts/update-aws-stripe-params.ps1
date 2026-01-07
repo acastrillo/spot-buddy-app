@@ -94,7 +94,7 @@ try {
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "1. Deploy your app to AWS (docker build + push + ECS update)"
     Write-Host "2. Verify webhook is working: https://dashboard.stripe.com/test/webhooks"
-    Write-Host "3. Test subscription flow on https://spotter.cannashieldct.com"
+    Write-Host "3. Test subscription flow on https://kinexfit.com"
     Write-Host ""
 } catch {
     Write-Host ""

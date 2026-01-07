@@ -130,6 +130,7 @@ export interface BedrockInvokeParams {
 export interface BedrockResponse {
   content: string;
   stopReason: string;
+  model: string;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -139,6 +140,7 @@ export interface BedrockResponse {
   cost?: {
     input: number;
     output: number;
+    cache: number;
     total: number;
   };
 }
@@ -239,15 +241,21 @@ function calculateCost(usage: BedrockResponse['usage'], model: ClaudeModel): Bed
   const pricing = resolveModelPricing(model);
   const hasCacheUsage = !!(usage.cacheCreationInputTokens || usage.cacheReadInputTokens);
 
-  const inputCost = hasCacheUsage
-    ? (usage.cacheCreationInputTokens || 0) * pricing.input +
-      (usage.cacheReadInputTokens || 0) * pricing.input * CACHE_READ_DISCOUNT
+  const cacheCreationCost = (usage.cacheCreationInputTokens || 0) * pricing.input;
+  const cacheReadCost = (usage.cacheReadInputTokens || 0) * pricing.input * CACHE_READ_DISCOUNT;
+  const cacheCost = cacheCreationCost + cacheReadCost;
+
+  const regularInputCost = hasCacheUsage
+    ? 0 // When cache is used, regular input tokens are already included in cache calculations
     : usage.inputTokens * pricing.input;
+
+  const inputCost = regularInputCost + cacheCost;
   const outputCost = usage.outputTokens * pricing.output;
 
   return {
-    input: inputCost,
+    input: regularInputCost,
     output: outputCost,
+    cache: cacheCost,
     total: inputCost + outputCost,
   };
 }
@@ -290,6 +298,7 @@ export async function invokeClaude(
     return {
       content: extractTextContent(responseBody.content),
       stopReason: responseBody.stop_reason,
+      model,
       usage,
       cost,
     };
@@ -382,6 +391,7 @@ export async function invokeClaudeStream(
     return {
       content: fullContent,
       stopReason,
+      model,
       usage,
       cost,
     };
@@ -463,12 +473,19 @@ export function estimateCost(
 
 /**
  * Helper: Log usage and cost for monitoring
+ * Now persists to DynamoDB for comprehensive tracking
  */
-export function logUsage(
+export async function logUsage(
   operation: string,
   userId: string,
-  response: BedrockResponse
-): void {
+  response: BedrockResponse,
+  options?: {
+    subscriptionTier?: string;
+    workoutId?: string;
+    success?: boolean;
+    errorType?: string;
+  }
+): Promise<void> {
   console.log('[Bedrock Usage]', {
     operation,
     userId,
@@ -480,10 +497,22 @@ export function logUsage(
     timestamp: new Date().toISOString(),
   });
 
-  // TODO: Store usage in DynamoDB for analytics and billing
-  // - Track per-user AI request counts
-  // - Monitor cost per subscription tier
-  // - Generate usage reports
+  // Persist to DynamoDB for analytics and billing
+  try {
+    const { logAIUsage } = await import('./usage-tracking');
+    await logAIUsage({
+      userId,
+      operation,
+      bedrockResponse: response,
+      subscriptionTier: options?.subscriptionTier || 'unknown',
+      workoutId: options?.workoutId,
+      success: options?.success ?? true,
+      errorType: options?.errorType,
+    });
+  } catch (error) {
+    console.error('[Bedrock] Failed to log usage to database:', error);
+    // Don't throw - logging failure shouldn't break the request
+  }
 }
 
 /**

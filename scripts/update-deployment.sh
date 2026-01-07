@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Updating Spotter App deployment..."
+echo "🚀 Updating Kinex Fit deployment..."
 
 # Variables (using existing infrastructure)
 REGION="us-east-1"
-CLUSTER_NAME="SpotterCluster"
-SERVICE_NAME="spotter-app"
-TASK_FAMILY="SpotterAppTaskDefinition"
+CLUSTER_NAME="spotter-cluster"
+SERVICE_NAME="spotter-web-service"
+TASK_FAMILY="spotter-app-task"
 
 # Get AWS Account ID
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -57,4 +57,4 @@ echo ""
 echo "📝 View application logs:"
 echo "   aws logs tail /ecs/spotter-app --follow --region $REGION"
 echo ""
-echo "🌐 Your app URL: https://spotter.cannashieldct.com"
+echo "🌐 Your app URL: https://kinexfit.com"

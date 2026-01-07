@@ -47,7 +47,7 @@ async function deleteAllByEmail(email) {
 
   console.log(`\n✅ All done! Deleted ${response.Items.length} user(s).`);
   console.log(`\n📝 Next steps:`);
-  console.log(`   1. Sign out completely from spotter.cannashieldct.com`);
+  console.log(`   1. Sign out completely from kinexfit.com`);
   console.log(`   2. Sign in with ${email}`);
   console.log(`   3. A fresh user will be created`);
   console.log(`   4. Test checkout and verify the upgrade sticks\n`);

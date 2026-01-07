@@ -268,7 +268,7 @@ export const authOptions: NextAuthOptions = {
         secure: isProduction,
         maxAge: 30 * 24 * 60 * 60, // Must match session.maxAge - fixes incognito mode issues
         domain: isProduction
-          ? ".cannashieldct.com"  // Allows spotter.cannashieldct.com and future subdomains
+          ? ".kinexfit.com"  // Allows kinexfit.com and future subdomains
           : undefined,  // localhost doesn't need domain
       },
     },
@@ -281,7 +281,7 @@ export const authOptions: NextAuthOptions = {
         path: "/",
         secure: isProduction,
         domain: isProduction
-          ? ".cannashieldct.com"  // Must match session token domain
+          ? ".kinexfit.com"  // Must match session token domain
           : undefined,
       },
     },
@@ -292,7 +292,7 @@ export const authOptions: NextAuthOptions = {
         path: "/",
         secure: isProduction,
         domain: isProduction
-          ? ".cannashieldct.com"
+          ? ".kinexfit.com"
           : undefined,
       },
     },
@@ -387,6 +387,7 @@ export const authOptions: NextAuthOptions = {
               firstName: oauthUser.firstName || null,
               lastName: oauthUser.lastName || null,
               emailVerified: emailVerifiedAt || null,
+              onboardingCompleted: false,
             }, {
               ConditionExpression: 'attribute_not_exists(#id)',
               ExpressionAttributeNames: { '#id': 'id' },
@@ -562,6 +563,8 @@ export const authOptions: NextAuthOptions = {
             token.subscriptionStatus = dbUser.subscriptionStatus;
             token.ocrQuotaUsed = dbUser.ocrQuotaUsed;
             token.ocrQuotaLimit = dbUser.ocrQuotaLimit;
+            token.onboardingCompleted = dbUser.onboardingCompleted ?? false;
+            token.onboardingSkipped = dbUser.onboardingSkipped ?? false;
 
             if (process.env.NODE_ENV === "development") {
               console.log(`[Auth:JWT] User ${token.id} tier: ${dbUser.subscriptionTier}/${dbUser.subscriptionStatus}`);
@@ -606,6 +609,8 @@ export const authOptions: NextAuthOptions = {
           ocrQuotaUsed: (token.ocrQuotaUsed as number | undefined) ?? 0,
           ocrQuotaLimit: (token.ocrQuotaLimit as number | undefined) ?? 2,
           provider: (token.provider as string | undefined) ?? undefined,
+          onboardingCompleted: (token.onboardingCompleted as boolean | undefined) ?? false,
+          onboardingSkipped: (token.onboardingSkipped as boolean | undefined) ?? false,
         },
       };
     },

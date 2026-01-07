@@ -59,7 +59,7 @@ export interface TimerSuggesterResult {
 // Prompts
 // ============================================================================
 
-const TIMER_SUGGESTER_PROMPT = `You are Spot Buddy's Workout Timer Agent.
+const TIMER_SUGGESTER_PROMPT = `You are Kinex Fit's Workout Timer Agent.
 
 Your job:
 - Analyze the workout data provided.

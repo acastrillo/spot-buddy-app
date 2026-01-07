@@ -69,7 +69,7 @@ async function deleteAllUsers() {
   console.log(`   Deleted: ${deletedCount}`);
   console.log(`   Failed: ${failedCount}`);
   console.log(`\n📝 Next steps:`);
-  console.log(`   1. Sign out from spotter.cannashieldct.com`);
+  console.log(`   1. Sign out from kinexfit.com`);
   console.log(`   2. Sign in fresh - a new user will be created`);
   console.log(`   3. Test checkout and verify it works\n`);
 }

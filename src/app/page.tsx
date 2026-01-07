@@ -78,13 +78,13 @@ export default function HomePage() {
   // Redirect to onboarding if not completed
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      const needsOnboarding = !user.onboardingCompleted;
+      const needsOnboarding = !user.onboardingCompleted && !user.onboardingSkipped;
 
       if (needsOnboarding) {
         router.push('/onboarding');
       }
     }
-  }, [isAuthenticated, user?.id, user?.onboardingCompleted, router]);
+  }, [isAuthenticated, user?.id, user?.onboardingCompleted, user?.onboardingSkipped, router]);
 
   // Check if user already generated this week's workout on mount
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for Spot Buddy
+ * Playwright Configuration for Kinex Fit
  * Tests authentication flows on both production and local environments
  */
 export default defineConfig({
@@ -31,7 +31,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://spotter.cannashieldct.com',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://kinexfit.com',
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',

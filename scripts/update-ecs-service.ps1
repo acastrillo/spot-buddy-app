@@ -6,10 +6,10 @@ param(
     [string]$Region = "us-east-1",
 
     [Parameter(Mandatory=$false)]
-    [string]$ClusterName = "Spot BuddyCluster",
+    [string]$ClusterName = "spotter-cluster",
 
     [Parameter(Mandatory=$false)]
-    [string]$ServiceName = "spotter-app"
+    [string]$ServiceName = "spotter-web-service"
 )
 
 Write-Host "🚀 Updating ECS service with NextAuth fix..." -ForegroundColor Green
@@ -90,10 +90,10 @@ while ((Get-Date) -lt $startTime.AddSeconds($maxWaitTime)) {
         Write-Host ""
         Write-Host "🎉 Google sign-in should now work correctly!" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "🌐 Test at: https://spotter.cannashieldct.com" -ForegroundColor Cyan
+        Write-Host "🌐 Test at: https://kinexfit.com" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "📋 What was fixed:" -ForegroundColor Yellow
-        Write-Host "   ✅ Added NEXTAUTH_URL=https://spotter.cannashieldct.com" -ForegroundColor White
+        Write-Host "   ✅ Added NEXTAUTH_URL=https://kinexfit.com" -ForegroundColor White
         Write-Host "   ✅ Added AUTH_TRUST_HOST=true" -ForegroundColor White
         Write-Host "   ✅ Configured secrets from Parameter Store" -ForegroundColor White
 

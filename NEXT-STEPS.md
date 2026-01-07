@@ -1,4 +1,4 @@
-# Spot Buddy - Next Steps
+# Kinex Fit - Next Steps
 
 **Generated:** December 27, 2025
 **Current Status:** Phase 6 Complete, Ready for Phase 7
@@ -9,7 +9,7 @@
 
 ### ✅ What's Complete
 - **Phase 1-6**: All core features implemented and production-ready
-- **Web Application**: Fully functional at https://spotter.cannashieldct.com
+- **Web Application**: Fully functional at https://spotter.kinexfit.com
 - **AI Features**: Bedrock integration, workout generation, WOD, training profiles
 - **Monetization**: Stripe integration with 4 subscription tiers
 - **Infrastructure**: AWS ECS Fargate, DynamoDB, Cognito auth
@@ -60,7 +60,7 @@
 
 ### 2. Android App Development (Phase 7) - PRIORITY (3 months)
 
-**Why:** This is the killer feature that differentiates Spot Buddy from competitors
+**Why:** This is the killer feature that differentiates Kinex Fit from competitors
 
 **Milestone 1: Project Setup (Week 1-2)**
 - [ ] Create Android repository structure

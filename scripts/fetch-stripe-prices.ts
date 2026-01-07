@@ -89,7 +89,7 @@ async function main() {
       console.log('\n');
     } else {
       console.log('⚠️  Could not find all three tiers');
-      console.log('   Make sure products are named: "Spot Buddy Core", "Spot Buddy Pro", "Spot Buddy Elite"');
+      console.log('   Make sure products are named: "Kinex Fit Core", "Kinex Fit Pro", "Kinex Fit Elite"');
     }
 
   } catch (error: unknown) {

@@ -15,6 +15,8 @@ interface SessionUser {
   ocrQuotaLimit?: number;
   workoutsSaved?: number;
   aiRequestsUsed?: number;
+  onboardingCompleted?: boolean;
+  onboardingSkipped?: boolean;
 }
 
 interface User {
@@ -28,6 +30,8 @@ interface User {
   ocrQuotaLimit?: number;
   workoutsSaved?: number;
   aiRequestsUsed?: number;
+  onboardingCompleted?: boolean;
+  onboardingSkipped?: boolean;
 }
 
 type AuthProvider = "google" | "facebook";
@@ -62,6 +66,8 @@ export const useAuthStore = (): AuthState => {
         ocrQuotaLimit: sessionUser.ocrQuotaLimit ?? 2,
         workoutsSaved: sessionUser.workoutsSaved ?? 0,
         aiRequestsUsed: sessionUser.aiRequestsUsed ?? 0,
+        onboardingCompleted: sessionUser.onboardingCompleted ?? false,
+        onboardingSkipped: sessionUser.onboardingSkipped ?? false,
       }
     : null;
 

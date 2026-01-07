@@ -127,7 +127,7 @@ class MetricsCollector {
     if (process.env.NODE_ENV === "production") {
       try {
         const cloudwatch = getCloudWatchClient();
-        const namespace = process.env.CLOUDWATCH_NAMESPACE || "SpotBuddy";
+        const namespace = process.env.CLOUDWATCH_NAMESPACE || "KinexFit";
 
         // CloudWatch has a limit of 1000 metrics per request
         // Split into batches of 20 for safety (recommended batch size)

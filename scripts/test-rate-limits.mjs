@@ -206,7 +206,7 @@ async function testRateLimit(config) {
 async function runTests() {
   log('\n╔════════════════════════════════════════════════════════╗', colors.cyan);
   log('║          Rate Limit Testing Suite                     ║', colors.cyan);
-  log('║          Spot Buddy API                                ║', colors.cyan);
+  log('║          Kinex Fit API                                ║', colors.cyan);
   log('╚════════════════════════════════════════════════════════╝', colors.cyan);
 
   logInfo('\nChecking prerequisites...');

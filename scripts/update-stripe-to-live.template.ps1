@@ -36,7 +36,7 @@ aws ssm put-parameter --name "/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_ELITE" --val
 Write-Host "`nStripe keys updated to LIVE mode!" -ForegroundColor Green
 Write-Host "`nNext steps:" -ForegroundColor Yellow
 Write-Host "1. Configure webhook in Stripe Dashboard: https://dashboard.stripe.com/webhooks" -ForegroundColor White
-Write-Host "   - Endpoint URL: https://spotter.cannashieldct.com/api/stripe/webhook" -ForegroundColor White
+Write-Host "   - Endpoint URL: https://kinexfit.com/api/stripe/webhook" -ForegroundColor White
 Write-Host "   - Events: checkout.session.completed, customer.subscription.*, invoice.payment_*" -ForegroundColor White
 Write-Host "2. Copy the webhook signing secret and update STRIPE_WEBHOOK_SECRET above" -ForegroundColor White
 Write-Host "3. Restart ECS service:" -ForegroundColor White

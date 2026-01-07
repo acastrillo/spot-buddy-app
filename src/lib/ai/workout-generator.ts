@@ -21,6 +21,8 @@ export interface WorkoutGenerationRequest {
   prompt: string; // Natural language description
   trainingProfile?: TrainingProfile;
   userId: string;
+  subscriptionTier?: string; // For usage tracking
+  workoutId?: string; // For linking logs to workout
 }
 
 /**
@@ -170,8 +172,12 @@ export async function generateWorkout(
       latencyOptimized: true, // 42-77% faster responses
     });
 
-    // Log usage
-    logUsage('workout-generation', userId, response);
+    // Log usage with cost tracking
+    await logUsage('workout-generation', userId, response, {
+      subscriptionTier: request.subscriptionTier || 'unknown',
+      workoutId: request.workoutId,
+      success: true,
+    });
 
     // Parse JSON response
     let parsedContent;

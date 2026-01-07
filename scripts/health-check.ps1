@@ -27,7 +27,7 @@ if ($taskStatus.status -eq "ACTIVE" -and $taskStatus.runningCount -eq $taskStatu
 # 2. Check App URL Responds
 Write-Host "`n[2/5] Checking App URL..." -ForegroundColor Yellow
 try {
-    $response = Invoke-WebRequest -Uri "https://spotter.cannashieldct.com" -Method GET -UseBasicParsing -TimeoutSec 10
+    $response = Invoke-WebRequest -Uri "https://kinexfit.com" -Method GET -UseBasicParsing -TimeoutSec 10
     if ($response.StatusCode -eq 200) {
         Write-Host "  ✅ App URL: Responding (HTTP 200)" -ForegroundColor Green
     } else {
@@ -40,7 +40,7 @@ try {
 # 3. Check Auth API Endpoint
 Write-Host "`n[3/5] Checking Auth API..." -ForegroundColor Yellow
 try {
-    $authResponse = Invoke-WebRequest -Uri "https://spotter.cannashieldct.com/api/auth/signin" -Method GET -UseBasicParsing -TimeoutSec 10
+    $authResponse = Invoke-WebRequest -Uri "https://kinexfit.com/api/auth/signin" -Method GET -UseBasicParsing -TimeoutSec 10
     if ($authResponse.StatusCode -eq 200) {
         Write-Host "  ✅ Auth API: Responding (HTTP 200)" -ForegroundColor Green
     } else {

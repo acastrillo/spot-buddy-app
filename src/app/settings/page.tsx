@@ -45,7 +45,7 @@ function SettingsContent() {
       setLastName(user.lastName || "")
       setEmail(user.email || "")
     }
-  }, [user])
+  }, [user?.id])
 
   // Handle checkout success/cancel redirects from Stripe
   useEffect(() => {

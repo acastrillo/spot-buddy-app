@@ -71,6 +71,16 @@ export interface DynamoDBUser {
   instagramImportsLimit?: number;
   lastInstagramImportReset?: string | null;
 
+  // AI Cost Tracking
+  currentMonthCost?: number;          // Current month AI cost in USD
+  currentMonthTokens?: number;        // Current month token usage
+  currentMonthRequests?: number;      // Current month AI requests
+  totalCost?: number;                 // All-time AI cost in USD
+  totalTokens?: number;               // All-time token usage
+  totalRequests?: number;             // All-time AI requests
+  lastCostUpdate?: string | null;     // Last cost update timestamp
+  costResetMonth?: string | null;     // Current cost tracking month (YYYY-MM)
+
   // Training Profile (Phase 6) - Full profile from training-profile.ts
   trainingProfile?: TrainingProfile;
 
@@ -80,6 +90,11 @@ export interface DynamoDBUser {
   // Admin/Test User Flag
   isAdmin?: boolean;
   roles?: string[];
+
+  // Onboarding tracking
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: string | null;
+  onboardingSkipped?: boolean;
 }
 
 // User operations

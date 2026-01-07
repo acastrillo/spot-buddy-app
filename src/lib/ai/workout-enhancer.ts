@@ -60,6 +60,8 @@ export interface TrainingContext {
   experience?: 'beginner' | 'intermediate' | 'advanced';
   equipment?: string[];
   goals?: string[];
+  subscriptionTier?: string; // For usage tracking
+  workoutId?: string; // For linking logs to workout
 }
 
 /**
@@ -584,9 +586,13 @@ export async function enhanceWorkout(
       latencyOptimized: true, // 42-77% faster responses
     });
 
-    // Log usage
+    // Log usage with cost tracking
     if (context?.userId) {
-      logUsage('workout-enhancement', context.userId, response);
+      await logUsage('workout-enhancement', context.userId, response, {
+        subscriptionTier: context.subscriptionTier || 'unknown',
+        workoutId: context.workoutId,
+        success: true,
+      });
     }
 
     // Parse JSON response
@@ -662,9 +668,13 @@ export async function structureWorkout(
       latencyOptimized: true, // 42-77% faster responses
     });
 
-    // Log usage
+    // Log usage with cost tracking
     if (context?.userId) {
-      logUsage('workout-structuring', context.userId, response);
+      await logUsage('workout-structuring', context.userId, response, {
+        subscriptionTier: context.subscriptionTier || 'unknown',
+        workoutId: context.workoutId,
+        success: true,
+      });
     }
 
     // Parse JSON response

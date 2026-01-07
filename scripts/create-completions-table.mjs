@@ -67,7 +67,7 @@ async function createCompletionsTable() {
       Tags: [
         {
           Key: "Project",
-          Value: "Spot Buddy",
+          Value: "Kinex Fit",
         },
         {
           Key: "Environment",

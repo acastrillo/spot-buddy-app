@@ -17,7 +17,7 @@ if (-not $AccountId) {
 Write-Host "AWS Account ID: $AccountId" -ForegroundColor Green
 
 # Read the policy file and replace account ID placeholders
-$PolicyTemplate = Get-Content "c:\spot-buddy-web\scripts\iam-policy-update.json" -Raw
+$PolicyTemplate = Get-Content "c:\kinex-fit-web\scripts\iam-policy-update.json" -Raw
 $PolicyDocument = $PolicyTemplate -replace "YOUR_ACCOUNT_ID", $AccountId
 $PolicyDocument = $PolicyDocument -replace "920013187591", $AccountId
 

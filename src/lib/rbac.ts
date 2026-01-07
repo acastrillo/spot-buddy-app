@@ -1,12 +1,12 @@
 import type { DynamoDBUser } from "@/lib/dynamodb";
 
 export type Role = "user" | "admin" | "support";
-export type Permission = "admin:reset-quotas";
+export type Permission = "admin:reset-quotas" | "admin:view-analytics" | "admin:manage-quotas";
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   user: [],
   support: ["admin:reset-quotas"],
-  admin: ["admin:reset-quotas"],
+  admin: ["admin:reset-quotas", "admin:view-analytics", "admin:manage-quotas"],
 };
 
 function normalizeRole(role: string): Role | null {
