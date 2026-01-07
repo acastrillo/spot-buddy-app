@@ -20,7 +20,13 @@ export function middleware() {
   // Cache-Control for HTML pages
   // Prevent caching of HTML to ensure fresh chunks are always loaded after deployments
   // This is critical for avoiding ChunkLoadError after deployments
-  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  // Delete any existing cache headers first, then set our strict no-cache policy
+  response.headers.delete('Cache-Control')
+  response.headers.delete('Pragma')
+  response.headers.delete('Expires')
+  response.headers.delete('Surrogate-Control')
+  response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate, max-age=0')
+  response.headers.set('Surrogate-Control', 'no-store')
   response.headers.set('Pragma', 'no-cache')
   response.headers.set('Expires', '0')
 
