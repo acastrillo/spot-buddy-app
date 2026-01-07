@@ -13,7 +13,7 @@ import { EquipmentStep } from '@/components/onboarding/EquipmentStep';
 import { GoalsStep } from '@/components/onboarding/GoalsStep';
 import { PersonalRecordsStep } from '@/components/onboarding/PersonalRecordsStep';
 import { CompleteStep } from '@/components/onboarding/CompleteStep';
-import { Login } from '@/components/auth/login';
+import { Loader2 } from 'lucide-react';
 import type { PersonalRecord } from '@/lib/training-profile';
 
 interface OnboardingData {
@@ -29,10 +29,11 @@ interface OnboardingData {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, isLoading: isSessionLoading } = useAuthStore();
   const { update: updateSession } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSkippingAll, setIsSkippingAll] = useState(false);
 
   const [formData, setFormData] = useState<OnboardingData>({
     firstName: '',
@@ -46,10 +47,14 @@ export default function OnboardingPage() {
   });
 
   // Redirect if not authenticated or already completed onboarding
+  // Wait for session to finish loading before making redirect decisions
   useEffect(() => {
+    // Don't redirect while session is still loading
+    if (isSessionLoading) return;
+
     if (!isAuthenticated) {
       router.push('/auth/login');
-    } else if (user?.onboardingCompleted) {
+    } else if (user?.onboardingCompleted || user?.onboardingSkipped) {
       router.push('/');
     } else if (user) {
       // Pre-populate with existing user data
@@ -59,7 +64,37 @@ export default function OnboardingPage() {
         lastName: user.lastName || '',
       }));
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, isSessionLoading, user, router]);
+
+  // Handler to skip all remaining onboarding steps
+  const handleSkipAll = async () => {
+    setIsSkippingAll(true);
+
+    try {
+      const response = await fetch('/api/user/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: false, skipped: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to skip onboarding');
+      }
+
+      // Update session to reflect onboarding skipped
+      await updateSession();
+
+      // Wait a moment for session to propagate before redirecting
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Force a page reload to ensure session is fully refreshed
+      window.location.replace('/');
+    } catch (error) {
+      console.error('Error skipping onboarding:', error);
+      alert('Failed to skip. Please try again.');
+      setIsSkippingAll(false);
+    }
+  };
 
   const totalSteps = 8;
 
@@ -201,9 +236,22 @@ export default function OnboardingPage() {
     }
   };
 
-  // Show login if not authenticated
+  // Show loading spinner while session is loading
+  if (isSessionLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
+      </div>
+    );
+  }
+
+  // Redirect to login handled by useEffect above
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
+      </div>
+    );
   }
 
   // Render current step
@@ -287,9 +335,10 @@ export default function OnboardingPage() {
       onNext={handleNext}
       onBack={handleBack}
       onSkip={handleSkip}
+      onSkipAll={handleSkipAll}
       canSkip={isSkippable(currentStep)}
       isNextDisabled={!isStepValid()}
-      isLoading={isLoading}
+      isLoading={isLoading || isSkippingAll}
     >
       {renderStep()}
     </OnboardingContainer>

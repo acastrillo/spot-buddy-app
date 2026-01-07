@@ -9,6 +9,7 @@ interface OnboardingContainerProps {
   onNext: () => void;
   onBack: () => void;
   onSkip?: () => void;
+  onSkipAll?: () => void;
   canSkip?: boolean;
   isNextDisabled?: boolean;
   isLoading?: boolean;
@@ -21,6 +22,7 @@ export function OnboardingContainer({
   onNext,
   onBack,
   onSkip,
+  onSkipAll,
   canSkip = false,
   isNextDisabled = false,
   isLoading = false,
@@ -35,9 +37,22 @@ export function OnboardingContainer({
       {/* Progress Bar */}
       <div className="bg-[var(--surface)] p-4 border-b border-[var(--border)]">
         <div className="max-w-2xl mx-auto">
-          <p className="text-sm text-[var(--text-secondary)] mb-2">
-            Step {currentStep + 1} of {totalSteps}
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Step {currentStep + 1} of {totalSteps}
+            </p>
+            {onSkipAll && !isLastStep && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSkipAll}
+                disabled={isLoading}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                Skip All
+              </Button>
+            )}
+          </div>
           <div className="w-full bg-[var(--surface-2)] rounded-full h-2">
             <div
               className="bg-[var(--primary)] h-2 rounded-full transition-all duration-300"

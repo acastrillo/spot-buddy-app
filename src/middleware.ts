@@ -17,6 +17,13 @@ export function middleware() {
   const response = NextResponse.next()
   const isProduction = process.env.NODE_ENV === "production"
 
+  // Cache-Control for HTML pages
+  // Prevent caching of HTML to ensure fresh chunks are always loaded after deployments
+  // This is critical for avoiding ChunkLoadError after deployments
+  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
+
   // Strict-Transport-Security (HSTS)
   // Forces browsers to use HTTPS for all future requests (1 year)
   // Prevents MITM attacks by disallowing HTTP connections
