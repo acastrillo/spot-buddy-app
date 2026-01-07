@@ -18,7 +18,7 @@ export function Landing() {
 
         {/* Headline */}
         <h1 className="text-4xl md:text-5xl font-bold text-[var(--text-primary)] mb-4">
-          Spot Buddy
+          Kinex Fit
         </h1>
         <p className="text-lg md:text-xl text-[var(--text-secondary)] mb-8 max-w-md">
           Your AI-powered fitness accountability partner

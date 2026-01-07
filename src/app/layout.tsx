@@ -15,8 +15,8 @@ import AuthSessionProvider from "@/components/providers/session-provider";
 // });
 
 export const metadata: Metadata = {
-  title: "Spot Buddy - Your Fitness Accountability Partner",
-  description: "Track workouts with your crew, celebrate PRs, and stay accountable. Spot Buddy is the fitness app that keeps you motivated with your gym squad.",
+  title: "Kinex Fit - Your AI-Powered Fitness Partner",
+  description: "Transform your fitness journey with AI-powered workout plans, smart tracking, and personalized guidance. Kinex Fit helps you achieve your fitness goals.",
 };
 
 export const viewport: Viewport = {
