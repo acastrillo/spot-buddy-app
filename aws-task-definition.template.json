@@ -24,7 +24,7 @@
         },
         {
           "name": "NEXTAUTH_URL",
-          "value": "https://spotter.cannashieldct.com"
+          "value": "https://kinexfit.com"
         },
         {
           "name": "AUTH_TRUST_HOST",
@@ -133,8 +133,16 @@
           "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
         },
         {
+          "name": "STRIPE_PRICE_PRO_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO_ANNUAL"
+        },
+        {
           "name": "STRIPE_PRICE_ELITE",
           "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
+        },
+        {
+          "name": "STRIPE_PRICE_ELITE_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE_ANNUAL"
         },
         {
           "name": "NEXT_PUBLIC_STRIPE_PRICE_CORE",
@@ -149,8 +157,16 @@
           "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_PRO"
         },
         {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL"
+        },
+        {
           "name": "NEXT_PUBLIC_STRIPE_PRICE_ELITE",
           "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/STRIPE_PRICE_ELITE"
+        },
+        {
+          "name": "NEXT_PUBLIC_STRIPE_PRICE_ELITE_ANNUAL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/spotter-app/NEXT_PUBLIC_STRIPE_PRICE_ELITE_ANNUAL"
         },
         {
           "name": "UPSTASH_REDIS_REST_URL",

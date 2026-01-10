@@ -9,7 +9,7 @@ echo "Updating Stripe products and pricing..."
 echo ""
 echo "1. Updating Core product..."
 stripe products update prod_TUMTNghFco0wBj \
-  --name="Spot Buddy Core" \
+  --name="Kinex Fit Core" \
   --description="Unlimited workouts, 3 Instagram imports/week, 10 AI requests/month, PR tracking, body metrics"
 
 # Create new Core monthly price ($8.99)
@@ -36,7 +36,7 @@ echo "Core Annual Price ID: $CORE_ANNUAL"
 echo ""
 echo "2. Updating Pro product..."
 stripe products update prod_TUMUyfF2rQGXYQ \
-  --name="Spot Buddy Pro" \
+  --name="Kinex Fit Pro" \
   --description="Everything in Core + unlimited Instagram imports, 30 AI requests/month, advanced analytics, workout templates"
 
 # Create new Pro monthly price ($13.99)
@@ -63,7 +63,7 @@ echo "Pro Annual Price ID: $PRO_ANNUAL"
 echo ""
 echo "3. Updating Elite product..."
 stripe products update prod_TUMVz07Hp3HPi0 \
-  --name="Spot Buddy Elite" \
+  --name="Kinex Fit Elite" \
   --description="Everything in Pro + 100 AI requests/month, priority support, early access, custom templates"
 
 # Create new Elite monthly price ($24.99)

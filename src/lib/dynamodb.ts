@@ -245,6 +245,11 @@ export const dynamoDBUsers = {
 
       // RBAC roles (optional)
       roles: user.roles || undefined,
+
+      // Onboarding status
+      onboardingCompleted: user.onboardingCompleted ?? false,
+      onboardingSkipped: user.onboardingSkipped ?? false,
+      onboardingCompletedAt: user.onboardingCompletedAt || null,
     };
 
     // Remove stripeCustomerId from item if it's null/undefined to avoid GSI validation errors
@@ -592,8 +597,13 @@ export const dynamoDBUsers = {
       firstName?: string | null;
       lastName?: string | null;
       trainingProfile?: DynamoDBUser["trainingProfile"];
+      onboardingCompleted?: boolean;
+      onboardingSkipped?: boolean;
+      onboardingCompletedAt?: string;
     }
   ): Promise<void> {
+    console.log('[DynamoDB] update() called for user', userId, 'with updates:', JSON.stringify(updates));
+
     const updateParts: string[] = [];
     const attributeValues: Record<string, unknown> = {
       ":updatedAt": new Date().toISOString(),
@@ -617,6 +627,21 @@ export const dynamoDBUsers = {
       attributeValues[":trainingProfile"] = updates.trainingProfile ?? {};
     }
 
+    if (hasProp("onboardingCompleted")) {
+      updateParts.push("onboardingCompleted = :onboardingCompleted");
+      attributeValues[":onboardingCompleted"] = updates.onboardingCompleted ?? false;
+    }
+
+    if (hasProp("onboardingSkipped")) {
+      updateParts.push("onboardingSkipped = :onboardingSkipped");
+      attributeValues[":onboardingSkipped"] = updates.onboardingSkipped ?? false;
+    }
+
+    if (hasProp("onboardingCompletedAt")) {
+      updateParts.push("onboardingCompletedAt = :onboardingCompletedAt");
+      attributeValues[":onboardingCompletedAt"] = updates.onboardingCompletedAt ?? null;
+    }
+
     // Always update updatedAt
     updateParts.push("updatedAt = :updatedAt");
 
@@ -624,6 +649,13 @@ export const dynamoDBUsers = {
     if (updateParts.length === 1) {
       return;
     }
+
+    console.log('[DynamoDB] update() executing:', {
+      table: USERS_TABLE,
+      userId,
+      updateExpression: `SET ${updateParts.join(", ")}`,
+      attributeValues,
+    });
 
     try {
       await getDynamoDb().send(
@@ -634,8 +666,9 @@ export const dynamoDBUsers = {
           ExpressionAttributeValues: attributeValues,
         })
       );
+      console.log('[DynamoDB] update() SUCCESS for user', userId);
     } catch (error) {
-      console.error("Error updating user in DynamoDB:", error);
+      console.error('[DynamoDB] update() FAILED for user', userId, error);
       throw error;
     }
   },

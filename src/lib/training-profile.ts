@@ -262,8 +262,8 @@ export function validateTrainingProfile(profile: Partial<TrainingProfile>): {
     }
   }
 
-  // Session duration
-  if (profile.sessionDuration !== undefined) {
+  // Session duration (null is valid - means not specified)
+  if (profile.sessionDuration != null) {
     if (profile.sessionDuration < 15 || profile.sessionDuration > 180) {
       errors.push('Session duration must be between 15 and 180 minutes');
     }

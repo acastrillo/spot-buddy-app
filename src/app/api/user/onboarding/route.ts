@@ -10,12 +10,15 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await getAuthenticatedUserId();
     if ('error' in auth) {
+      console.log('[Onboarding API] POST: Unauthorized');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { userId } = auth;
 
     const body = await req.json();
     const { completed, skipped } = body;
+
+    console.log('[Onboarding API] POST: Received request', { userId, completed, skipped });
 
     // Update user in DynamoDB
     const updates: Record<string, any> = {
@@ -27,7 +30,11 @@ export async function POST(req: NextRequest) {
       updates.onboardingSkipped = true;
     }
 
+    console.log('[Onboarding API] POST: Updating DynamoDB with', updates);
+
     await dynamoDBUsers.update(userId, updates);
+
+    console.log('[Onboarding API] POST: DynamoDB update complete');
 
     return NextResponse.json({ success: true });
   } catch (error) {

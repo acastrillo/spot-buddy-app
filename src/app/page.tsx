@@ -24,7 +24,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export default function HomePage() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, isLoading: isSessionLoading, user } = useAuthStore()
   const router = useRouter()
   const [workoutStats, setWorkoutStats] = useState({
     thisWeek: 0,
@@ -76,15 +76,38 @@ export default function HomePage() {
   }
 
   // Redirect to onboarding if not completed
+  // Wait for session to finish loading to avoid race conditions with session updates
   useEffect(() => {
+    // Don't redirect while session is still loading
+    if (isSessionLoading) return;
+
     if (isAuthenticated && user?.id) {
       const needsOnboarding = !user.onboardingCompleted && !user.onboardingSkipped;
 
       if (needsOnboarding) {
-        router.push('/onboarding');
+        // Double-check with the API to avoid redirect loops caused by stale session data
+        fetch('/api/user/onboarding')
+          .then(res => {
+            if (!res.ok) {
+              // API error - don't redirect to avoid loops
+              console.warn('[Home] Onboarding check failed with status:', res.status);
+              return null;
+            }
+            return res.json();
+          })
+          .then(status => {
+            // Only redirect if we got a successful response with explicit false values
+            if (status && status.completed === false && status.skipped === false) {
+              router.push('/onboarding');
+            }
+          })
+          .catch((err) => {
+            // On API error, don't redirect - stay on home to avoid loops
+            console.warn('[Home] Onboarding API error:', err);
+          });
       }
     }
-  }, [isAuthenticated, user?.id, user?.onboardingCompleted, user?.onboardingSkipped, router]);
+  }, [isAuthenticated, isSessionLoading, user?.id, user?.onboardingCompleted, user?.onboardingSkipped, router]);
 
   // Check if user already generated this week's workout on mount
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store';
 import { useSession } from 'next-auth/react';
@@ -46,6 +46,9 @@ export default function OnboardingPage() {
     personalRecords: {},
   });
 
+  // Track if we've already initialized form data from user
+  const hasInitializedForm = useRef(false);
+
   // Redirect if not authenticated or already completed onboarding
   // Wait for session to finish loading before making redirect decisions
   useEffect(() => {
@@ -56,8 +59,9 @@ export default function OnboardingPage() {
       router.push('/auth/login');
     } else if (user?.onboardingCompleted || user?.onboardingSkipped) {
       router.push('/');
-    } else if (user) {
-      // Pre-populate with existing user data
+    } else if (user && !hasInitializedForm.current) {
+      // Pre-populate with existing user data ONLY ONCE
+      hasInitializedForm.current = true;
       setFormData((prev) => ({
         ...prev,
         firstName: user.firstName || '',
@@ -65,6 +69,18 @@ export default function OnboardingPage() {
       }));
     }
   }, [isAuthenticated, isSessionLoading, user, router]);
+
+  // Simple session refresh - DynamoDB writes are immediately consistent
+  // so we just need to trigger one session update before redirecting
+  const refreshSession = async () => {
+    try {
+      await updateSession();
+      // Brief pause to allow session propagation
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch {
+      // Continue even if session update fails - the redirect will work
+    }
+  };
 
   // Handler to skip all remaining onboarding steps
   const handleSkipAll = async () => {
@@ -81,13 +97,8 @@ export default function OnboardingPage() {
         throw new Error('Failed to skip onboarding');
       }
 
-      // Update session to reflect onboarding skipped
-      await updateSession();
-
-      // Wait a moment for session to propagate before redirecting
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Force a page reload to ensure session is fully refreshed
+      // Refresh session and redirect
+      await refreshSession();
       window.location.replace('/');
     } catch (error) {
       console.error('Error skipping onboarding:', error);
@@ -189,16 +200,8 @@ export default function OnboardingPage() {
           throw new Error('Failed to complete onboarding');
         }
 
-        // Update session to reflect onboarding completion
-        await updateSession();
-
-        // Wait a moment for session to propagate before redirecting
-        // This prevents race condition where homepage checks onboardingCompleted
-        // before the session is fully refreshed
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Force a page reload to ensure session is fully refreshed
-        // Using window.location.replace to prevent back button navigation
+        // Refresh session and redirect
+        await refreshSession();
         window.location.replace('/');
       } else {
         // Move to next step

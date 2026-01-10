@@ -368,6 +368,10 @@ export const authOptions: NextAuthOptions = {
             aiRequestsLimit: existingUser.aiRequestsLimit,
             lastAiRequestReset: existingUser.lastAiRequestReset,
             trainingProfile: existingUser.trainingProfile,
+            // Preserve onboarding status
+            onboardingCompleted: existingUser.onboardingCompleted,
+            onboardingSkipped: existingUser.onboardingSkipped,
+            onboardingCompletedAt: existingUser.onboardingCompletedAt,
           });
         } else {
           // New user - create with new UUID
@@ -531,6 +535,10 @@ export const authOptions: NextAuthOptions = {
               aiRequestsLimit: existingUserForJWT.aiRequestsLimit,
               lastAiRequestReset: existingUserForJWT.lastAiRequestReset,
               trainingProfile: existingUserForJWT.trainingProfile,
+              // Preserve onboarding status
+              onboardingCompleted: existingUserForJWT.onboardingCompleted,
+              onboardingSkipped: existingUserForJWT.onboardingSkipped,
+              onboardingCompletedAt: existingUserForJWT.onboardingCompletedAt,
             });
           } else {
             // User doesn't exist yet - create with minimal data
