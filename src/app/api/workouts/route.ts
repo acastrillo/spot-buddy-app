@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
       aiEnhanced,
       aiNotes,
       muscleGroups,
+      thumbnailUrl,
     } = body;
 
     if (!workoutId || !title || !exercises || !content) {
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
       aiEnhanced,
       aiNotes,
       muscleGroups,
+      thumbnailUrl,
     });
     const duration = perf.finish();
 

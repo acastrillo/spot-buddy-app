@@ -32,6 +32,7 @@ interface WorkoutData {
   createdAt: string
   source: string
   type: string
+  thumbnailUrl?: string | null
 }
 
 export default function EditWorkoutPage() {
@@ -191,6 +192,7 @@ export default function EditWorkoutPage() {
         } : workoutStructure,
         aiNotes: null,  // AI notes now merged into description
         aiEnhanced: workoutDescription.includes('**AI Insights:**'), // Mark as AI enhanced if description contains AI insights
+        thumbnailUrl: workoutData.thumbnailUrl || null,  // Include Instagram image URL if available
       }
 
       // Save to DynamoDB via API route

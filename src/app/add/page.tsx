@@ -270,7 +270,8 @@ export default function ImportWorkoutPage() {
           author: null,
           createdAt: new Date().toISOString(),
           source: 'ocr',
-          type: 'image'
+          type: 'image',
+          thumbnailUrl: null  // OCR doesn't provide an image URL
         }
         sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
         setWorkoutData(workoutResult)
@@ -348,7 +349,8 @@ export default function ImportWorkoutPage() {
         author: fetchData?.author || null,
         createdAt: new Date().toISOString(),
         source: url.trim(),
-        type: 'url'
+        type: 'url',
+        thumbnailUrl: fetchData.image || null  // Store Instagram image URL
       }
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
       // User can now click "Continue to Edit" button to proceed
@@ -406,7 +408,8 @@ export default function ImportWorkoutPage() {
         author: fetchedData?.author || null,
         createdAt: new Date().toISOString(),
         source: activeTab === 'url' ? url : 'manual',
-        type: activeTab
+        type: activeTab,
+        thumbnailUrl: fetchedData?.image || null  // Store image URL if available from Instagram
       }
 
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
