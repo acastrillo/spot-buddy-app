@@ -9,7 +9,36 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    domains: ['localhost', 'kinexfit.com', 'www.kinexfit.com', 'spotter-alb-56827129.us-east-1.elb.amazonaws.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kinexfit.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.kinexfit.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'spotter-alb-56827129.us-east-1.elb.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cdninstagram.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'scontent-*.cdninstagram.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'scontent.cdninstagram.com',
+      },
+    ],
   },
 
   // Performance optimizations

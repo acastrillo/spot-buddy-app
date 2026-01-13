@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
@@ -32,6 +33,7 @@ interface Workout {
   type: string
   createdAt: string
   completionCount?: number
+  thumbnailUrl?: string | null
 }
 
 export default function LibraryPage() {
@@ -103,6 +105,7 @@ export default function LibraryPage() {
               type: workout.type || 'manual',
               createdAt: workout.createdAt,
               completionCount,
+              thumbnailUrl: workout.thumbnailUrl || null,
             }
           })
 
@@ -252,7 +255,20 @@ export default function LibraryPage() {
                   href={`/workout/${workout.id}`}
                   className="group"
                 >
-                  <Card className="h-full border-0 hover:shadow-lg transition-all duration-200 cursor-pointer">
+                  <Card className="h-full border-0 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden">
+                    {/* Thumbnail Image */}
+                    {workout.thumbnailUrl && (
+                      <div className="relative w-full h-48 bg-surface">
+                        <Image
+                          src={workout.thumbnailUrl}
+                          alt={workout.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      </div>
+                    )}
+
                     <CardContent className="p-5">
                       {/* Title */}
                       <h3 className="text-lg font-semibold text-text-primary mb-2 line-clamp-2 group-hover:text-primary transition-colors">
