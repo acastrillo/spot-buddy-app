@@ -111,8 +111,18 @@ export function normalizePaidTier(tier: string | null | undefined): PaidTier | u
 export function getPriceIdForTier(tier: PaidTier, billingPeriod: BillingPeriod = 'monthly'): string {
   const envKeys: Record<PaidTier, Record<BillingPeriod, (keyof NodeJS.ProcessEnv)[]>> = {
     core: {
-      monthly: ['STRIPE_PRICE_CORE', 'NEXT_PUBLIC_STRIPE_PRICE_CORE'],
-      annual: ['STRIPE_PRICE_CORE_ANNUAL', 'NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL'],
+      monthly: [
+        'STRIPE_PRICE_CORE',
+        'STRIPE_PRICE_STARTER',
+        'NEXT_PUBLIC_STRIPE_PRICE_CORE',
+        'NEXT_PUBLIC_STRIPE_PRICE_STARTER',
+      ],
+      annual: [
+        'STRIPE_PRICE_CORE_ANNUAL',
+        'STRIPE_PRICE_STARTER_ANNUAL',
+        'NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL',
+        'NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL',
+      ],
     },
     pro: {
       monthly: ['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],

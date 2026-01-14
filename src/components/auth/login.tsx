@@ -179,7 +179,7 @@ export function Login() {
         <CardHeader className="space-y-1 text-center">
           {/* Back button */}
           <div className="flex justify-start mb-2">
-            <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <Link href="/sign-in" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </div>

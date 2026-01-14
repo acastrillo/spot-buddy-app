@@ -14,6 +14,7 @@ import { maskEmail } from "@/lib/safe-logger";
 import { normalizeSubscriptionTier } from "@/lib/subscription-tiers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request-ip";
+import { sendSignupAlert } from "@/lib/email-service";
 
 // Extended user type for OAuth providers
 interface OAuthUser {
@@ -425,6 +426,22 @@ export const authOptions: NextAuthOptions = {
           } catch (error) {
             console.error('[Auth:SignIn] Failed to check for duplicates:', error);
           }
+
+          // Send signup alert email (async, non-blocking)
+          // Skip dev login signups
+          if (account?.provider !== 'dev-credentials') {
+            sendSignupAlert({
+              email: user.email,
+              firstName: oauthUser.firstName || null,
+              lastName: oauthUser.lastName || null,
+              id: newUserId,
+              provider: account?.provider || 'unknown',
+              createdAt: new Date().toISOString()
+            }).catch(error => {
+              console.error('[Auth:SignIn] Failed to send signup alert:', error);
+              // Don't throw - email failure shouldn't block signin
+            });
+          }
         }
 
         return true;
@@ -560,7 +577,7 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Fetch subscription tier from DynamoDB on every token refresh
+      // Fetch subscription tier and profile data from DynamoDB on every token refresh
       if (token.id) {
         try {
           // PERFORMANCE NOTE: Use strong consistency to ensure we get latest subscription
@@ -573,6 +590,9 @@ export const authOptions: NextAuthOptions = {
             token.ocrQuotaLimit = dbUser.ocrQuotaLimit;
             token.onboardingCompleted = dbUser.onboardingCompleted ?? false;
             token.onboardingSkipped = dbUser.onboardingSkipped ?? false;
+            // Refresh profile name fields to reflect any profile updates
+            token.firstName = dbUser.firstName ?? null;
+            token.lastName = dbUser.lastName ?? null;
 
             if (process.env.NODE_ENV === "development") {
               console.log(`[Auth:JWT] User ${token.id} tier: ${dbUser.subscriptionTier}/${dbUser.subscriptionStatus}`);

@@ -117,13 +117,23 @@ function SettingsContent() {
         throw new Error(data.error || 'Failed to update profile')
       }
 
-      // Force session refresh to update user data from server
+      // IMMEDIATELY update local state with confirmed values from API response
+      // This provides instant UI feedback without waiting for session refresh
+      if (data.user) {
+        setFirstName(data.user.firstName || "")
+        setLastName(data.user.lastName || "")
+      }
+
+      // Force aggressive session refresh to sync with NextAuth token
+      // Multiple calls with delays ensure token refresh happens even if it was recently updated
+      await updateSession()
+      await new Promise(resolve => setTimeout(resolve, 500))
       await updateSession()
 
-      setNotification({
-        type: 'success',
-        message: 'Profile updated successfully!',
-      })
+      // Force a hard page reload to ensure the browser re-reads the JWT cookie
+      // This guarantees the updated firstName/lastName persist after the session update
+      await new Promise(resolve => setTimeout(resolve, 500))
+      window.location.reload()
     } catch (error) {
       console.error('Error updating profile:', error)
       setNotification({

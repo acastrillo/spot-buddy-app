@@ -6,6 +6,7 @@ import { dynamoDBUsers } from '@/lib/dynamodb'
 import { maskEmail } from '@/lib/safe-logger'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getRequestIp } from '@/lib/request-ip'
+import { sendSignupAlert } from '@/lib/email-service'
 
 export const runtime = 'nodejs'
 
@@ -94,6 +95,19 @@ export async function POST(req: NextRequest) {
     })
 
     console.log(`[Signup] ✓ Created new user: ${userId} (${maskEmail(email)})`)
+
+    // Send signup alert email (async, non-blocking)
+    sendSignupAlert({
+      email,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      id: userId,
+      provider: 'credentials',
+      createdAt: new Date().toISOString()
+    }).catch(error => {
+      console.error('[Signup] Failed to send signup alert:', error);
+      // Don't throw - email failure shouldn't block signup
+    });
 
     return NextResponse.json(
       { success: true, message: responseMessage },

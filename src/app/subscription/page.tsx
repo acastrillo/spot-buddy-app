@@ -20,7 +20,14 @@ function SubscriptionContent() {
   const [loading, setLoading] = useState<string | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual') // Default to annual
+  const hasAnnualPricing = Boolean(
+    SUBSCRIPTION_TIERS.core.annualPriceId &&
+    SUBSCRIPTION_TIERS.pro.annualPriceId &&
+    SUBSCRIPTION_TIERS.elite.annualPriceId
+  )
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>(
+    hasAnnualPricing ? 'annual' : 'monthly'
+  )
 
   // Force refresh subscription data from server
   const refreshSubscription = useCallback(async () => {
@@ -79,17 +86,21 @@ function SubscriptionContent() {
         body: JSON.stringify({ tier, billingPeriod }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to create checkout session. Please try again.')
+      }
 
       if (data.url) {
         window.location.href = data.url
       } else {
-        alert('Failed to create checkout session. Please try again.')
-        setLoading(null)
+        throw new Error('Checkout session unavailable. Please try again.')
       }
     } catch (error) {
       console.error('Subscription error:', error)
-      alert('An error occurred. Please try again.')
+      const message = error instanceof Error ? error.message : 'An error occurred. Please try again.'
+      alert(message)
       setLoading(null)
     }
   }
@@ -187,31 +198,37 @@ function SubscriptionContent() {
             </p>
 
             {/* Billing Period Toggle */}
-            <div className="inline-flex items-center bg-surface rounded-lg p-1 gap-1">
-              <button
-                onClick={() => setBillingPeriod('monthly')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
-                  billingPeriod === 'monthly'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingPeriod('annual')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors relative ${
-                  billingPeriod === 'annual'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Annual
-                <span className="absolute -top-2 -right-2 bg-success text-white text-xs px-2 py-0.5 rounded-full">
-                  Save 20%
-                </span>
-              </button>
-            </div>
+            {hasAnnualPricing ? (
+              <div className="inline-flex items-center bg-surface rounded-lg p-1 gap-1">
+                <button
+                  onClick={() => setBillingPeriod('monthly')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                    billingPeriod === 'monthly'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingPeriod('annual')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                    billingPeriod === 'annual'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Annual
+                  <span className="absolute -top-2 -right-2 bg-success text-white text-xs px-2 py-0.5 rounded-full">
+                    Save 20%
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-sm text-text-secondary">
+                Monthly billing only (annual plans coming soon).
+              </div>
+            )}
           </div>
 
           {/* Current Subscription Banner */}

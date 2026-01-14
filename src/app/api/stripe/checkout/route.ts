@@ -65,7 +65,13 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const priceId = getPriceIdForTier(tier, billingPeriod)
+    let priceId: string
+    try {
+      priceId = getPriceIdForTier(tier, billingPeriod)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Price ID not configured'
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
 
     if (!priceId) {
       return NextResponse.json({ error: 'Price ID not configured for this tier' }, { status: 500 })

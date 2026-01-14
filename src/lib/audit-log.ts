@@ -16,7 +16,11 @@ function getAuditClient(): DynamoDBDocumentClient {
   return auditClient;
 }
 
-export type AuditAction = "admin.reset-quotas";
+export type AuditAction =
+  | "admin.reset-quotas"
+  | "admin.view-users"
+  | "admin.view-user-details"
+  | "admin.export-users";
 
 export async function writeAuditLog(entry: {
   action: AuditAction;

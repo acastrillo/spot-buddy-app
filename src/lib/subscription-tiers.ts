@@ -7,8 +7,16 @@ const coreTier = {
   price: 8.99,
   annualPrice: 69.99, // $5.83/month when billed annually (22% discount)
   // Server-side env vars (runtime) take priority over NEXT_PUBLIC (build-time)
-  priceId: process.env.STRIPE_PRICE_CORE || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE,
-  annualPriceId: process.env.STRIPE_PRICE_CORE_ANNUAL || process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL,
+  priceId:
+    process.env.STRIPE_PRICE_CORE ||
+    process.env.STRIPE_PRICE_STARTER ||
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE ||
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+  annualPriceId:
+    process.env.STRIPE_PRICE_CORE_ANNUAL ||
+    process.env.STRIPE_PRICE_STARTER_ANNUAL ||
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_CORE_ANNUAL ||
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL,
   features: [
     'Unlimited workouts',
     '3 Instagram imports per week',
