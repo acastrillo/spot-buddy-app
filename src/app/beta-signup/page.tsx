@@ -34,9 +34,9 @@ export default function BetaSignupPage() {
       email: formData.email.trim(),
     }
 
-    if (!payload.firstName || !payload.lastName || !payload.email) {
+    if (!payload.firstName || !payload.email) {
       setStatus("error")
-      setError("Please fill out all fields.")
+      setError("Please fill out all required fields.")
       return
     }
 
@@ -141,14 +141,13 @@ export default function BetaSignupPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last name</Label>
+                      <Label htmlFor="lastName">Last name (optional)</Label>
                       <Input
                         id="lastName"
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleChange}
                         autoComplete="family-name"
-                        required
                       />
                     </div>
                   </div>

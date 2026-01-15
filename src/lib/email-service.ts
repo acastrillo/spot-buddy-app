@@ -23,7 +23,7 @@ interface SignupAlertData {
 interface BetaSignupAlertData {
   email: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   createdAt: string;
 }
 
@@ -269,7 +269,7 @@ Signup Time: ${signupTime}
         },
         Message: {
           Subject: {
-            Data: `New Beta Signup: ${signup.email}`,
+            Data: `New Beta Signup: ${signup.firstName}${signup.lastName ? ' ' + signup.lastName : ''} (${signup.email})`,
             Charset: 'UTF-8',
           },
           Body: {

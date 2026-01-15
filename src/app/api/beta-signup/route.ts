@@ -9,7 +9,7 @@ export const runtime = "nodejs"
 
 const betaSignupSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
-  lastName: z.string().trim().min(1, "Last name is required").max(100),
+  lastName: z.string().trim().max(100).optional(),
   email: z.string().trim().email("Invalid email address").max(254),
 })
 
