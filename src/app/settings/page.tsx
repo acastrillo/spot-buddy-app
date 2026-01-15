@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, getSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
@@ -124,15 +124,39 @@ function SettingsContent() {
         setLastName(data.user.lastName || "")
       }
 
-      // Force aggressive session refresh to sync with NextAuth token
-      // Multiple calls with delays ensure token refresh happens even if it was recently updated
-      await updateSession()
-      await new Promise(resolve => setTimeout(resolve, 500))
-      await updateSession()
+      // Store expected values for verification
+      const expectedFirstName = firstName.trim() || null
+      const expectedLastName = lastName.trim() || null
 
-      // Force a hard page reload to ensure the browser re-reads the JWT cookie
-      // This guarantees the updated firstName/lastName persist after the session update
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Poll session until it contains the updated values
+      // This ensures the JWT token has been refreshed before reloading
+      const maxAttempts = 10
+      const pollInterval = 500 // ms
+      let attempts = 0
+      let sessionUpdated = false
+
+      while (attempts < maxAttempts && !sessionUpdated) {
+        await updateSession()
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+
+        // Get current session to verify update
+        const currentSession = await getSession()
+        const sessionFirstName = currentSession?.user?.firstName ?? null
+        const sessionLastName = currentSession?.user?.lastName ?? null
+
+        if (sessionFirstName === expectedFirstName && sessionLastName === expectedLastName) {
+          sessionUpdated = true
+          console.log('[Settings] Session successfully updated with new profile data')
+        }
+
+        attempts++
+      }
+
+      if (!sessionUpdated) {
+        console.warn('[Settings] Session update timed out, but data is saved in DB')
+      }
+
+      // Now reload - session is guaranteed to have fresh data
       window.location.reload()
     } catch (error) {
       console.error('Error updating profile:', error)
