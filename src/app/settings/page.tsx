@@ -138,12 +138,16 @@ function SettingsContent() {
         message: 'Profile updated successfully!'
       })
 
-      // Update session to refresh user data from server
-      // This triggers JWT callback which reads fresh data from DynamoDB
-      // The useEffect hook (line 44-50) will then update the form state
+      // Force NextAuth to refresh the JWT token with updated values from DynamoDB
+      // Pass the updated data to trigger a session update that persists to the JWT cookie
+      // This will cause the JWT callback to run and save new values to the JWT token
       console.log('[Settings] Updating session with new profile data...')
-      await updateSession()
-      console.log('[Settings] Session updated successfully')
+      await updateSession({
+        trigger: 'profile-update',
+        firstName: data.user.firstName,
+        lastName: data.user.lastName,
+      })
+      console.log('[Settings] Session updated successfully - JWT token refreshed')
     } catch (error) {
       console.error('[Settings] Error updating profile:', error)
       setNotification({

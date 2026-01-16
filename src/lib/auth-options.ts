@@ -464,12 +464,18 @@ export const authOptions: NextAuthOptions = {
       }
     },
 
-    async jwt({ token, account, profile, user }) {
+    async jwt({ token, account, profile, user, trigger }) {
       const isInitialSignIn = !!user;
       const provider = account?.provider || (token.provider as string | undefined) || 'unknown';
 
       if (isInitialSignIn) {
         console.log(`[Auth:JWT] Initial sign-in via ${provider} for user ${user.id}`);
+      }
+
+      // Handle profile update trigger from updateSession() call
+      if (trigger === 'update') {
+        console.log('[Auth:JWT] Profile update triggered - forcing JWT refresh from DynamoDB');
+        // Force a fresh read from DynamoDB below (will happen in the existing code at line ~603)
       }
 
       // Persist provider info for auditing
