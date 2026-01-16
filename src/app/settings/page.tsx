@@ -138,16 +138,12 @@ function SettingsContent() {
         message: 'Profile updated successfully!'
       })
 
-      // CRITICAL: Update session BEFORE reloading to ensure fresh data
-      // This forces NextAuth to refetch the session from the server
+      // Update session to refresh user data from server
+      // This triggers JWT callback which reads fresh data from DynamoDB
+      // The useEffect hook (line 44-50) will then update the form state
       console.log('[Settings] Updating session with new profile data...')
       await updateSession()
-
-      // Now reload - session cache is fresh with updated values
-      console.log('[Settings] Session updated, reloading page...')
-      setTimeout(() => {
-        window.location.reload()
-      }, 500)
+      console.log('[Settings] Session updated successfully')
     } catch (error) {
       console.error('[Settings] Error updating profile:', error)
       setNotification({
