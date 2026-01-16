@@ -20,10 +20,12 @@ import {
   Crown,
   Target,
   CheckCircle,
-  XCircle
+  XCircle,
+  Shield
 } from "lucide-react"
 import Link from "next/link"
 import { SUBSCRIPTION_TIERS, normalizeSubscriptionTier, type SubscriptionTierInput } from "@/lib/subscription-tiers"
+import { isAdmin } from "@/lib/rbac"
 
 // Wrapper component to handle Suspense boundary for useSearchParams
 function SettingsContent() {
@@ -100,14 +102,21 @@ function SettingsContent() {
     setNotification(null)
 
     try {
+      // CRITICAL: Store expected values BEFORE making API call
+      // We need to capture the values we're about to send, not the state after updates
+      const sentFirstName = firstName.trim() || null
+      const sentLastName = lastName.trim() || null
+
+      console.log('[Settings] Saving profile:', { sentFirstName, sentLastName })
+
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName: firstName.trim() || null,
-          lastName: lastName.trim() || null,
+          firstName: sentFirstName,
+          lastName: sentLastName,
         }),
       })
 
@@ -117,16 +126,14 @@ function SettingsContent() {
         throw new Error(data.error || 'Failed to update profile')
       }
 
+      console.log('[Settings] API response:', data.user)
+
       // IMMEDIATELY update local state with confirmed values from API response
       // This provides instant UI feedback without waiting for session refresh
       if (data.user) {
         setFirstName(data.user.firstName || "")
         setLastName(data.user.lastName || "")
       }
-
-      // Store expected values for verification
-      const expectedFirstName = firstName.trim() || null
-      const expectedLastName = lastName.trim() || null
 
       // Poll session until it contains the updated values
       // This ensures the JWT token has been refreshed before reloading
@@ -144,22 +151,32 @@ function SettingsContent() {
         const sessionFirstName = currentSession?.user?.firstName ?? null
         const sessionLastName = currentSession?.user?.lastName ?? null
 
-        if (sessionFirstName === expectedFirstName && sessionLastName === expectedLastName) {
+        if (sessionFirstName === sentFirstName && sessionLastName === sentLastName) {
           sessionUpdated = true
-          console.log('[Settings] Session successfully updated with new profile data')
+          console.log('[Settings] ✓ Session successfully updated with new profile data:', {
+            firstName: sentFirstName,
+            lastName: sentLastName
+          })
+        } else {
+          console.log(`[Settings] Polling attempt ${attempts + 1}/${maxAttempts} - Session not yet updated:`, {
+            expected: { firstName: sentFirstName, lastName: sentLastName },
+            current: { firstName: sessionFirstName, lastName: sessionLastName }
+          })
         }
 
         attempts++
       }
 
       if (!sessionUpdated) {
-        console.warn('[Settings] Session update timed out, but data is saved in DB')
+        console.warn('[Settings] ✗ Session update timed out after', maxAttempts, 'attempts, but data is saved in DB:', {
+          sent: { firstName: sentFirstName, lastName: sentLastName }
+        })
       }
 
-      // Now reload - session is guaranteed to have fresh data
+      // Now reload - session should have fresh data (or will be loaded from DB)
       window.location.reload()
     } catch (error) {
-      console.error('Error updating profile:', error)
+      console.error('[Settings] Error updating profile:', error)
       setNotification({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to update profile',
@@ -217,6 +234,7 @@ function SettingsContent() {
 
   const currentTier = normalizeSubscriptionTier((user?.subscriptionTier ?? 'free') as SubscriptionTierInput)
   const tierConfig = SUBSCRIPTION_TIERS[currentTier]
+  const userIsAdmin = user ? isAdmin(user as any) : false
 
   const settingsSections = [
     {
@@ -231,6 +249,18 @@ function SettingsContent() {
         }
       ]
     },
+    ...(userIsAdmin ? [{
+      title: "Administration",
+      items: [
+        {
+          icon: Shield,
+          title: "Admin Panel",
+          subtitle: "Manage users, settings, and system logs",
+          action: "chevron" as const,
+          href: "/admin/users"
+        }
+      ]
+    }] : []),
     {
       title: "Stats & Progress",
       items: [
