@@ -128,20 +128,26 @@ function SettingsContent() {
 
       console.log('[Settings] API response:', data.user)
 
-      // Show success message briefly before reload
+      // Update local state immediately for optimistic UI feedback
+      setFirstName(data.user.firstName || '')
+      setLastName(data.user.lastName || '')
+
+      // Show success message
       setNotification({
         type: 'success',
         message: 'Profile updated successfully!'
       })
 
-      // Reload page immediately - NextAuth will fetch fresh session from DB
-      // The page load will trigger JWT callback which reads firstName/lastName from DynamoDB
-      console.log('[Settings] Profile saved to database, reloading to refresh session...')
+      // CRITICAL: Update session BEFORE reloading to ensure fresh data
+      // This forces NextAuth to refetch the session from the server
+      console.log('[Settings] Updating session with new profile data...')
+      await updateSession()
 
-      // Small delay to let user see the success message
+      // Now reload - session cache is fresh with updated values
+      console.log('[Settings] Session updated, reloading page...')
       setTimeout(() => {
         window.location.reload()
-      }, 800)
+      }, 500)
     } catch (error) {
       console.error('[Settings] Error updating profile:', error)
       setNotification({
