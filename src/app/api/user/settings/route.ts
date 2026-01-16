@@ -95,8 +95,9 @@ export async function PATCH(req: NextRequest) {
     // Update in DynamoDB
     await dynamoDBUsers.update(userId, updates);
 
-    // Get updated user data
-    const updatedUser = await dynamoDBUsers.get(userId);
+    // Get updated user data with strong consistency (required for read-after-write)
+    // This ensures we read from the primary node where the update was just written
+    const updatedUser = await dynamoDBUsers.get(userId, true);
 
     console.log('[Settings API] User profile updated:', userId, '- New values in DB:', {
       firstName: updatedUser?.firstName,
