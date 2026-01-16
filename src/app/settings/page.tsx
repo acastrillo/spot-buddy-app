@@ -40,14 +40,14 @@ function SettingsContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Sync form state with user data only when user ID changes (initial load or user switch)
+  // Sync form state with user data when it changes (session updates)
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || "")
       setLastName(user.lastName || "")
       setEmail(user.email || "")
     }
-  }, [user?.id])
+  }, [user?.id, user?.firstName, user?.lastName, user?.email])
 
   // Handle checkout success/cancel redirects from Stripe
   useEffect(() => {
