@@ -90,13 +90,18 @@ export async function PATCH(req: NextRequest) {
     if (firstName !== undefined) updates.firstName = firstName || null;
     if (lastName !== undefined) updates.lastName = lastName || null;
 
+    console.log('[Settings API] Updating user', userId, 'with values:', updates);
+
     // Update in DynamoDB
     await dynamoDBUsers.update(userId, updates);
 
     // Get updated user data
     const updatedUser = await dynamoDBUsers.get(userId);
 
-    console.log('[Settings API] User profile updated:', userId);
+    console.log('[Settings API] User profile updated:', userId, '- New values in DB:', {
+      firstName: updatedUser?.firstName,
+      lastName: updatedUser?.lastName
+    });
 
     return NextResponse.json({
       success: true,
