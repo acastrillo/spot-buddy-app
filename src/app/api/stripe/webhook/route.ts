@@ -413,6 +413,11 @@ async function resolveUserByCustomer(
               email: user.email,
               stripeCustomerId,
               emailVerified: user.emailVerified ?? null,
+              isBeta: user.isBeta,
+              isDisabled: user.isDisabled,
+              disabledAt: user.disabledAt ?? null,
+              disabledBy: user.disabledBy ?? null,
+              disabledReason: user.disabledReason ?? null,
             },
             {
               // Only link if stripeCustomerId doesn't exist yet (prevent concurrent webhooks from overwriting)

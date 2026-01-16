@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
 import { dynamoDBUsers } from '@/lib/dynamodb'
 import { getReturnUrls, getStripe } from '@/lib/stripe-server'
+import { getSystemSettings } from '@/lib/system-settings'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +15,14 @@ export async function POST() {
     const user = await dynamoDBUsers.get(userId)
     if (!user || !user.stripeCustomerId) {
       return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
+    }
+
+    const systemSettings = await getSystemSettings()
+    if (user.isBeta && systemSettings.globalBetaMode) {
+      return NextResponse.json(
+        { error: 'Billing portal access is disabled for beta users during the beta period.' },
+        { status: 403 }
+      )
     }
 
     const stripe = getStripe()

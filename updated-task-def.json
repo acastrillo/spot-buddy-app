@@ -50,6 +50,10 @@
           "value": "alejo@kinexfit.com"
         },
         {
+          "name": "EMAIL_FROM",
+          "value": "alejo@kinexfit.com"
+        },
+        {
           "name": "UPSTASH_REDIS_REST_URL",
           "value": "https://pumped-katydid-26778.upstash.io"
         },
@@ -106,10 +110,6 @@
         {
           "name": "EMAIL_SERVER_SECURE",
           "valueFrom": "arn:aws:ssm:us-east-1:920013187591:parameter/spotter-app/prod/EMAIL_SERVER_SECURE"
-        },
-        {
-          "name": "EMAIL_FROM",
-          "valueFrom": "arn:aws:ssm:us-east-1:920013187591:parameter/spotter-app/prod/EMAIL_FROM"
         },
         {
           "name": "APIFY_API_TOKEN",

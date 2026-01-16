@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useSession, getSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/store"
 import { Login } from "@/components/auth/login"
@@ -128,53 +128,20 @@ function SettingsContent() {
 
       console.log('[Settings] API response:', data.user)
 
-      // IMMEDIATELY update local state with confirmed values from API response
-      // This provides instant UI feedback without waiting for session refresh
-      if (data.user) {
-        setFirstName(data.user.firstName || "")
-        setLastName(data.user.lastName || "")
-      }
+      // Show success message briefly before reload
+      setNotification({
+        type: 'success',
+        message: 'Profile updated successfully!'
+      })
 
-      // Poll session until it contains the updated values
-      // This ensures the JWT token has been refreshed before reloading
-      const maxAttempts = 10
-      const pollInterval = 500 // ms
-      let attempts = 0
-      let sessionUpdated = false
+      // Reload page immediately - NextAuth will fetch fresh session from DB
+      // The page load will trigger JWT callback which reads firstName/lastName from DynamoDB
+      console.log('[Settings] Profile saved to database, reloading to refresh session...')
 
-      while (attempts < maxAttempts && !sessionUpdated) {
-        await updateSession()
-        await new Promise(resolve => setTimeout(resolve, pollInterval))
-
-        // Get current session to verify update
-        const currentSession = await getSession()
-        const sessionFirstName = currentSession?.user?.firstName ?? null
-        const sessionLastName = currentSession?.user?.lastName ?? null
-
-        if (sessionFirstName === sentFirstName && sessionLastName === sentLastName) {
-          sessionUpdated = true
-          console.log('[Settings] ✓ Session successfully updated with new profile data:', {
-            firstName: sentFirstName,
-            lastName: sentLastName
-          })
-        } else {
-          console.log(`[Settings] Polling attempt ${attempts + 1}/${maxAttempts} - Session not yet updated:`, {
-            expected: { firstName: sentFirstName, lastName: sentLastName },
-            current: { firstName: sessionFirstName, lastName: sessionLastName }
-          })
-        }
-
-        attempts++
-      }
-
-      if (!sessionUpdated) {
-        console.warn('[Settings] ✗ Session update timed out after', maxAttempts, 'attempts, but data is saved in DB:', {
-          sent: { firstName: sentFirstName, lastName: sentLastName }
-        })
-      }
-
-      // Now reload - session should have fresh data (or will be loaded from DB)
-      window.location.reload()
+      // Small delay to let user see the success message
+      setTimeout(() => {
+        window.location.reload()
+      }, 800)
     } catch (error) {
       console.error('[Settings] Error updating profile:', error)
       setNotification({

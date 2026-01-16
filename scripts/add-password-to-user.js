@@ -3,6 +3,8 @@
  * Usage: node scripts/add-password-to-user.js <email> <password>
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 const { hash } = require('bcryptjs');
 
 // Load environment variables
@@ -58,6 +60,11 @@ async function addPasswordToUser(email, password) {
       onboardingCompleted: existingUser.onboardingCompleted,
       onboardingSkipped: existingUser.onboardingSkipped,
       onboardingCompletedAt: existingUser.onboardingCompletedAt,
+      isBeta: existingUser.isBeta,
+      isDisabled: existingUser.isDisabled,
+      disabledAt: existingUser.disabledAt ?? null,
+      disabledBy: existingUser.disabledBy ?? null,
+      disabledReason: existingUser.disabledReason ?? null,
     });
 
     console.log(`[AddPassword] ✓ Password added successfully!`);

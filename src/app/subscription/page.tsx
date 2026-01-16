@@ -28,6 +28,8 @@ function SubscriptionContent() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>(
     hasAnnualPricing ? 'annual' : 'monthly'
   )
+  const isBetaRestricted = Boolean(user?.isBeta && user?.globalBetaMode)
+  const betaRestrictionMessage = 'Beta access: upgrades are disabled while global beta mode is active.'
 
   // Force refresh subscription data from server
   const refreshSubscription = useCallback(async () => {
@@ -257,7 +259,8 @@ function SubscriptionContent() {
                     <Button
                       variant="outline"
                       onClick={handleManageSubscription}
-                      disabled={loading === 'portal'}
+                      disabled={loading === 'portal' || isBetaRestricted}
+                      title={isBetaRestricted ? betaRestrictionMessage : undefined}
                     >
                       {loading === 'portal' ? (
                         <>
@@ -356,14 +359,21 @@ function SubscriptionContent() {
                         Current Plan
                       </Button>
                     ) : isCurrent ? (
-                      <Button variant="outline" onClick={handleManageSubscription} className="w-full">
+                      <Button
+                        variant="outline"
+                        onClick={handleManageSubscription}
+                        className="w-full"
+                        disabled={isBetaRestricted}
+                        title={isBetaRestricted ? betaRestrictionMessage : undefined}
+                      >
                         Manage
                       </Button>
                     ) : isUpgrade ? (
                       <Button
                         className="w-full"
                         onClick={() => handleSubscribe(tier.key)}
-                        disabled={loading === tier.key}
+                        disabled={loading === tier.key || isBetaRestricted}
+                        title={isBetaRestricted ? betaRestrictionMessage : undefined}
                       >
                         {loading === tier.key ? (
                           <>

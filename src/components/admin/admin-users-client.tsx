@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UserFilters } from './user-filters';
 import { UsersTable } from './users-table';
@@ -12,9 +12,13 @@ interface User {
   lastName?: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
+  hasStripeSubscription?: boolean;
   createdAt: string;
   isAdmin: boolean;
   roles: string[];
+  isBeta?: boolean;
+  isDisabled?: boolean;
+  disabledReason?: string | null;
   quotas: {
     ocr: { used: number; limit: number };
     ai: { used: number; limit: number };
@@ -43,12 +47,7 @@ export function AdminUsersClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch users whenever search params change
-  useEffect(() => {
-    fetchUsers();
-  }, [searchParams]);
-
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -78,7 +77,12 @@ export function AdminUsersClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [searchParams]);
+
+  // Fetch users whenever search params change
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   function handleRetry() {
     fetchUsers();
@@ -163,6 +167,7 @@ export function AdminUsersClient() {
             users={users}
             pagination={pagination}
             loading={loading}
+            onActionComplete={fetchUsers}
           />
         )}
       </div>

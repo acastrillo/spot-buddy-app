@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Copy, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChangeTierModal } from './change-tier-modal';
+import { DisableAccountModal } from './disable-account-modal';
 
 interface User {
   id: string;
@@ -27,9 +29,13 @@ interface User {
   lastName?: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
+  hasStripeSubscription?: boolean;
   createdAt: string;
   isAdmin: boolean;
   roles: string[];
+  isBeta?: boolean;
+  isDisabled?: boolean;
+  disabledReason?: string | null;
   quotas: {
     ocr: { used: number; limit: number };
     ai: { used: number; limit: number };
@@ -54,12 +60,17 @@ interface UsersTableProps {
   users: User[];
   pagination: Pagination | null;
   loading?: boolean;
+  onActionComplete?: () => void;
 }
 
-export function UsersTable({ users, pagination, loading }: UsersTableProps) {
+export function UsersTable({ users, pagination, loading, onActionComplete }: UsersTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isTierModalOpen, setIsTierModalOpen] = useState(false);
+  const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
 
   function copyToClipboard(text: string, userId: string) {
     navigator.clipboard.writeText(text);
@@ -111,6 +122,39 @@ export function UsersTable({ users, pagination, loading }: UsersTableProps) {
     }
   }
 
+  async function handleToggleBeta(user: User) {
+    setIsUpdating(user.id);
+    try {
+      const response = await fetch('/api/admin/users/toggle-beta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isBeta: !user.isBeta }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to update beta status');
+      }
+
+      onActionComplete?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update beta status';
+      alert(message);
+    } finally {
+      setIsUpdating(null);
+    }
+  }
+
+  function openTierModal(user: User) {
+    setSelectedUser(user);
+    setIsTierModalOpen(true);
+  }
+
+  function openDisableModal(user: User) {
+    setSelectedUser(user);
+    setIsDisableModalOpen(true);
+  }
+
   function goToNextPage() {
     if (!pagination?.hasMore || !pagination?.lastEvaluatedKey) return;
 
@@ -133,13 +177,14 @@ export function UsersTable({ users, pagination, loading }: UsersTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Signed Up</TableHead>
-                <TableHead>Workouts</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Beta</TableHead>
+              <TableHead>Signed Up</TableHead>
+              <TableHead>Workouts</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user) => (
@@ -164,11 +209,23 @@ export function UsersTable({ users, pagination, loading }: UsersTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      className={`capitalize ${getStatusBadgeColor(user.subscriptionStatus)}`}
-                    >
-                      {user.subscriptionStatus}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        className={`capitalize ${getStatusBadgeColor(user.subscriptionStatus)}`}
+                      >
+                        {user.subscriptionStatus}
+                      </Badge>
+                      {user.isDisabled && (
+                        <Badge variant="destructive">Disabled</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {user.isBeta ? (
+                      <Badge variant="secondary">Beta</Badge>
+                    ) : (
+                      <span className="text-sm text-gray-500">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
                     {formatDate(user.createdAt)}
@@ -199,6 +256,21 @@ export function UsersTable({ users, pagination, loading }: UsersTableProps) {
                             <Mail className="h-4 w-4 mr-2" />
                             Send Email
                           </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleToggleBeta(user)}
+                          disabled={isUpdating === user.id}
+                        >
+                          {user.isBeta ? 'Remove Beta Flag' : 'Mark as Beta'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openTierModal(user)}>
+                          Change Tier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className={user.isDisabled ? '' : 'text-red-600'}
+                          onClick={() => openDisableModal(user)}
+                        >
+                          {user.isDisabled ? 'Enable Account' : 'Disable Account'}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -247,6 +319,19 @@ export function UsersTable({ users, pagination, loading }: UsersTableProps) {
           </div>
         </div>
       )}
+
+      <ChangeTierModal
+        open={isTierModalOpen}
+        user={selectedUser}
+        onOpenChange={setIsTierModalOpen}
+        onUpdated={onActionComplete}
+      />
+      <DisableAccountModal
+        open={isDisableModalOpen}
+        user={selectedUser}
+        onOpenChange={setIsDisableModalOpen}
+        onUpdated={onActionComplete}
+      />
     </div>
   );
 }

@@ -20,7 +20,14 @@ export type AuditAction =
   | "admin.reset-quotas"
   | "admin.view-users"
   | "admin.view-user-details"
-  | "admin.export-users";
+  | "admin.export-users"
+  | "admin.toggle-user-beta"
+  | "admin.disable-account"
+  | "admin.enable-account"
+  | "admin.change-tier"
+  | "admin.toggle-global-beta"
+  | "admin.view-logs"
+  | "admin.update-settings";
 
 export async function writeAuditLog(entry: {
   action: AuditAction;

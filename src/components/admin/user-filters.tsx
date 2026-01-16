@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export function UserFilters() {
   const router = useRouter();
@@ -22,19 +22,11 @@ export function UserFilters() {
   // Local state for debounced search
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateFilter('search', searchValue);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchValue]);
-
-  function updateFilter(key: string, value: string) {
+  const updateFilter = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
 
-    if (value && value.trim()) {
+    // Treat "all" as clearing the filter
+    if (value && value.trim() && value !== 'all') {
       params.set(key, value);
     } else {
       params.delete(key);
@@ -44,7 +36,16 @@ export function UserFilters() {
     params.delete('lastEvaluatedKey');
 
     router.push(`/admin/users?${params.toString()}`);
-  }
+  }, [router, searchParams]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateFilter('search', searchValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, updateFilter]);
 
   function clearAllFilters() {
     router.push('/admin/users');
@@ -57,7 +58,8 @@ export function UserFilters() {
     searchParams.get('status') ||
     searchParams.get('dateFrom') ||
     searchParams.get('dateTo') ||
-    searchParams.get('isAdmin');
+    searchParams.get('isAdmin') ||
+    searchParams.get('isBeta');
 
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -97,14 +99,14 @@ export function UserFilters() {
         <div className="space-y-2">
           <Label htmlFor="tier">Subscription Tier</Label>
           <Select
-            value={searchParams.get('tier') || ''}
+            value={searchParams.get('tier') || 'all'}
             onValueChange={(value) => updateFilter('tier', value)}
           >
             <SelectTrigger id="tier">
               <SelectValue placeholder="All Tiers" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Tiers</SelectItem>
+              <SelectItem value="all">All Tiers</SelectItem>
               <SelectItem value="free">Free</SelectItem>
               <SelectItem value="core">Core</SelectItem>
               <SelectItem value="pro">Pro</SelectItem>
@@ -117,14 +119,14 @@ export function UserFilters() {
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           <Select
-            value={searchParams.get('status') || ''}
+            value={searchParams.get('status') || 'all'}
             onValueChange={(value) => updateFilter('status', value)}
           >
             <SelectTrigger id="status">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="trialing">Trialing</SelectItem>
               <SelectItem value="canceled">Canceled</SelectItem>
@@ -152,6 +154,24 @@ export function UserFilters() {
               Admins Only
             </label>
           </div>
+        </div>
+
+        {/* Beta Filter */}
+        <div className="space-y-2">
+          <Label htmlFor="beta-filter">Beta Users</Label>
+          <Select
+            value={searchParams.get('isBeta') || 'all'}
+            onValueChange={(value) => updateFilter('isBeta', value)}
+          >
+            <SelectTrigger id="beta-filter">
+              <SelectValue placeholder="All Users" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Users</SelectItem>
+              <SelectItem value="true">Beta Only</SelectItem>
+              <SelectItem value="false">Non-Beta</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Date Range - From */}

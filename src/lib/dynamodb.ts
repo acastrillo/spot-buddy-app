@@ -91,6 +91,15 @@ export interface DynamoDBUser {
   isAdmin?: boolean;
   roles?: string[];
 
+  // Beta user management
+  isBeta?: boolean;
+
+  // Account status
+  isDisabled?: boolean;
+  disabledAt?: string | null;
+  disabledBy?: string | null;
+  disabledReason?: string | null;
+
   // Onboarding tracking
   onboardingCompleted?: boolean;
   onboardingCompletedAt?: string | null;
@@ -245,6 +254,13 @@ export const dynamoDBUsers = {
 
       // RBAC roles (optional)
       roles: user.roles || undefined,
+
+      // Beta/user status flags (optional - only persisted when provided)
+      ...(user.isBeta !== undefined ? { isBeta: user.isBeta } : {}),
+      ...(user.isDisabled !== undefined ? { isDisabled: user.isDisabled } : {}),
+      ...(user.disabledAt !== undefined ? { disabledAt: user.disabledAt } : {}),
+      ...(user.disabledBy !== undefined ? { disabledBy: user.disabledBy } : {}),
+      ...(user.disabledReason !== undefined ? { disabledReason: user.disabledReason } : {}),
 
       // Onboarding status
       onboardingCompleted: user.onboardingCompleted ?? false,

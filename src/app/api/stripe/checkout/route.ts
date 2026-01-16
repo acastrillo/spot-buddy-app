@@ -11,6 +11,7 @@ import {
   getStripe,
 } from '@/lib/stripe-server'
 import { AppMetrics } from '@/lib/metrics'
+import { getSystemSettings } from '@/lib/system-settings'
 
 export const runtime = 'nodejs'
 
@@ -47,6 +48,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    const systemSettings = await getSystemSettings()
+    if (user.isBeta && systemSettings.globalBetaMode) {
+      return NextResponse.json(
+        { error: 'Upgrades are disabled for beta users during the beta period.' },
+        { status: 403 }
+      )
+    }
+
     let customerId = user.stripeCustomerId?.trim() || null
 
     if (!customerId) {
@@ -62,6 +71,11 @@ export async function POST(req: NextRequest) {
         email: user.email,
         stripeCustomerId: customerId,
         emailVerified: user.emailVerified ?? null,
+        isBeta: user.isBeta,
+        isDisabled: user.isDisabled,
+        disabledAt: user.disabledAt ?? null,
+        disabledBy: user.disabledBy ?? null,
+        disabledReason: user.disabledReason ?? null,
       })
     }
 

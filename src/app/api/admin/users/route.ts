@@ -17,6 +17,7 @@ interface ScanFilters {
   dateFrom?: string;
   dateTo?: string;
   isAdmin?: boolean;
+  isBeta?: boolean;
   limit?: number;
   lastEvaluatedKey?: Record<string, any>;
 }
@@ -66,6 +67,7 @@ export async function GET(req: NextRequest) {
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           isAdmin: filters.isAdmin,
+          isBeta: filters.isBeta,
         },
         resultCount: result.users.length,
       },
@@ -145,6 +147,14 @@ function parseFilters(searchParams: URLSearchParams): ScanFilters {
     filters.isAdmin = false;
   }
 
+  // Filter beta users (include missing isBeta when false)
+  const isBetaParam = searchParams.get('isBeta');
+  if (isBetaParam === 'true') {
+    filters.isBeta = true;
+  } else if (isBetaParam === 'false') {
+    filters.isBeta = false;
+  }
+
   // Pagination
   const limit = parseInt(searchParams.get('limit') || '50');
   filters.limit = Math.min(Math.max(limit, 1), 100); // Between 1-100
@@ -211,6 +221,16 @@ async function scanUsersWithFilters(filters: ScanFilters): Promise<{
     expressionAttributeValues[':isAdmin'] = filters.isAdmin;
   }
 
+  if (filters.isBeta !== undefined) {
+    expressionAttributeNames['#isBeta'] = 'isBeta';
+    if (filters.isBeta) {
+      filterExpressions.push('#isBeta = :isBeta');
+    } else {
+      filterExpressions.push('(attribute_not_exists(#isBeta) OR #isBeta = :isBeta)');
+    }
+    expressionAttributeValues[':isBeta'] = filters.isBeta;
+  }
+
   // Build scan command
   const scanCommand = new ScanCommand({
     TableName: process.env.DYNAMODB_USERS_TABLE || 'spotter-users',
@@ -259,6 +279,12 @@ function sanitizeUserForAdmin(user: DynamoDBUser) {
     updatedAt: user.updatedAt,
     isAdmin: user.isAdmin || false,
     roles: user.roles || [],
+    isBeta: user.isBeta || false,
+    isDisabled: user.isDisabled || false,
+    disabledAt: user.disabledAt || null,
+    disabledBy: user.disabledBy || null,
+    disabledReason: user.disabledReason || null,
+    hasStripeSubscription: Boolean(user.stripeSubscriptionId),
     quotas: {
       ocr: {
         used: user.ocrQuotaUsed || 0,

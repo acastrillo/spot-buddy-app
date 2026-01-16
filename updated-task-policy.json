@@ -1,0 +1,58 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Query",
+                "dynamodb:Scan"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-users",
+                "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-users/index/*",
+                "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-workouts",
+                "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-body-metrics",
+                "arn:aws:dynamodb:us-east-1:920013187591:table/spotter-webhook-events"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::spotter-uploads-920013187591/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cognito-idp:AdminCreateUser",
+                "cognito-idp:AdminDeleteUser",
+                "cognito-idp:AdminGetUser",
+                "cognito-idp:ListUsers"
+            ],
+            "Resource": "arn:aws:cognito-idp:us-east-1:920013187591:userpool/us-east-1_CWBzHnJFT"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "textract:DetectDocumentText",
+                "textract:AnalyzeDocument"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

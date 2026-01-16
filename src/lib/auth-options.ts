@@ -15,6 +15,7 @@ import { normalizeSubscriptionTier } from "@/lib/subscription-tiers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request-ip";
 import { sendSignupAlert } from "@/lib/email-service";
+import { getSystemSettings } from "@/lib/system-settings";
 
 // Extended user type for OAuth providers
 interface OAuthUser {
@@ -232,6 +233,11 @@ if (enableDevLogin) {
             firstName: existingUser?.firstName || firstName,
             lastName: existingUser?.lastName || lastName,
             emailVerified: existingUser?.emailVerified || new Date().toISOString(),
+            isBeta: existingUser?.isBeta,
+            isDisabled: existingUser?.isDisabled,
+            disabledAt: existingUser?.disabledAt ?? null,
+            disabledBy: existingUser?.disabledBy ?? null,
+            disabledReason: existingUser?.disabledReason ?? null,
           });
         } catch (error) {
           console.error("Failed to create/update dev user in DynamoDB:", error);
@@ -373,6 +379,12 @@ export const authOptions: NextAuthOptions = {
             onboardingCompleted: existingUser.onboardingCompleted,
             onboardingSkipped: existingUser.onboardingSkipped,
             onboardingCompletedAt: existingUser.onboardingCompletedAt,
+            // Preserve beta/disabled flags
+            isBeta: existingUser.isBeta,
+            isDisabled: existingUser.isDisabled,
+            disabledAt: existingUser.disabledAt ?? null,
+            disabledBy: existingUser.disabledBy ?? null,
+            disabledReason: existingUser.disabledReason ?? null,
           });
         } else {
           // New user - create with new UUID
@@ -556,6 +568,12 @@ export const authOptions: NextAuthOptions = {
               onboardingCompleted: existingUserForJWT.onboardingCompleted,
               onboardingSkipped: existingUserForJWT.onboardingSkipped,
               onboardingCompletedAt: existingUserForJWT.onboardingCompletedAt,
+              // Preserve beta/disabled flags
+              isBeta: existingUserForJWT.isBeta,
+              isDisabled: existingUserForJWT.isDisabled,
+              disabledAt: existingUserForJWT.disabledAt ?? null,
+              disabledBy: existingUserForJWT.disabledBy ?? null,
+              disabledReason: existingUserForJWT.disabledReason ?? null,
             });
           } else {
             // User doesn't exist yet - create with minimal data
@@ -584,12 +602,17 @@ export const authOptions: NextAuthOptions = {
           // status immediately after webhook updates (e.g., subscription cancellation)
           const dbUser = await dynamoDBUsers.get(token.id as string, true);
           if (dbUser) {
+            if (dbUser.isDisabled) {
+              throw new Error("Account disabled by administrator");
+            }
+
             token.subscriptionTier = normalizeSubscriptionTier(dbUser.subscriptionTier);
             token.subscriptionStatus = dbUser.subscriptionStatus;
             token.ocrQuotaUsed = dbUser.ocrQuotaUsed;
             token.ocrQuotaLimit = dbUser.ocrQuotaLimit;
             token.onboardingCompleted = dbUser.onboardingCompleted ?? false;
             token.onboardingSkipped = dbUser.onboardingSkipped ?? false;
+            token.isBeta = dbUser.isBeta ?? false;
             // Refresh profile name fields to reflect any profile updates
             token.firstName = dbUser.firstName ?? null;
             token.lastName = dbUser.lastName ?? null;
@@ -603,7 +626,13 @@ export const authOptions: NextAuthOptions = {
               `This may indicate a sync issue or deleted user. Continuing with cached token data.`
             );
           }
+
+          const systemSettings = await getSystemSettings();
+          token.globalBetaMode = systemSettings.globalBetaMode;
         } catch (error) {
+          if (error instanceof Error && error.message === "Account disabled by administrator") {
+            throw error;
+          }
           console.error(`[Auth:JWT] Failed to fetch user ${token.id} from DynamoDB:`, error);
           // Continue with existing token data
         }
@@ -639,6 +668,11 @@ export const authOptions: NextAuthOptions = {
           provider: (token.provider as string | undefined) ?? undefined,
           onboardingCompleted: (token.onboardingCompleted as boolean | undefined) ?? false,
           onboardingSkipped: (token.onboardingSkipped as boolean | undefined) ?? false,
+          isBeta: (token.isBeta as boolean | undefined) ?? false,
+          globalBetaMode:
+            typeof token.globalBetaMode === "boolean"
+              ? (token.globalBetaMode as boolean)
+              : process.env.NODE_ENV === "production",
         },
       };
     },

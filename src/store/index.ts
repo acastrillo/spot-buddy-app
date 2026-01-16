@@ -17,6 +17,8 @@ interface SessionUser {
   aiRequestsUsed?: number;
   onboardingCompleted?: boolean;
   onboardingSkipped?: boolean;
+  isBeta?: boolean;
+  globalBetaMode?: boolean;
 }
 
 interface User {
@@ -32,6 +34,8 @@ interface User {
   aiRequestsUsed?: number;
   onboardingCompleted?: boolean;
   onboardingSkipped?: boolean;
+  isBeta?: boolean;
+  globalBetaMode?: boolean;
 }
 
 type AuthProvider = "google" | "facebook";
@@ -68,6 +72,8 @@ export const useAuthStore = (): AuthState => {
         aiRequestsUsed: sessionUser.aiRequestsUsed ?? 0,
         onboardingCompleted: sessionUser.onboardingCompleted ?? false,
         onboardingSkipped: sessionUser.onboardingSkipped ?? false,
+        isBeta: sessionUser.isBeta ?? false,
+        globalBetaMode: sessionUser.globalBetaMode ?? false,
       }
     : null;
 

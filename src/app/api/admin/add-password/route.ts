@@ -95,6 +95,11 @@ export async function POST(req: NextRequest) {
       onboardingCompleted: existingUser.onboardingCompleted,
       onboardingSkipped: existingUser.onboardingSkipped,
       onboardingCompletedAt: existingUser.onboardingCompletedAt,
+      isBeta: existingUser.isBeta,
+      isDisabled: existingUser.isDisabled,
+      disabledAt: existingUser.disabledAt ?? null,
+      disabledBy: existingUser.disabledBy ?? null,
+      disabledReason: existingUser.disabledReason ?? null,
     });
 
     console.log(`[AddPassword] ✓ Password added successfully for ${maskEmail(email)}`);
