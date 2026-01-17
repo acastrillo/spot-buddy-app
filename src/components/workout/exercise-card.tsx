@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Dumbbell, Check, X, Edit2 } from "lucide-react"
+import { Dumbbell, Check, X, Edit2, Copy } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,7 @@ interface ExerciseCardProps {
   card: ExerciseCardType
   onChange: (updatedCard: ExerciseCardType) => void
   onDelete?: (cardId: string) => void
+  onDuplicate?: (updatedCard: ExerciseCardType) => void
 }
 
 /**
@@ -23,9 +24,10 @@ interface ExerciseCardProps {
  *   - Click/tap the card or use the edit button (always visible)
  * - Re-hide empty fields after save
  */
-export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
+export function ExerciseCard({ card, onChange, onDelete, onDuplicate }: ExerciseCardProps) {
   const [isEditing, setIsEditing] = useState(card.isEditing || false)
   const [editedCard, setEditedCard] = useState<ExerciseCardType>(card)
+  const isRepeatedSet = Boolean(card.totalRepetitions && card.totalRepetitions > 1)
 
   // Update local state when card prop changes
   useEffect(() => {
@@ -38,19 +40,21 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
     }
   }
 
+  const cleanCard = (cardToClean: ExerciseCardType): ExerciseCardType => ({
+    ...cardToClean,
+    weight: cardToClean.weight?.trim() || null,
+    distance: cardToClean.distance?.trim() || null,
+    time: cardToClean.time?.trim() || null,
+    timing: cardToClean.timing?.trim() || null,
+    notes: cardToClean.notes?.trim() || null,
+    restSeconds: cardToClean.restSeconds || null,
+    isEditing: false,
+  })
+
   // Edit handlers
   const handleSave = () => {
     // Clean up empty fields before saving
-    const cleanedCard: ExerciseCardType = {
-      ...editedCard,
-      weight: editedCard.weight?.trim() || null,
-      distance: editedCard.distance?.trim() || null,
-      time: editedCard.time?.trim() || null,
-      timing: editedCard.timing?.trim() || null,
-      notes: editedCard.notes?.trim() || null,
-      restSeconds: editedCard.restSeconds || null,
-      isEditing: false,
-    }
+    const cleanedCard = cleanCard(editedCard)
 
     onChange(cleanedCard)
     setIsEditing(false)
@@ -65,6 +69,13 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
     if (onDelete) {
       onDelete(card.id)
     }
+  }
+
+  const handleDuplicate = () => {
+    if (!onDuplicate) return
+    const cleanedCard = cleanCard(editedCard)
+    onDuplicate(cleanedCard)
+    setIsEditing(false)
   }
 
   // Check if field has content (for conditional rendering)
@@ -237,19 +248,26 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
         </div>
 
         {/* Sets & Reps (always visible) */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="sets">Sets *</Label>
-            <Input
-              id="sets"
-              type="number"
-              min="1"
-              value={editedCard.sets}
-              onChange={(e) =>
-                setEditedCard({ ...editedCard, sets: parseInt(e.target.value) || 1 })
-              }
-            />
-          </div>
+        {isRepeatedSet && (
+          <p className="text-xs text-muted-foreground">
+            Set {(card.repetitionIndex ?? 0) + 1} of {card.totalRepetitions}
+          </p>
+        )}
+        <div className={isRepeatedSet ? "grid gap-4" : "grid grid-cols-2 gap-4"}>
+          {!isRepeatedSet && (
+            <div>
+              <Label htmlFor="sets">Sets *</Label>
+              <Input
+                id="sets"
+                type="number"
+                min="1"
+                value={editedCard.sets}
+                onChange={(e) =>
+                  setEditedCard({ ...editedCard, sets: parseInt(e.target.value) || 1 })
+                }
+              />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="reps">Reps *</Label>
@@ -353,6 +371,17 @@ export function ExerciseCard({ card, onChange, onDelete }: ExerciseCardProps) {
             <Check className="h-4 w-4 mr-2" />
             Save
           </Button>
+          {onDuplicate && (
+            <Button
+              onClick={handleDuplicate}
+              variant="outline"
+              className="flex-1"
+              size="sm"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicate
+            </Button>
+          )}
           <Button
             onClick={handleCancel}
             variant="outline"

@@ -214,6 +214,30 @@ export default function AMRAPSessionView({
     setCurrentBlockIndex(index)
   }, [checkedExercises, exerciseCounts, currentBlock])
 
+  const handleManualComplete = useCallback(() => {
+    const roundsCompleted = calculateRoundsFromProgress(
+      currentBlock.exercises,
+      checkedExercises,
+      exerciseCounts
+    )
+
+    setBlockStates((prev) => {
+      const newStates = new Map(prev)
+      newStates.set(currentBlock.id, {
+        completed: true,
+        roundsCompleted,
+        checkedExercises: new Set(checkedExercises),
+        exerciseCounts: new Map(exerciseCounts),
+      })
+      return newStates
+    })
+
+    timer.pause()
+    setShowTransition(false)
+    setShowCountdown(false)
+    setShowCompletionDialog(true)
+  }, [checkedExercises, exerciseCounts, currentBlock, timer])
+
   const handleSaveWorkout = () => {
     // Build comprehensive notes
     let notes = ''
@@ -296,6 +320,7 @@ export default function AMRAPSessionView({
             currentIndex={currentBlockIndex}
             onNavigate={handleNavigateToBlock}
             completedBlocks={completedBlocks}
+            onComplete={handleManualComplete}
           />
         )}
 
@@ -309,6 +334,7 @@ export default function AMRAPSessionView({
               : undefined
           }
           isRunning={timer.isRunning}
+          isCompleted={timer.isCompleted}
           onPlayPause={() => {
             if (timer.isRunning) {
               timer.pause()

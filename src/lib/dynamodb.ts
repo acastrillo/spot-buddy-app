@@ -8,6 +8,7 @@ import {
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import type { TrainingProfile } from "./training-profile";
+import type { WorkoutCardLayout } from "../types/workout-card";
 import { normalizeSubscriptionTier } from "./subscription-tiers";
 
 // Lazy-initialized DynamoDB client singleton
@@ -977,6 +978,7 @@ export interface DynamoDBWorkout {
     timeLimit?: number; // Seconds total (AMRAP - single block, backward compatible)
     totalTime?: number; // Total workout time in seconds
     pattern?: string; // Rep pattern for ladder workouts (e.g., "21-15-9")
+    cardLayout?: WorkoutCardLayout[];
   } | null;
 
   // Multi-Block AMRAP Support (Phase 7+)
@@ -989,6 +991,17 @@ export interface DynamoDBWorkout {
     completed?: boolean; // Completion status
     completedAt?: string; // ISO timestamp
     roundsCompleted?: number; // Rounds completed in this block
+    notes?: string; // Block-specific notes
+  }> | null;
+
+  emomBlocks?: Array<{
+    id: string; // Unique block identifier
+    label: string; // "Minute 1", "Block 1", etc.
+    intervalSeconds: number; // Seconds per EMOM interval
+    order: number; // Sequence order
+    exercises: DynamoDBExercise[]; // Exercises specific to this block
+    completed?: boolean; // Completion status
+    completedAt?: string; // ISO timestamp
     notes?: string; // Block-specific notes
   }> | null;
 
@@ -1121,6 +1134,8 @@ export const dynamoDBWorkouts = {
       // Workout structure fields
       workoutType: workout.workoutType,
       structure: workout.structure ?? null,
+      amrapBlocks: workout.amrapBlocks ?? null,
+      emomBlocks: workout.emomBlocks ?? null,
       timerConfig: workout.timerConfig ?? null,
       blockTimers: workout.blockTimers ?? null,
       // AI enhancement fields
@@ -1162,6 +1177,8 @@ export const dynamoDBWorkouts = {
       completedDate?: string | null;
       workoutType?: 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata' | null;
       structure?: DynamoDBWorkout['structure'];
+      amrapBlocks?: DynamoDBWorkout['amrapBlocks'];
+      emomBlocks?: DynamoDBWorkout['emomBlocks'];
       timerConfig?: DynamoDBWorkout['timerConfig'];
       blockTimers?: DynamoDBWorkout['blockTimers'];
       aiEnhanced?: boolean | null;
@@ -1222,6 +1239,14 @@ export const dynamoDBWorkouts = {
         updateExpressions.push("#structure = :structure");
         attributeValues[":structure"] = updates.structure;
         attributeNames["#structure"] = "structure"; // May be reserved
+      }
+      if (updates.amrapBlocks !== undefined) {
+        updateExpressions.push("amrapBlocks = :amrapBlocks");
+        attributeValues[":amrapBlocks"] = updates.amrapBlocks;
+      }
+      if (updates.emomBlocks !== undefined) {
+        updateExpressions.push("emomBlocks = :emomBlocks");
+        attributeValues[":emomBlocks"] = updates.emomBlocks;
       }
       if (updates.timerConfig !== undefined) {
         updateExpressions.push("timerConfig = :timerConfig");

@@ -550,8 +550,9 @@ export const authOptions: NextAuthOptions = {
             await dynamoDBUsers.upsert({
               id: token.id as string,
               email: token.email as string,
-              firstName: (token.firstName as string | null) ?? null,
-              lastName: (token.lastName as string | null) ?? null,
+              // Preserve DB name fields to avoid overwriting user edits with stale token data
+              firstName: existingUserForJWT.firstName ?? null,
+              lastName: existingUserForJWT.lastName ?? null,
               emailVerified: existingUserForJWT.emailVerified ?? null,
               // Preserve existing subscription data
               subscriptionTier: normalizedTier,

@@ -109,16 +109,16 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
   function getStatusBadgeColor(status: string) {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800 hover:bg-green-100';
+        return 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30';
       case 'trialing':
-        return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
+        return 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-blue-500/30';
       case 'canceled':
-        return 'bg-red-100 text-red-800 hover:bg-red-100';
+        return 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30';
       case 'past_due':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100';
+        return 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border-yellow-500/30';
       case 'inactive':
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
+        return 'bg-surface text-text-secondary hover:bg-surface/80 border-border';
     }
   }
 
@@ -171,19 +171,19 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Beta</TableHead>
-              <TableHead>Signed Up</TableHead>
-              <TableHead>Workouts</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-text-primary">Email</TableHead>
+              <TableHead className="text-text-primary">Name</TableHead>
+              <TableHead className="text-text-primary">Tier</TableHead>
+              <TableHead className="text-text-primary">Status</TableHead>
+              <TableHead className="text-text-primary">Beta</TableHead>
+              <TableHead className="text-text-primary">Signed Up</TableHead>
+              <TableHead className="text-text-primary">Workouts</TableHead>
+              <TableHead className="text-right text-text-primary">Actions</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -191,7 +191,7 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-2">
-                      <span className="truncate max-w-[200px]">{user.email}</span>
+                      <span className="truncate max-w-[200px] text-text-primary">{user.email}</span>
                       {user.isAdmin && (
                         <Badge variant="destructive" className="text-xs">
                           Admin
@@ -199,7 +199,7 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{formatName(user)}</TableCell>
+                  <TableCell className="text-text-primary">{formatName(user)}</TableCell>
                   <TableCell>
                     <Badge
                       variant={getTierBadgeVariant(user.subscriptionTier)}
@@ -224,13 +224,13 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
                     {user.isBeta ? (
                       <Badge variant="secondary">Beta</Badge>
                     ) : (
-                      <span className="text-sm text-gray-500">—</span>
+                      <span className="text-sm text-text-secondary">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="text-sm text-text-secondary">
                     {formatDate(user.createdAt)}
                   </TableCell>
-                  <TableCell className="text-sm">{user.workoutsSaved}</TableCell>
+                  <TableCell className="text-sm text-text-primary">{user.workoutsSaved}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -293,7 +293,7 @@ export function UsersTable({ users, pagination, loading, onActionComplete }: Use
       {/* Pagination Controls */}
       {pagination && users.length > 0 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-text-secondary">
             Showing {users.length} user{users.length !== 1 ? 's' : ''}
             {pagination.hasMore && ' (more available)'}
           </div>

@@ -62,15 +62,15 @@ export function UserFilters() {
     searchParams.get('isBeta');
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+    <div className="bg-surface p-6 rounded-lg border border-border shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Filters</h2>
+        <h2 className="text-lg font-semibold text-text-primary">Filters</h2>
         {hasActiveFilters && (
           <Button
             variant="ghost"
             size="sm"
             onClick={clearAllFilters}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
           >
             <X className="h-4 w-4 mr-1" />
             Clear All
@@ -81,9 +81,9 @@ export function UserFilters() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search by email */}
         <div className="space-y-2">
-          <Label htmlFor="search">Search Email</Label>
+          <Label htmlFor="search" className="text-text-primary">Search Email</Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-secondary" />
             <Input
               id="search"
               type="search"
@@ -97,7 +97,7 @@ export function UserFilters() {
 
         {/* Subscription Tier */}
         <div className="space-y-2">
-          <Label htmlFor="tier">Subscription Tier</Label>
+          <Label htmlFor="tier" className="text-text-primary">Subscription Tier</Label>
           <Select
             value={searchParams.get('tier') || 'all'}
             onValueChange={(value) => updateFilter('tier', value)}
@@ -117,7 +117,7 @@ export function UserFilters() {
 
         {/* Subscription Status */}
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
+          <Label htmlFor="status" className="text-text-primary">Status</Label>
           <Select
             value={searchParams.get('status') || 'all'}
             onValueChange={(value) => updateFilter('status', value)}
@@ -138,7 +138,7 @@ export function UserFilters() {
 
         {/* Admin Filter */}
         <div className="space-y-2">
-          <Label htmlFor="admin-filter">Filter Options</Label>
+          <Label htmlFor="admin-filter" className="text-text-primary">Filter Options</Label>
           <div className="flex items-center space-x-2 h-10">
             <Checkbox
               id="admin-filter"
@@ -149,7 +149,7 @@ export function UserFilters() {
             />
             <label
               htmlFor="admin-filter"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-text-primary"
             >
               Admins Only
             </label>
@@ -158,7 +158,7 @@ export function UserFilters() {
 
         {/* Beta Filter */}
         <div className="space-y-2">
-          <Label htmlFor="beta-filter">Beta Users</Label>
+          <Label htmlFor="beta-filter" className="text-text-primary">Beta Users</Label>
           <Select
             value={searchParams.get('isBeta') || 'all'}
             onValueChange={(value) => updateFilter('isBeta', value)}
@@ -176,7 +176,7 @@ export function UserFilters() {
 
         {/* Date Range - From */}
         <div className="space-y-2">
-          <Label htmlFor="dateFrom">Signup Date From</Label>
+          <Label htmlFor="dateFrom" className="text-text-primary">Signup Date From</Label>
           <Input
             id="dateFrom"
             type="date"
@@ -187,7 +187,7 @@ export function UserFilters() {
 
         {/* Date Range - To */}
         <div className="space-y-2">
-          <Label htmlFor="dateTo">Signup Date To</Label>
+          <Label htmlFor="dateTo" className="text-text-primary">Signup Date To</Label>
           <Input
             id="dateTo"
             type="date"

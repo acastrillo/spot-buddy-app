@@ -66,6 +66,13 @@ interface Workout {
   title: string
   description: string
   exercises: Exercise[]
+  amrapBlocks?: Array<{
+    id: string
+    label: string
+    timeLimit: number
+    order: number
+    exercises: Exercise[]
+  }>
   totalDuration: number
   difficulty: string
   workoutType?: string
@@ -233,6 +240,7 @@ export default function WorkoutSessionPage() {
           title: dbWorkout.title,
           description: dbWorkout.description || '',
           exercises: dbWorkout.exercises || [],
+          amrapBlocks: dbWorkout.amrapBlocks || [],
           totalDuration: dbWorkout.totalDuration || 0,
           difficulty: dbWorkout.difficulty || 'medium',
           timerConfig: dbWorkout.timerConfig,

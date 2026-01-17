@@ -353,7 +353,7 @@ export default function ImportWorkoutPage() {
         thumbnailUrl: fetchData.image || null  // Store Instagram image URL
       }
       sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
-      // User can now click "Continue to Edit" button to proceed
+      router.push('/add/edit')
 
     } catch (error) {
       console.error('Process error:', error)

@@ -25,6 +25,33 @@ const exerciseSchema = z.object({
     .nullable(),
 }).passthrough();
 
+const amrapBlockSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+    label: z.string().max(200),
+    timeLimit: z.number().int().min(1).max(14400),
+    order: z.number().int().min(1).max(100),
+    exercises: z.array(exerciseSchema).max(200),
+    completed: z.boolean().optional(),
+    completedAt: z.string().optional().nullable(),
+    roundsCompleted: z.number().int().min(0).max(100000).optional(),
+    notes: z.string().max(2000).optional().nullable(),
+  })
+  .passthrough();
+
+const emomBlockSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+    label: z.string().max(200),
+    intervalSeconds: z.number().int().min(1).max(3600),
+    order: z.number().int().min(1).max(100),
+    exercises: z.array(exerciseSchema).max(200),
+    completed: z.boolean().optional(),
+    completedAt: z.string().optional().nullable(),
+    notes: z.string().max(2000).optional().nullable(),
+  })
+  .passthrough();
+
 const workoutUpdateSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
@@ -35,6 +62,8 @@ const workoutUpdateSchema = z
     tags: z.array(z.string().min(1).max(50)).max(50).optional(),
     workoutType: z.string().min(1).max(50).optional(),
     structure: z.record(z.any()).optional(),
+    amrapBlocks: z.array(amrapBlockSchema).optional().nullable(),
+    emomBlocks: z.array(emomBlockSchema).optional().nullable(),
     timerConfig: z.record(z.any()).optional(),
     blockTimers: z.array(z.any()).optional(),
     aiEnhanced: z.boolean().optional(),
@@ -141,6 +170,8 @@ export async function PATCH(
       tags,
       workoutType,
       structure,
+      amrapBlocks,
+      emomBlocks,
       timerConfig,
       blockTimers,
       aiEnhanced,
@@ -157,6 +188,8 @@ export async function PATCH(
       tags,
       workoutType,
       structure,
+      amrapBlocks,
+      emomBlocks,
       timerConfig,
       blockTimers,
       aiEnhanced,
@@ -169,11 +202,26 @@ export async function PATCH(
     }
 
     // Transform exercises to match DynamoDBExercise type
-    const transformedExercises = exercises?.map(ex => ({
+    const transformExercise = (ex: any) => ({
       ...ex,
       reps: ex.reps ?? "", // Convert null reps to empty string
-      weight: typeof ex.weight === 'number' ? String(ex.weight) : ex.weight // Convert number to string
-    })) as any; // Type assertion needed due to Zod passthrough
+      weight: typeof ex.weight === 'number' ? String(ex.weight) : ex.weight, // Convert number to string
+    });
+
+    const transformedExercises = exercises?.map(transformExercise) as any; // Type assertion needed due to Zod passthrough
+
+    const transformedAmrapBlocks = amrapBlocks?.map((block) => ({
+      ...block,
+      exercises: block.exercises.map(transformExercise),
+      completedAt: block.completedAt ?? undefined,
+      notes: block.notes ?? undefined,
+    }));
+    const transformedEmomBlocks = emomBlocks?.map((block) => ({
+      ...block,
+      exercises: block.exercises.map(transformExercise),
+      completedAt: block.completedAt ?? undefined,
+      notes: block.notes ?? undefined,
+    }));
 
     await dynamoDBWorkouts.update(userId, id, {
       title,
@@ -184,6 +232,8 @@ export async function PATCH(
       tags: tags ?? undefined, // Convert null to undefined
       workoutType: workoutType as 'standard' | 'emom' | 'amrap' | 'rounds' | 'ladder' | 'tabata' | undefined,
       structure,
+      amrapBlocks: transformedAmrapBlocks,
+      emomBlocks: transformedEmomBlocks,
       timerConfig: timerConfig as { params: any; aiGenerated?: boolean; reason?: string } | null | undefined,
       blockTimers,
       aiEnhanced,

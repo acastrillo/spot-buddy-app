@@ -5,7 +5,13 @@
  * Implements workout repetition logic (e.g., "5 sets" = repeat card sequence 5 times).
  */
 
-import type { WorkoutCard, ExerciseCard, RestCard, WorkoutRepetition } from '@/types/workout-card';
+import type {
+  WorkoutCard,
+  ExerciseCard,
+  RestCard,
+  WorkoutRepetition,
+  WorkoutCardLayout,
+} from '@/types/workout-card';
 
 /**
  * Exercise format from edit page
@@ -20,6 +26,11 @@ interface EditExercise {
   notes?: string | null;
   distance?: string | null;
   timing?: string | null;
+  setDetails?: Array<{
+    id?: string | null;
+    reps?: string | number | null;
+    weight?: string | number | null;
+  }> | null;
 }
 
 /**
@@ -35,16 +46,25 @@ interface EditExercise {
  */
 export function expandWorkoutToCards(
   exercises: EditExercise[],
-  repetition?: WorkoutRepetition
+  repetition?: WorkoutRepetition,
+  options?: {
+    amrapBlockId?: string | null;
+    emomBlockId?: string | null;
+  }
 ): WorkoutCard[] {
   const cards: WorkoutCard[] = [];
+  const hasSetDetails = exercises.some(
+    (exercise) => exercise.setDetails && exercise.setDetails.length > 0
+  );
 
   // Determine number of repetitions
-  const repeatCount = repetition?.rounds || repetition?.sets || 1;
+  const repeatCount = hasSetDetails ? 1 : (repetition?.rounds || repetition?.sets || 1);
 
   // Determine if we should insert rest cards
-  const shouldInsertRestBetweenExercises = repetition?.restBetweenExercises ?? false;
-  const shouldInsertRestBetweenRounds = repetition?.restBetweenRounds ?? false;
+  const shouldInsertRestBetweenExercises =
+    !hasSetDetails && (repetition?.restBetweenExercises ?? false);
+  const shouldInsertRestBetweenRounds =
+    !hasSetDetails && (repetition?.restBetweenRounds ?? false);
   const defaultRestDuration = repetition?.defaultRestDuration || 60;
 
   // Build single sequence of cards (one "set")
@@ -52,25 +72,58 @@ export function expandWorkoutToCards(
     const sequence: WorkoutCard[] = [];
 
     exercises.forEach((exercise, exerciseIndex) => {
-      // Create exercise card
-      const exerciseCard: ExerciseCard = {
-        id: `${exercise.id}-rep${repetitionIndex}-${Date.now()}`,
-        type: 'exercise',
-        name: exercise.name,
-        sets: 1,  // Each card represents 1 set
-        reps: exercise.reps,
-        weight: exercise.weight || null,
-        distance: exercise.distance || null,
-        timing: exercise.timing || null,
-        restSeconds: exercise.restSeconds || null,
-        notes: exercise.notes || null,
-        isEditing: false,
-        originalExerciseId: exercise.id,
-        repetitionIndex,
-        totalRepetitions: repeatCount,  // Pass total repetitions for "Set X of N" display
-      };
+      const setDetails = exercise.setDetails?.length ? exercise.setDetails : null;
+      const amrapBlockId = options?.amrapBlockId ?? null;
+      const emomBlockId = options?.emomBlockId ?? null;
 
-      sequence.push(exerciseCard);
+      if (setDetails) {
+        const totalRepetitions = setDetails.length;
+        setDetails.forEach((detail, detailIndex) => {
+          const resolvedWeight = detail?.weight ?? exercise.weight ?? null;
+          const exerciseCard: ExerciseCard = {
+            id: `${exercise.id}-set${detail?.id || detailIndex}-${Date.now()}`,
+            type: 'exercise',
+            name: exercise.name,
+            sets: 1,
+            reps: detail?.reps ?? exercise.reps,
+            weight: typeof resolvedWeight === "number" ? String(resolvedWeight) : resolvedWeight,
+            distance: exercise.distance || null,
+            timing: exercise.timing || null,
+            restSeconds: exercise.restSeconds || null,
+            notes: exercise.notes || null,
+            isEditing: false,
+            originalExerciseId: exercise.id,
+            repetitionIndex: totalRepetitions > 1 ? detailIndex : undefined,
+            totalRepetitions: totalRepetitions > 1 ? totalRepetitions : undefined,
+            setDetailId: detail?.id ?? null,
+            amrapBlockId,
+            emomBlockId,
+          };
+          sequence.push(exerciseCard);
+        });
+      } else {
+        // Create exercise card
+        const exerciseCard: ExerciseCard = {
+          id: `${exercise.id}-rep${repetitionIndex}-${Date.now()}`,
+          type: 'exercise',
+          name: exercise.name,
+          sets: 1,  // Each card represents 1 set
+          reps: exercise.reps,
+          weight: exercise.weight || null,
+          distance: exercise.distance || null,
+          timing: exercise.timing || null,
+          restSeconds: exercise.restSeconds || null,
+          notes: exercise.notes || null,
+          isEditing: false,
+          originalExerciseId: exercise.id,
+          repetitionIndex,
+          totalRepetitions: repeatCount,  // Pass total repetitions for "Set X of N" display
+          amrapBlockId,
+          emomBlockId,
+        };
+
+        sequence.push(exerciseCard);
+      }
 
       // Insert rest card after exercise (if not last exercise in sequence)
       if (shouldInsertRestBetweenExercises && exerciseIndex < exercises.length - 1) {
@@ -131,6 +184,17 @@ export function collapseCardsToExercises(cards: WorkoutCard[]): EditExercise[] {
     }
   });
 
+  const summariseValues = (values: Array<string | number | null | undefined>): string | null => {
+    const cleaned = values
+      .map((value) => (value == null ? "" : String(value)).trim())
+      .filter((value) => value.length > 0);
+
+    if (!cleaned.length) return null;
+
+    const unique = Array.from(new Set(cleaned));
+    return unique.length === 1 ? unique[0] : unique.join(" / ");
+  };
+
   // Convert grouped cards back to exercises
   const exercises: EditExercise[] = [];
 
@@ -143,16 +207,26 @@ export function collapseCardsToExercises(cards: WorkoutCard[]): EditExercise[] {
     // Count total sets (number of cards with same exercise)
     const totalSets = cardGroup.length;
 
+    const hasSetDetails = cardGroup.some((card) => card.setDetailId);
+    const setDetails = hasSetDetails
+      ? cardGroup.map((card, index) => ({
+          id: card.setDetailId || `set-${index}`,
+          reps: card.reps ?? null,
+          weight: card.weight ?? null,
+        }))
+      : null;
+
     const exercise: EditExercise = {
       id: firstCard.originalExerciseId || firstCard.id,
       name: firstCard.name,
       sets: totalSets,
-      reps: firstCard.reps,
-      weight: firstCard.weight || undefined,
+      reps: summariseValues(cardGroup.map((card) => card.reps)) ?? "",
+      weight: summariseValues(cardGroup.map((card) => card.weight)) || undefined,
       distance: firstCard.distance || undefined,
       timing: firstCard.timing || undefined,
       restSeconds: firstCard.restSeconds || undefined,
       notes: firstCard.notes || undefined,
+      setDetails,
     };
 
     exercises.push(exercise);
@@ -177,6 +251,8 @@ export function createBlankExerciseCard(): ExerciseCard {
     restSeconds: 60,
     notes: null,
     isEditing: true,  // Start in edit mode
+    amrapBlockId: null,
+    emomBlockId: null,
   };
 }
 
@@ -190,6 +266,28 @@ export function createRestCard(duration: number = 60, notes?: string): RestCard 
     duration,
     notes: notes || null,
   };
+}
+
+/**
+ * Prepare editor card layout for persistence (strip transient edit state).
+ */
+export function buildCardLayout(cards: WorkoutCard[]): WorkoutCardLayout[] {
+  return cards.map((card) => {
+    if (card.type === 'exercise') {
+      const { isEditing, ...rest } = card;
+      return rest;
+    }
+    return card;
+  });
+}
+
+/**
+ * Ensure stored card layout is ready for editor use.
+ */
+export function normaliseCardLayout(layout: WorkoutCardLayout[]): WorkoutCard[] {
+  return layout.map((card) =>
+    card.type === 'exercise' ? { ...card, isEditing: false } : card
+  );
 }
 
 /**

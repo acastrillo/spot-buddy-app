@@ -83,6 +83,10 @@ type StoredWorkout = {
     aiGenerated?: boolean;
     reason?: string;
   } | null;
+  workoutType?: DynamoDBWorkout["workoutType"];
+  structure?: DynamoDBWorkout["structure"] | null;
+  amrapBlocks?: DynamoDBWorkout["amrapBlocks"] | null;
+  emomBlocks?: DynamoDBWorkout["emomBlocks"] | null;
 };
 
 const generateId = () => {

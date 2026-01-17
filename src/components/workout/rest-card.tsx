@@ -12,7 +12,7 @@ interface RestCardProps {
 /**
  * RestCard Component
  *
- * Displays a rest period between exercises with amber/rest-color theme.
+ * Displays a rest period between exercises with a calm recovery theme.
  * Simpler than ExerciseCard - just shows duration and optional notes.
  */
 export function RestCard({ card, onDelete }: RestCardProps) {
@@ -25,19 +25,19 @@ export function RestCard({ card, onDelete }: RestCardProps) {
   }
 
   return (
-    <Card className="border-amber-600/40 bg-amber-950/30 hover:bg-amber-950/40 transition-colors shadow-md">
+    <Card className="border-emerald-500/30 bg-emerald-950/40 hover:bg-emerald-950/50 transition-colors shadow-md">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           {/* Rest indicator */}
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-amber-600/20">
-              <Clock className="h-5 w-5 text-amber-400" />
+            <div className="p-2 rounded-full bg-emerald-400/15">
+              <Clock className="h-5 w-5 text-emerald-200" />
             </div>
             <div>
-              <div className="text-lg font-semibold text-amber-100">
+              <div className="text-lg font-semibold text-emerald-100">
                 REST
               </div>
-              <div className="text-sm text-amber-300">
+              <div className="text-sm text-emerald-200/80">
                 {formatDuration(card.duration)}
               </div>
             </div>
@@ -47,7 +47,7 @@ export function RestCard({ card, onDelete }: RestCardProps) {
           {onDelete && (
             <button
               onClick={() => onDelete(card.id)}
-              className="p-1 rounded hover:bg-amber-600/20 text-amber-400 hover:text-amber-300 transition-colors"
+              className="p-1 rounded hover:bg-emerald-400/15 text-emerald-200/70 hover:text-emerald-100 transition-colors"
               aria-label="Delete rest period"
             >
               <svg
@@ -68,7 +68,7 @@ export function RestCard({ card, onDelete }: RestCardProps) {
 
         {/* Optional notes */}
         {card.notes && (
-          <div className="mt-3 text-sm text-amber-200/80 italic pl-11">
+          <div className="mt-3 text-sm text-emerald-100/70 italic pl-11">
             {card.notes}
           </div>
         )}

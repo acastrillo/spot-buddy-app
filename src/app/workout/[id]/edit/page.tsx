@@ -6,10 +6,8 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Loader2,
-  Plus,
   Save,
   Trash2,
-  X,
   Timer,
   Sparkles,
 } from "lucide-react";
@@ -18,6 +16,8 @@ import { useAuthStore } from "@/store";
 import { Login } from "@/components/auth/login";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { WorkoutCardList } from "@/components/workout/workout-card-list";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,29 +31,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  buildLocalWorkoutPayload,
-  denormaliseExercises,
-  EditableExercise,
-  EditableSet,
   EditableWorkoutState,
   normaliseWorkoutForEditing,
   type StoredWorkout,
   type DynamoDBWorkout,
 } from "@/lib/workouts/types";
+import {
+  buildCardLayout,
+  collapseCardsToExercises,
+  detectRepetitionPattern,
+  expandWorkoutToCards,
+  normaliseCardLayout,
+} from "@/lib/workout/card-transformer";
+import type { WorkoutCard, AMRAPBlockDraft, EMOMBlockDraft } from "@/types/workout-card";
 import { TIMER_TEMPLATES } from "@/timers";
 
 type WorkoutSource = "dynamodb" | "local";
 
-const makeId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-};
-
 const createSnapshot = (
   meta: EditableWorkoutState["meta"],
-  exercises: EditableExercise[]
+  cards: WorkoutCard[],
+  amrapBlocks: AMRAPBlockDraft[],
+  emomBlocks: EMOMBlockDraft[],
+  workoutType: string,
+  workoutStructure: any
 ) =>
   JSON.stringify({
     meta: {
@@ -61,17 +62,46 @@ const createSnapshot = (
       description: meta.description,
       timerConfig: meta.timerConfig,
     },
-    exercises: exercises.map((exercise) => ({
-      id: exercise.id,
-      name: exercise.name,
-      notes: exercise.notes,
-      restSeconds: exercise.restSeconds,
-      setDetails: exercise.setDetails.map((set) => ({
-        id: set.id,
-        reps: set.reps,
-        weight: set.weight,
-      })),
+    workoutType,
+    workoutStructure,
+    amrapBlocks: amrapBlocks.map((block) => ({
+      id: block.id,
+      label: block.label,
+      timeLimitSeconds: block.timeLimitSeconds,
+      order: block.order,
     })),
+    emomBlocks: emomBlocks.map((block) => ({
+      id: block.id,
+      label: block.label,
+      intervalSeconds: block.intervalSeconds,
+      order: block.order,
+    })),
+    cards: cards.map((card) =>
+      card.type === "exercise"
+        ? {
+            id: card.id,
+            type: card.type,
+            name: card.name,
+            sets: card.sets,
+            reps: card.reps,
+            weight: card.weight,
+            distance: card.distance,
+            time: card.time,
+            timing: card.timing,
+            restSeconds: card.restSeconds,
+            notes: card.notes,
+            amrapBlockId: card.amrapBlockId,
+            emomBlockId: card.emomBlockId,
+            originalExerciseId: card.originalExerciseId,
+            setDetailId: card.setDetailId,
+          }
+        : {
+            id: card.id,
+            type: card.type,
+            duration: card.duration,
+            notes: card.notes,
+          }
+    ),
   });
 
 const formatWorkoutDate = (dateString: string) => {
@@ -87,165 +117,16 @@ const formatWorkoutDate = (dateString: string) => {
   }
 };
 
-const createEmptySet = (): EditableSet => ({
-  id: makeId(),
-  reps: "",
-  weight: "",
-});
-
-const createEmptyExercise = (): EditableExercise => ({
-  id: makeId(),
-  name: "",
-  notes: null,
-  restSeconds: null,
-  setDetails: [createEmptySet()],
-});
-
-interface ExerciseCardProps {
-  exercise: EditableExercise;
-  index: number;
-  validationErrors: Record<string, string>;
-  onNameChange: (value: string) => void;
-  onSetChange: (setId: string, field: "reps" | "weight", value: string) => void;
-  onRemoveSet: (setId: string) => void;
-  onAddSet: () => void;
-  onRemoveExercise: () => void;
-}
-
-function ExerciseCard({
-  exercise,
-  index,
-  validationErrors,
-  onNameChange,
-  onSetChange,
-  onRemoveSet,
-  onAddSet,
-  onRemoveExercise,
-}: ExerciseCardProps) {
-  return (
-    <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-4 mb-4 shadow-lg">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-700 text-xs font-semibold text-white">
-            {index + 1}
-          </div>
-          <div className="flex-1">
-            <Input
-              value={exercise.name}
-              onChange={(event) => onNameChange(event.target.value)}
-              placeholder="Exercise name"
-              className={cn(
-                "border-slate-600 bg-slate-900/80 text-white placeholder:text-slate-400 focus:border-primary focus:ring-0 h-9",
-                validationErrors[`exercise-${exercise.id}`] && "border-red-500 focus:border-red-500"
-              )}
-            />
-            {validationErrors[`exercise-${exercise.id}`] && (
-              <p className="mt-1 text-xs text-red-400">
-                {validationErrors[`exercise-${exercise.id}`]}
-              </p>
-            )}
-          </div>
-        </div>
-        <button
-          type="button"
-          title="Remove exercise"
-          onClick={onRemoveExercise}
-          className="flex-shrink-0 p-1.5 text-slate-400 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      <p className="mb-3 text-xs text-slate-400">
-        Exclude your bodyweight when inputting weight.
-      </p>
-
-      <div className="space-y-2">
-        {exercise.setDetails.map((set, setIndex) => (
-          <div
-            key={set.id}
-            className="flex items-center gap-3 rounded-xl bg-slate-900/60 p-3"
-          >
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-700 text-xs font-semibold text-white">
-              {setIndex + 1}
-            </div>
-            <div className="grid flex-1 grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
-                  Reps
-                </label>
-                <Input
-                  value={set.reps}
-                  onChange={(event) => onSetChange(set.id, "reps", event.target.value)}
-                  placeholder="0"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className={cn(
-                    "border-slate-600 bg-slate-800 text-white placeholder:text-slate-500 focus:border-primary focus:ring-0 h-10 text-center font-medium",
-                    validationErrors[`set-${set.id}-reps`] && "border-red-500 focus:border-red-500"
-                  )}
-                />
-                {validationErrors[`set-${set.id}-reps`] && (
-                  <p className="mt-1 text-xs text-red-400">
-                    {validationErrors[`set-${set.id}-reps`]}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
-                  Weight (lbs)
-                </label>
-                <Input
-                  value={set.weight}
-                  onChange={(event) => onSetChange(set.id, "weight", event.target.value)}
-                  placeholder="0"
-                  inputMode="decimal"
-                  className="border-slate-600 bg-slate-800 text-white placeholder:text-slate-500 focus:border-primary focus:ring-0 h-10 text-center font-medium"
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              title="Remove set"
-              onClick={() => onRemoveSet(set.id)}
-              disabled={exercise.setDetails.length === 1}
-              className="flex-shrink-0 p-1.5 text-slate-400 hover:text-red-400 transition-colors disabled:text-slate-600 disabled:cursor-not-allowed"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onAddSet}
-          className="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
-        >
-          <Plus className="h-4 w-4" />
-          Add Set
-        </button>
-        <button
-          type="button"
-          onClick={onRemoveExercise}
-          className="p-1 text-slate-500 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function EditWorkoutPage() {
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
   const params = useParams();
   const [workoutMeta, setWorkoutMeta] = useState<EditableWorkoutState["meta"] | null>(null);
-  const [exercises, setExercises] = useState<EditableExercise[]>([]);
+  const [cards, setCards] = useState<WorkoutCard[]>([]);
+  const [amrapBlocks, setAmrapBlocks] = useState<AMRAPBlockDraft[]>([]);
+  const [emomBlocks, setEmomBlocks] = useState<EMOMBlockDraft[]>([]);
+  const [workoutType, setWorkoutType] = useState<string>("standard");
+  const [workoutStructure, setWorkoutStructure] = useState<any>(null);
   const [source, setSource] = useState<WorkoutSource>("local");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -253,6 +134,24 @@ export default function EditWorkoutPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const initialSnapshotRef = useRef<string>("");
+
+  useEffect(() => {
+    if (emomBlocks.length > 0 && workoutType !== "emom") {
+      setWorkoutType("emom");
+      return;
+    }
+    if (emomBlocks.length === 0 && amrapBlocks.length > 0 && workoutType !== "amrap") {
+      setWorkoutType("amrap");
+      return;
+    }
+    if (
+      emomBlocks.length === 0 &&
+      amrapBlocks.length === 0 &&
+      (workoutType === "amrap" || workoutType === "emom")
+    ) {
+      setWorkoutType("standard");
+    }
+  }, [emomBlocks.length, amrapBlocks.length, workoutType]);
 
   useEffect(() => {
     const workoutId = params?.id as string | undefined;
@@ -285,14 +184,158 @@ export default function EditWorkoutPage() {
         if (!workout) {
           setNotFound(true);
           setWorkoutMeta(null);
-          setExercises([]);
+          setCards([]);
+          setAmrapBlocks([]);
+          setEmomBlocks([]);
           return;
         }
 
         const normalised = normaliseWorkoutForEditing(workout);
         setWorkoutMeta(normalised.meta);
-        setExercises(normalised.exercises);
-        initialSnapshotRef.current = createSnapshot(normalised.meta, normalised.exercises);
+        const hasEmomBlocks = (workout.emomBlocks?.length ?? 0) > 0;
+        const hasAmrapBlocks = (workout.amrapBlocks?.length ?? 0) > 0;
+        const detectedWorkoutType = hasEmomBlocks
+          ? "emom"
+          : hasAmrapBlocks
+          ? "amrap"
+          : workout.workoutType || "standard";
+        const nextWorkoutStructure = workout.structure ?? null;
+        const storedCardLayout =
+          Array.isArray(nextWorkoutStructure?.cardLayout) && nextWorkoutStructure.cardLayout.length > 0
+            ? normaliseCardLayout(nextWorkoutStructure.cardLayout)
+            : null;
+        setWorkoutType(detectedWorkoutType);
+        setWorkoutStructure(nextWorkoutStructure);
+
+        const mapExercise = (exercise: any) => ({
+          id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
+          name: exercise.name || "",
+          sets: exercise.sets || 1,
+          reps: exercise.reps || "",
+          weight: exercise.weight || "",
+          distance: exercise.distance || null,
+          timing: exercise.timing || null,
+          restSeconds:
+            typeof exercise.restSeconds === "number"
+              ? exercise.restSeconds
+              : exercise.restSeconds
+              ? Number(exercise.restSeconds)
+              : null,
+          notes: exercise.notes || "",
+          setDetails: Array.isArray(exercise.setDetails) ? exercise.setDetails : null,
+        });
+
+        const exerciseData = Array.isArray(workout.exercises)
+          ? workout.exercises.map(mapExercise)
+          : [];
+
+        let nextCards: WorkoutCard[] = [];
+        let nextAmrapBlocks: AMRAPBlockDraft[] = [];
+        let nextEmomBlocks: EMOMBlockDraft[] = [];
+
+        if (detectedWorkoutType === "emom") {
+          const defaultIntervalSeconds = Math.max(
+            1,
+            Math.floor(workout.structure?.timePerRound || 60)
+          );
+          if (Array.isArray(workout.emomBlocks) && workout.emomBlocks.length > 0) {
+            const baseId = Date.now();
+            workout.emomBlocks.forEach((block, index) => {
+              const blockId = block.id || `emom-${baseId}-${index}`;
+              nextEmomBlocks.push({
+                id: blockId,
+                label: block.label || "EMOM",
+                intervalSeconds: block.intervalSeconds || defaultIntervalSeconds,
+                order: block.order || index + 1,
+              });
+
+              const blockExercises = (block.exercises || []).map(mapExercise);
+              nextCards.push(
+                ...expandWorkoutToCards(blockExercises, undefined, {
+                  emomBlockId: blockId,
+                })
+              );
+            });
+          } else {
+            const blockId = `emom-${Date.now()}`;
+            nextEmomBlocks = [
+              {
+                id: blockId,
+                label: "EMOM",
+                intervalSeconds: defaultIntervalSeconds,
+                order: 1,
+              },
+            ];
+            nextCards = expandWorkoutToCards(exerciseData, undefined, {
+              emomBlockId: blockId,
+            });
+          }
+        } else if (detectedWorkoutType === "amrap") {
+          if (Array.isArray(workout.amrapBlocks) && workout.amrapBlocks.length > 0) {
+            const baseId = Date.now();
+            workout.amrapBlocks.forEach((block, index) => {
+              const blockId = block.id || `amrap-${baseId}-${index}`;
+              nextAmrapBlocks.push({
+                id: blockId,
+                label: block.label || "AMRAP",
+                timeLimitSeconds: block.timeLimit || 720,
+                order: block.order || index + 1,
+              });
+
+              const blockExercises = (block.exercises || []).map(mapExercise);
+              nextCards.push(
+                ...expandWorkoutToCards(blockExercises, undefined, {
+                  amrapBlockId: blockId,
+                })
+              );
+            });
+          } else {
+            const timeLimitSeconds = workout.structure?.timeLimit || 720;
+            const blockId = `amrap-${Date.now()}`;
+            nextAmrapBlocks = [
+              {
+                id: blockId,
+                label: "AMRAP",
+                timeLimitSeconds,
+                order: 1,
+              },
+            ];
+            nextCards = expandWorkoutToCards(exerciseData, undefined, {
+              amrapBlockId: blockId,
+            });
+          }
+        } else {
+          let repetition = detectRepetitionPattern(exerciseData, detectedWorkoutType);
+          if (detectedWorkoutType === "rounds" && workout.structure?.rounds) {
+            repetition = {
+              rounds: workout.structure.rounds,
+              pattern: "circuit" as const,
+              restBetweenExercises: false,
+              restBetweenRounds: true,
+              defaultRestDuration: 60,
+            };
+          }
+
+          nextCards = expandWorkoutToCards(exerciseData, repetition);
+          nextAmrapBlocks = [];
+          nextEmomBlocks = [];
+        }
+
+        if (storedCardLayout) {
+          nextCards = storedCardLayout;
+        }
+
+        setCards(nextCards);
+        setAmrapBlocks(nextAmrapBlocks);
+        setEmomBlocks(nextEmomBlocks);
+        initialSnapshotRef.current = createSnapshot(
+          normalised.meta,
+          nextCards,
+          nextAmrapBlocks,
+          nextEmomBlocks,
+          detectedWorkoutType,
+          nextWorkoutStructure
+        );
       } catch (error) {
         console.error("Error loading workout:", error);
         setNotFound(true);
@@ -306,9 +349,16 @@ export default function EditWorkoutPage() {
 
   const isDirty = useMemo(() => {
     if (!workoutMeta) return false;
-    const currentSnapshot = createSnapshot(workoutMeta, exercises);
+    const currentSnapshot = createSnapshot(
+      workoutMeta,
+      cards,
+      amrapBlocks,
+      emomBlocks,
+      workoutType,
+      workoutStructure
+    );
     return currentSnapshot !== initialSnapshotRef.current;
-  }, [workoutMeta, exercises]);
+  }, [workoutMeta, cards, amrapBlocks, emomBlocks, workoutType, workoutStructure]);
 
   const clearError = (key: string) => {
     setValidationErrors((prev) => {
@@ -319,94 +369,11 @@ export default function EditWorkoutPage() {
     });
   };
 
-  const handleExerciseNameChange = (exerciseId: string, value: string) => {
-    setExercises((prev) =>
-      prev.map((exercise) =>
-        exercise.id === exerciseId ? { ...exercise, name: value } : exercise
-      )
-    );
-    clearError(`exercise-${exerciseId}`);
-  };
-
-  const handleSetChange = (
-    exerciseId: string,
-    setId: string,
-    field: "reps" | "weight",
-    value: string
-  ) => {
-    setExercises((prev) =>
-      prev.map((exercise) => {
-        if (exercise.id !== exerciseId) return exercise;
-        return {
-          ...exercise,
-          setDetails: exercise.setDetails.map((set) =>
-            set.id === setId ? { ...set, [field]: value } : set
-          ),
-        };
-      })
-    );
-    if (field === "reps") {
-      clearError(`set-${setId}-reps`);
-    }
-  };
-
-  const handleAddSet = (exerciseId: string) => {
-    setExercises((prev) =>
-      prev.map((exercise) =>
-        exercise.id === exerciseId
-          ? {
-              ...exercise,
-              setDetails: [...exercise.setDetails, createEmptySet()],
-            }
-          : exercise
-      )
-    );
-  };
-
-  const handleRemoveSet = (exerciseId: string, setId: string) => {
-    setExercises((prev) =>
-      prev.map((exercise) => {
-        if (exercise.id !== exerciseId) return exercise;
-        if (exercise.setDetails.length === 1) {
-          return exercise;
-        }
-        return {
-          ...exercise,
-          setDetails: exercise.setDetails.filter((set) => set.id !== setId),
-        };
-      })
-    );
-  };
-
-  const handleAddExercise = () => {
-    setExercises((prev) => [...prev, createEmptyExercise()]);
-  };
-
-  const handleRemoveExercise = (exerciseId: string) => {
-    setExercises((prev) => {
-      if (prev.length === 1) {
-        return [createEmptyExercise()];
-      }
-      return prev.filter((exercise) => exercise.id !== exerciseId);
-    });
-  };
-
   const validate = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!workoutMeta?.title.trim()) {
       errors["meta-title"] = "Workout name is required.";
     }
-
-    exercises.forEach((exercise) => {
-      if (!exercise.name.trim()) {
-        errors[`exercise-${exercise.id}`] = "Exercise name is required.";
-      }
-      exercise.setDetails.forEach((set) => {
-        if (!set.reps.trim()) {
-          errors[`set-${set.id}-reps`] = "Enter reps for this set.";
-        }
-      });
-    });
     return errors;
   };
 
@@ -440,7 +407,61 @@ export default function EditWorkoutPage() {
 
     setSaving(true);
     try {
-      const exercisePayload = denormaliseExercises(exercises);
+      const exercisePayload = collapseCardsToExercises(cards);
+      const cardLayout = buildCardLayout(cards);
+      const resolvedWorkoutType =
+        emomBlocks.length > 0
+          ? "emom"
+          : amrapBlocks.length > 0
+          ? "amrap"
+          : workoutType === "amrap" || workoutType === "emom"
+          ? "standard"
+          : workoutType;
+      const resolvedWorkoutTypeValue =
+        resolvedWorkoutType as Exclude<DynamoDBWorkout["workoutType"], undefined>;
+      const amrapBlocksPayload = amrapBlocks.length
+        ? amrapBlocks.map((block) => ({
+            id: block.id,
+            label: block.label,
+            timeLimit: block.timeLimitSeconds,
+            order: block.order,
+            exercises: collapseCardsToExercises(
+              cards.filter(
+                (card) => card.type === "exercise" && card.amrapBlockId === block.id
+              )
+            ),
+          }))
+        : null;
+      const emomBlocksPayload = emomBlocks.length
+        ? emomBlocks.map((block) => ({
+            id: block.id,
+            label: block.label,
+            intervalSeconds: block.intervalSeconds,
+            order: block.order,
+            exercises: collapseCardsToExercises(
+              cards.filter(
+                (card) => card.type === "exercise" && card.emomBlockId === block.id
+              )
+            ),
+          }))
+        : null;
+      const emomStructure =
+        emomBlocks.length > 0
+          ? {
+              rounds: emomBlocks.length,
+              timePerRound: emomBlocks[0].intervalSeconds,
+              totalTime: emomBlocks.reduce((sum, block) => sum + block.intervalSeconds, 0),
+            }
+          : null;
+      const structure =
+        resolvedWorkoutType === "amrap"
+          ? amrapBlocks.length === 1
+            ? { timeLimit: amrapBlocks[0].timeLimitSeconds }
+            : null
+          : resolvedWorkoutType === "emom"
+          ? workoutStructure ?? emomStructure
+          : workoutStructure;
+      const structureWithLayout = { ...(structure ?? {}), cardLayout };
 
       if (user?.id) {
         const response = await fetch(`/api/workouts/${workoutMeta.id}`, {
@@ -455,6 +476,10 @@ export default function EditWorkoutPage() {
             totalDuration: workoutMeta.totalDuration,
             difficulty: workoutMeta.difficulty,
             tags: workoutMeta.tags,
+            workoutType: resolvedWorkoutTypeValue,
+            structure: structureWithLayout,
+            amrapBlocks: amrapBlocksPayload,
+            emomBlocks: emomBlocksPayload,
           }),
         });
         if (!response.ok) {
@@ -463,14 +488,43 @@ export default function EditWorkoutPage() {
         setSource("dynamodb");
       }
 
-      const localPayload = buildLocalWorkoutPayload(
-        { meta: workoutMeta, exercises } as EditableWorkoutState,
-        exercises,
-        exercisePayload
-      );
+      const localPayload: StoredWorkout = {
+        id: workoutMeta.id,
+        title: workoutMeta.title.trim(),
+        description: workoutMeta.description ?? null,
+        exercises: exercisePayload,
+        content: workoutMeta.content,
+        author: workoutMeta.author ?? null,
+        createdAt: workoutMeta.createdAt,
+        updatedAt: new Date().toISOString(),
+        source: workoutMeta.source,
+        type: workoutMeta.type,
+        totalDuration: workoutMeta.totalDuration,
+        difficulty: workoutMeta.difficulty,
+        tags: workoutMeta.tags,
+        llmData: workoutMeta.llmData,
+        imageUrls: workoutMeta.imageUrls,
+        thumbnailUrl: workoutMeta.thumbnailUrl ?? null,
+        scheduledDate: workoutMeta.scheduledDate ?? null,
+        status: workoutMeta.status ?? null,
+        completedDate: workoutMeta.completedDate ?? null,
+        timerConfig: workoutMeta.timerConfig ?? null,
+        workoutType: resolvedWorkoutTypeValue,
+        structure: structureWithLayout,
+        amrapBlocks: amrapBlocksPayload,
+        emomBlocks: emomBlocksPayload,
+      };
       updateLocalCache(localPayload);
 
-      initialSnapshotRef.current = createSnapshot(workoutMeta, exercises);
+      setWorkoutStructure(structureWithLayout);
+      initialSnapshotRef.current = createSnapshot(
+        workoutMeta,
+        cards,
+        amrapBlocks,
+        emomBlocks,
+        resolvedWorkoutTypeValue,
+        structureWithLayout
+      );
       setValidationErrors({});
       window.dispatchEvent(new Event("workoutsUpdated"));
       router.push(`/workout/${workoutMeta.id}`);
@@ -580,14 +634,7 @@ export default function EditWorkoutPage() {
               </p>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleAddExercise}
-              className="h-10 w-10 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            <div className="h-10 w-10" aria-hidden="true" />
           </div>
 
           <div className="mb-6 rounded-2xl border border-slate-700/50 bg-slate-800/80 p-5 shadow-lg">
@@ -709,30 +756,25 @@ export default function EditWorkoutPage() {
             </div>
           </div>
 
-          {exercises.map((exercise, index) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              index={index}
-              validationErrors={validationErrors}
-              onNameChange={(value) => handleExerciseNameChange(exercise.id, value)}
-              onSetChange={(setId, field, value) => handleSetChange(exercise.id, setId, field, value)}
-              onRemoveSet={(setId) => handleRemoveSet(exercise.id, setId)}
-              onAddSet={() => handleAddSet(exercise.id)}
-              onRemoveExercise={() => handleRemoveExercise(exercise.id)}
-            />
-          ))}
-
-          <div className="mt-4 flex justify-center">
-            <Button
-              variant="ghost"
-              onClick={handleAddExercise}
-              className="rounded-xl border border-dashed border-slate-600 bg-transparent px-6 py-3 text-slate-300 hover:border-slate-500 hover:text-white transition-colors"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Movement
-            </Button>
-          </div>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Workout Cards</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Tap a card to edit; drag the handle to reorder. Empty fields auto-hide.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <WorkoutCardList
+                cards={cards}
+                onCardsChange={setCards}
+                amrapBlocks={amrapBlocks}
+                onAmrapBlocksChange={setAmrapBlocks}
+                emomBlocks={emomBlocks}
+                onEmomBlocksChange={setEmomBlocks}
+                showAddButton={true}
+              />
+            </CardContent>
+          </Card>
 
           <div className="mt-10">
             <Button

@@ -12,6 +12,7 @@ interface AMRAPTimerCardProps {
   totalSeconds: number
   blockLabel?: string // "Block 1 of 2" for multi-block workouts
   isRunning: boolean
+  isCompleted?: boolean
   onPlayPause: () => void
   onReset: () => void
   soundEnabled?: boolean
@@ -23,6 +24,7 @@ export function AMRAPTimerCard({
   totalSeconds,
   blockLabel,
   isRunning,
+  isCompleted = false,
   onPlayPause,
   onReset,
   soundEnabled = true,
@@ -45,7 +47,12 @@ export function AMRAPTimerCard({
   const shouldPulse = percentage <= 20 && isRunning
 
   return (
-    <Card className="p-6 md:p-8 bg-gradient-to-br from-background to-muted/20 border-2">
+    <Card
+      className={cn(
+        "p-6 md:p-8 bg-gradient-to-br from-background to-muted/20 border-2",
+        isCompleted && "border-red-500/70 bg-red-500/5"
+      )}
+    >
       <div className="space-y-4 md:space-y-6">
         {/* Block label for multi-block workouts */}
         {blockLabel && (
@@ -92,6 +99,13 @@ export function AMRAPTimerCard({
           <div className="flex items-center justify-center gap-2 text-red-500 animate-pulse">
             <Bell className="h-5 w-5" />
             <span className="font-medium">BEEP</span>
+          </div>
+        )}
+
+        {isCompleted && (
+          <div className="flex items-center justify-center gap-2 text-red-500">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="font-medium">Time&apos;s up</span>
           </div>
         )}
 

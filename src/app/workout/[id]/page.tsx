@@ -8,6 +8,7 @@ import { Login } from "@/components/auth/login"
 import { Header } from "@/components/layout/header"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EnhanceWithAIButton } from "@/components/ai/enhance-button"
 import {
@@ -30,6 +31,7 @@ import {
   Loader2,
   Trash2
 } from "lucide-react"
+import { formatTime as formatAmrapTime } from "@/lib/amrap-migration"
 
 interface Exercise {
   id: string
@@ -51,6 +53,20 @@ interface Workout {
   title: string
   description: string
   exercises: Exercise[]
+  amrapBlocks?: Array<{
+    id: string
+    label: string
+    timeLimit: number
+    order: number
+    exercises: Exercise[]
+  }>
+  emomBlocks?: Array<{
+    id: string
+    label: string
+    intervalSeconds: number
+    order: number
+    exercises: Exercise[]
+  }>
   content: string
   author?: any
   createdAt: string
@@ -74,6 +90,16 @@ interface Workout {
     aiGenerated?: boolean
     reason?: string
   }
+}
+
+const getAmrapTotalSeconds = (workout: Workout) => {
+  if (workout.amrapBlocks && workout.amrapBlocks.length > 0) {
+    return workout.amrapBlocks.reduce(
+      (sum, block) => sum + (block.timeLimit || 0),
+      0
+    )
+  }
+  return workout.structure?.timeLimit || 0
 }
 
 export default function WorkoutViewPage() {
@@ -107,6 +133,8 @@ export default function WorkoutViewPage() {
           title: dbWorkout.title,
           description: dbWorkout.description || '',
           exercises: dbWorkout.exercises || [],
+          amrapBlocks: dbWorkout.amrapBlocks || [],
+          emomBlocks: dbWorkout.emomBlocks || [],
           content: dbWorkout.content || '',
           author: dbWorkout.author,
           createdAt: dbWorkout.createdAt,
@@ -213,11 +241,127 @@ export default function WorkoutViewPage() {
     )
   }
 
+  const amrapTotalSeconds =
+    workout.workoutType === 'amrap' ? getAmrapTotalSeconds(workout) : 0
+  const amrapMinutes = amrapTotalSeconds ? Math.floor(amrapTotalSeconds / 60) : 0
+  const amrapBlockCount = workout.amrapBlocks?.length || 0
+  const orderedAmrapBlocks = workout.amrapBlocks
+    ? [...workout.amrapBlocks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    : []
+  const hasAmrapBlocks = workout.workoutType === 'amrap' && orderedAmrapBlocks.length > 0
+  const totalAmrapExercises = orderedAmrapBlocks.reduce(
+    (sum, block) => sum + (block.exercises?.length || 0),
+    0
+  )
+  const normalizeName = (value?: string) => (value || "").trim().toLowerCase()
+  const blockExerciseIds = new Set<string>()
+  const blockExerciseNames = new Set<string>()
+  orderedAmrapBlocks.forEach((block) => {
+    block.exercises?.forEach((exercise) => {
+      if (exercise.id) blockExerciseIds.add(exercise.id)
+      if (exercise.name) blockExerciseNames.add(normalizeName(exercise.name))
+    })
+  })
+  const ungroupedExercises = hasAmrapBlocks
+    ? workout.exercises.filter(
+        (exercise) =>
+          !blockExerciseIds.has(exercise.id) &&
+          !blockExerciseNames.has(normalizeName(exercise.name))
+      )
+    : []
+
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+
+  const renderExerciseCard = (exercise: Exercise, index: number, key?: string) => {
+    const setDetails =
+      Array.isArray(exercise.setDetails) && exercise.setDetails.length > 0
+        ? exercise.setDetails
+        : null
+
+    return (
+      <div
+        key={key ?? exercise.id ?? `${index}-${exercise.name}`}
+        className="rounded-lg border border-border bg-surface p-4 md:flex md:items-start md:justify-between"
+      >
+        <div className="flex items-start space-x-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            {index + 1}
+          </div>
+          <div>
+            <h3 className="font-medium text-text-primary capitalize">
+              {exercise.name}
+            </h3>
+            {exercise.notes && (
+              <p className="mt-1 text-xs text-text-secondary">{exercise.notes}</p>
+            )}
+            {setDetails && (
+              <div className="mt-3 space-y-2 rounded-lg bg-background/60 p-3 text-xs text-text-secondary">
+                {setDetails.map((detail, detailIdx) => (
+                  <div
+                    key={detail?.id ?? `${exercise.id}-${detailIdx}`}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="uppercase tracking-wide text-[10px] text-text-secondary/70">
+                      Set {detailIdx + 1}
+                    </span>
+                    <div className="flex items-center gap-4 text-sm text-text-primary">
+                      <span>{detail?.reps || exercise.reps || "-"} reps</span>
+                      <span className="text-text-secondary">
+                        {detail?.weight || exercise.weight || "Bodyweight"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {exercise.restSeconds && exercise.restSeconds > 0 && (
+              <p className="mt-2 text-xs text-text-secondary">
+                Rest {exercise.restSeconds}s between sets
+              </p>
+            )}
+          </div>
+        </div>
+
+        {!setDetails && (
+          <div className="mt-4 flex items-center space-x-6 text-sm text-text-secondary md:mt-0">
+            {exercise.sets > 1 && (
+              <div className="text-center">
+                <div className="font-medium text-text-primary">{exercise.sets}</div>
+                <div className="text-xs">sets</div>
+              </div>
+            )}
+
+            {exercise.reps && (
+              <div className="text-center">
+                <div className="font-medium text-text-primary">{exercise.reps}</div>
+                <div className="text-xs">reps</div>
+              </div>
+            )}
+
+            {exercise.weight && (
+              <div className="text-center">
+                <div className="font-medium text-text-primary">{exercise.weight}</div>
+                <div className="text-xs">weight</div>
+              </div>
+            )}
+
+            {exercise.restSeconds && exercise.restSeconds > 0 && (
+              <div className="text-center">
+                <div className="font-medium text-text-primary">
+                  {exercise.restSeconds}s
+                </div>
+                <div className="text-xs">rest</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -248,8 +392,7 @@ export default function WorkoutViewPage() {
                   <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                     <Clock className="h-4 w-4 text-amber-500" />
                     <span className="text-sm font-semibold text-amber-500">
-                      AMRAP {workout.structure?.timeLimit ?
-                        `${Math.floor(workout.structure.timeLimit / 60)} min` : ''}
+                      AMRAP{amrapBlockCount > 1 ? ` ${amrapBlockCount} blocks` : ""}{amrapMinutes ? ` · ${amrapMinutes} min` : ""}
                     </span>
                   </div>
                 )}
@@ -279,6 +422,8 @@ export default function WorkoutViewPage() {
                       exercises: workout.exercises,
                       workoutType: workout.workoutType,
                       structure: workout.structure,
+                      amrapBlocks: workout.amrapBlocks,
+                      emomBlocks: workout.emomBlocks,
                     },
                     createdAt: workout.createdAt,
                     source: workout.source,
@@ -319,7 +464,9 @@ export default function WorkoutViewPage() {
                   <div>
                     <div className="text-sm text-text-secondary">Workout Type</div>
                     <div className="text-lg font-bold text-amber-500">
-                      AMRAP - {Math.floor((workout.structure?.timeLimit || 0) / 60)} Minutes
+                      {amrapBlockCount > 1
+                        ? `AMRAP ${amrapBlockCount} Blocks${amrapMinutes ? ` · ${amrapMinutes} Minutes` : ""}`
+                        : `AMRAP${amrapMinutes ? ` - ${amrapMinutes} Minutes` : ""}`}
                     </div>
                   </div>
                 </div>
@@ -379,98 +526,77 @@ export default function WorkoutViewPage() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {workout.workoutType === 'amrap'
+                {hasAmrapBlocks
+                  ? `AMRAP Blocks (${orderedAmrapBlocks.length})${
+                      totalAmrapExercises ? ` · ${totalAmrapExercises} movements` : ""
+                    }`
+                  : workout.workoutType === 'amrap'
                   ? `Exercise Circuit (${workout.exercises.length} movements)`
                   : `Exercises (${workout.exercises.length})`}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {workout.exercises.map((exercise, idx) => {
-                  const setDetails =
-                    Array.isArray(exercise.setDetails) && exercise.setDetails.length > 0
-                      ? exercise.setDetails
-                      : null;
+              {hasAmrapBlocks ? (
+                <div className="space-y-4">
+                  {orderedAmrapBlocks.map((block, blockIdx) => {
+                    const blockLabel = (block.label || "AMRAP").trim() || "AMRAP"
+                    const useIndex =
+                      orderedAmrapBlocks.length > 1 && blockLabel.toLowerCase() === "amrap"
+                    const badgeLabel = useIndex ? `AMRAP ${blockIdx + 1}` : blockLabel
+                    const blockExercises = block.exercises || []
 
-                  return (
-                    <div
-                      key={exercise.id}
-                      className="rounded-lg border border-border bg-surface p-4 md:flex md:items-start md:justify-between"
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-text-primary capitalize">
-                            {exercise.name}
-                          </h3>
-                          {exercise.notes && (
-                            <p className="mt-1 text-xs text-text-secondary">{exercise.notes}</p>
-                          )}
-                          {setDetails && (
-                            <div className="mt-3 space-y-2 rounded-lg bg-background/60 p-3 text-xs text-text-secondary">
-                              {setDetails.map((detail, detailIdx) => (
-                                <div
-                                  key={detail?.id ?? `${exercise.id}-${detailIdx}`}
-                                  className="flex items-center justify-between gap-3"
-                                >
-                                  <span className="uppercase tracking-wide text-[10px] text-text-secondary/70">
-                                    Set {detailIdx + 1}
-                                  </span>
-                                  <div className="flex items-center gap-4 text-sm text-text-primary">
-                                    <span>{detail?.reps || exercise.reps || "-"} reps</span>
-                                    <span className="text-text-secondary">
-                                      {detail?.weight || exercise.weight || "Bodyweight"}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                    return (
+                      <div
+                        key={block.id}
+                        className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4"
+                      >
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className="border-blue-400/40 bg-blue-500/20 text-blue-100">
+                              {badgeLabel}
+                            </Badge>
+                            <div className="flex items-center gap-1 text-sm font-semibold text-blue-100/80">
+                              <Clock className="h-4 w-4" />
+                              {formatAmrapTime(block.timeLimit)}
                             </div>
-                          )}
-                          {exercise.restSeconds && exercise.restSeconds > 0 && (
-                            <p className="mt-2 text-xs text-text-secondary">
-                              Rest {exercise.restSeconds}s between sets
+                          </div>
+                          <span className="text-xs text-blue-100/60">
+                            {blockExercises.length} move{blockExercises.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {blockExercises.length > 0 ? (
+                            blockExercises.map((exercise, idx) =>
+                              renderExerciseCard(exercise, idx, `${block.id}-${exercise.id ?? idx}`)
+                            )
+                          ) : (
+                            <p className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm text-blue-100/70">
+                              No moves in this block yet.
                             </p>
                           )}
                         </div>
                       </div>
+                    )
+                  })}
 
-                      {!setDetails && (
-                        <div className="mt-4 flex items-center space-x-6 text-sm text-text-secondary md:mt-0">
-                          {exercise.sets > 1 && (
-                            <div className="text-center">
-                              <div className="font-medium text-text-primary">{exercise.sets}</div>
-                              <div className="text-xs">sets</div>
-                            </div>
-                          )}
-
-                          {exercise.reps && (
-                            <div className="text-center">
-                              <div className="font-medium text-text-primary">{exercise.reps}</div>
-                              <div className="text-xs">reps</div>
-                            </div>
-                          )}
-
-                          {exercise.weight && (
-                            <div className="text-center">
-                              <div className="font-medium text-text-primary">{exercise.weight}</div>
-                              <div className="text-xs">weight</div>
-                            </div>
-                          )}
-
-                          {exercise.restSeconds && exercise.restSeconds > 0 && (
-                            <div className="text-center">
-                              <div className="font-medium text-text-primary">{exercise.restSeconds}s</div>
-                              <div className="text-xs">rest</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  {ungroupedExercises.length > 0 && (
+                    <div className="rounded-2xl border border-border bg-background/40 p-4">
+                      <div className="mb-3 text-sm font-semibold text-text-secondary">
+                        Moves outside AMRAP blocks
+                      </div>
+                      <div className="space-y-3">
+                        {ungroupedExercises.map((exercise, idx) =>
+                          renderExerciseCard(exercise, idx, `ungrouped-${exercise.id ?? idx}`)
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {workout.exercises.map((exercise, idx) => renderExerciseCard(exercise, idx))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

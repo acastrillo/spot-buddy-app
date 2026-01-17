@@ -91,9 +91,9 @@ export function AdminUsersClient() {
   if (error) {
     return (
       <div className="mt-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-red-400 mb-4"
+            className="mx-auto h-12 w-12 text-destructive mb-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -105,13 +105,13 @@ export function AdminUsersClient() {
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <h3 className="text-lg font-medium text-red-800 mb-2">
+          <h3 className="text-lg font-medium text-text-primary mb-2">
             Failed to Load Users
           </h3>
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-destructive mb-4">{error}</p>
           <button
             onClick={handleRetry}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-destructive hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-destructive"
           >
             Retry
           </button>
@@ -126,18 +126,18 @@ export function AdminUsersClient() {
 
       <div className="relative mt-6">
         {loading && (
-          <div className="absolute inset-0 bg-white/75 flex items-center justify-center z-10 rounded-lg">
+          <div className="absolute inset-0 bg-surface/90 flex items-center justify-center z-10 rounded-lg">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading users...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-text-secondary">Loading users...</p>
             </div>
           </div>
         )}
 
         {users.length === 0 && !loading ? (
-          <div className="text-center p-12 bg-gray-50 rounded-lg">
+          <div className="text-center p-12 bg-surface rounded-lg border border-border">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400 mb-4"
+              className="mx-auto h-12 w-12 text-text-secondary mb-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -149,15 +149,15 @@ export function AdminUsersClient() {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-text-primary mb-2">
               No Users Found
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-text-secondary mb-4">
               No users match your current filters.
             </p>
             <button
               onClick={() => router.push('/admin/users')}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-primary hover:text-primary/80 font-medium"
             >
               Clear all filters
             </button>

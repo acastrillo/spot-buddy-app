@@ -10,6 +10,7 @@ interface AMRAPBlockNavigatorProps {
   currentIndex: number
   onNavigate: (index: number) => void
   completedBlocks: Set<string>
+  onComplete?: () => void
 }
 
 export function AMRAPBlockNavigator({
@@ -17,6 +18,7 @@ export function AMRAPBlockNavigator({
   currentIndex,
   onNavigate,
   completedBlocks,
+  onComplete,
 }: AMRAPBlockNavigatorProps) {
   // Only show navigator for multi-block workouts
   if (blocks.length <= 1) {
@@ -25,20 +27,24 @@ export function AMRAPBlockNavigator({
 
   const canGoPrevious = currentIndex > 0
   const canGoNext = currentIndex < blocks.length - 1
+  const isLastBlock = currentIndex === blocks.length - 1
 
   return (
     <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-between gap-4">
       {/* Previous button */}
-      <Button
-        variant="outline"
-        size="default"
-        disabled={!canGoPrevious}
-        onClick={() => onNavigate(currentIndex - 1)}
-        className="gap-1 sm:gap-2 min-w-[44px] sm:min-w-0"
-      >
-        <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
-        <span className="hidden sm:inline">Previous</span>
-      </Button>
+      {canGoPrevious ? (
+        <Button
+          variant="outline"
+          size="default"
+          onClick={() => onNavigate(currentIndex - 1)}
+          className="gap-1 sm:gap-2 min-w-[44px] sm:min-w-0"
+        >
+          <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
+          <span className="text-sm">Back</span>
+        </Button>
+      ) : (
+        <div className="min-w-[44px] sm:min-w-[72px]" aria-hidden />
+      )}
 
       {/* Progress dots and block info */}
       <div className="flex-1 flex flex-col items-center gap-3">
@@ -82,11 +88,17 @@ export function AMRAPBlockNavigator({
       <Button
         variant="outline"
         size="default"
-        disabled={!canGoNext}
-        onClick={() => onNavigate(currentIndex + 1)}
+        disabled={isLastBlock ? !onComplete : !canGoNext}
+        onClick={() => {
+          if (isLastBlock) {
+            onComplete?.()
+            return
+          }
+          onNavigate(currentIndex + 1)
+        }}
         className="gap-1 sm:gap-2 min-w-[44px] sm:min-w-0"
       >
-        <span className="hidden sm:inline">Next</span>
+        <span className="text-sm">{isLastBlock ? "Complete" : "Next"}</span>
         <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
       </Button>
     </div>

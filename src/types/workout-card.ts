@@ -44,6 +44,9 @@ export interface ExerciseCard extends BaseCard {
   originalExerciseId?: string;  // Link back to source exercise for collapsing
   repetitionIndex?: number;  // Which repetition this card belongs to (for "5 sets")
   totalRepetitions?: number;  // Total number of repetitions (for "Set X of N" display)
+  setDetailId?: string | null; // Preserve per-set details when available
+  amrapBlockId?: string | null; // Assigned AMRAP block container
+  emomBlockId?: string | null; // Assigned EMOM block container
 }
 
 /**
@@ -66,6 +69,29 @@ export interface RestCard extends BaseCard {
  * Union type for all card types
  */
 export type WorkoutCard = ExerciseCard | RestCard;
+
+// Card layout persisted for editor sessions (strip transient edit state)
+export type WorkoutCardLayout = Omit<ExerciseCard, "isEditing"> | RestCard;
+
+/**
+ * AMRAP block draft metadata for editor grouping
+ */
+export interface AMRAPBlockDraft {
+  id: string;
+  label: string;
+  timeLimitSeconds: number;
+  order: number;
+}
+
+/**
+ * EMOM block draft metadata for editor grouping
+ */
+export interface EMOMBlockDraft {
+  id: string;
+  label: string;
+  intervalSeconds: number;
+  order: number;
+}
 
 /**
  * Helper type guards

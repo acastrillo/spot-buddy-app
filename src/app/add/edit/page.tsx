@@ -11,9 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { WorkoutCardList } from "@/components/workout/workout-card-list"
-import { AMRAPHeaderCard } from "@/components/workout/amrap-header-card"
-import { expandWorkoutToCards, collapseCardsToExercises, detectRepetitionPattern } from "@/lib/workout/card-transformer"
-import type { WorkoutCard } from "@/types/workout-card"
+import {
+  buildCardLayout,
+  expandWorkoutToCards,
+  collapseCardsToExercises,
+  detectRepetitionPattern,
+} from "@/lib/workout/card-transformer"
+import type { WorkoutCard, AMRAPBlockDraft, EMOMBlockDraft } from "@/types/workout-card"
 import {
   Save,
   ArrowLeft,
@@ -45,7 +49,26 @@ export default function EditWorkoutPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [workoutType, setWorkoutType] = useState<string>('standard')
   const [workoutStructure, setWorkoutStructure] = useState<any>(null)
-  const [amrapTimeLimit, setAmrapTimeLimit] = useState<number>(1200) // Default 20 min
+  const [amrapBlocks, setAmrapBlocks] = useState<AMRAPBlockDraft[]>([])
+  const [emomBlocks, setEmomBlocks] = useState<EMOMBlockDraft[]>([])
+
+  useEffect(() => {
+    if (emomBlocks.length > 0 && workoutType !== 'emom') {
+      setWorkoutType('emom')
+      return
+    }
+    if (emomBlocks.length === 0 && amrapBlocks.length > 0 && workoutType !== 'amrap') {
+      setWorkoutType('amrap')
+      return
+    }
+    if (
+      emomBlocks.length === 0 &&
+      amrapBlocks.length === 0 &&
+      (workoutType === 'amrap' || workoutType === 'emom')
+    ) {
+      setWorkoutType('standard')
+    }
+  }, [emomBlocks.length, amrapBlocks.length, workoutType])
 
   useEffect(() => {
     // Load workout data from sessionStorage
@@ -71,20 +94,23 @@ export default function EditWorkoutPage() {
       }
       setWorkoutDescription(notesContent)
 
+      const mapExercise = (exercise: any) => ({
+        id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
+        name: exercise.name || exercise.movement || '',
+        sets: exercise.sets || 1,
+        reps: exercise.reps || '',
+        weight: exercise.weight || '',
+        distance: exercise.distance || null,
+        timing: exercise.timing || null,
+        restSeconds: exercise.restSeconds || 60,
+        notes: exercise.notes || '',
+        setDetails: Array.isArray(exercise.setDetails) ? exercise.setDetails : null,
+      })
+
       // Convert parsed exercises to card format
       let exerciseData = []
       if (data.llmData?.exercises && data.llmData.exercises.length > 0) {
-        exerciseData = data.llmData.exercises.map((exercise: any) => ({
-          id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
-          name: exercise.name || exercise.movement || '',
-          sets: exercise.sets || 1,
-          reps: exercise.reps || '',
-          weight: exercise.weight || '',
-          distance: exercise.distance || null,
-          timing: exercise.timing || null,
-          restSeconds: exercise.restSeconds || 60,
-          notes: exercise.notes || ''
-        }))
+        exerciseData = data.llmData.exercises.map(mapExercise)
       } else if (data.llmData?.rows) {
         // Fallback to old rows format
         exerciseData = data.llmData.rows.map((row: any) => ({
@@ -94,34 +120,127 @@ export default function EditWorkoutPage() {
           reps: row.reps || '',
           weight: row.weight || '',
           restSeconds: 60,
-          notes: row.notes || ''
+          notes: row.notes || '',
+          setDetails: null,
         }))
       }
 
-      // Detect repetition pattern and expand to cards
-      // For "rounds" workout type, use structure.rounds instead of exercise.sets
-      let repetition = detectRepetitionPattern(exerciseData, data.llmData?.workoutType)
+      const emomBlocksFromAI = Array.isArray(data.llmData?.emomBlocks)
+        ? data.llmData.emomBlocks
+        : []
+      const amrapBlocksFromAI = Array.isArray(data.llmData?.amrapBlocks)
+        ? data.llmData.amrapBlocks
+        : []
 
-      // Override for rounds-based workouts
-      if (data.llmData?.workoutType === 'rounds' && data.llmData?.structure?.rounds) {
-        repetition = {
-          rounds: data.llmData.structure.rounds,
-          pattern: 'circuit' as const,
-          restBetweenExercises: false,  // No rest between exercises in same round
-          restBetweenRounds: true,  // Rest between rounds
-          defaultRestDuration: 60,
+      const detectedWorkoutType = emomBlocksFromAI.length > 0
+        ? 'emom'
+        : amrapBlocksFromAI.length > 0
+        ? 'amrap'
+        : data.llmData?.workoutType || 'standard'
+
+      setWorkoutType(detectedWorkoutType)
+      setWorkoutStructure(data.llmData?.structure || null)
+
+      if (detectedWorkoutType === 'emom') {
+        const defaultIntervalSeconds = Math.max(
+          1,
+          Math.floor(data.llmData?.structure?.timePerRound || 60)
+        )
+
+        if (emomBlocksFromAI.length > 0) {
+          const blockCards: WorkoutCard[] = []
+          const blockDrafts: EMOMBlockDraft[] = []
+          const baseId = Date.now()
+
+          emomBlocksFromAI.forEach((block: any, index: number) => {
+            const blockId = block.id || `emom-${baseId}-${index}`
+            blockDrafts.push({
+              id: blockId,
+              label: block.label || 'EMOM',
+              intervalSeconds: block.intervalSeconds || defaultIntervalSeconds,
+              order: block.order || index + 1,
+            })
+
+            const blockExercises = (block.exercises || []).map(mapExercise)
+            blockCards.push(
+              ...expandWorkoutToCards(blockExercises, undefined, { emomBlockId: blockId })
+            )
+          })
+
+          setEmomBlocks(blockDrafts)
+          setCards(blockCards)
+        } else {
+          const blockId = `emom-${Date.now()}`
+          setEmomBlocks([
+            {
+              id: blockId,
+              label: 'EMOM',
+              intervalSeconds: defaultIntervalSeconds,
+              order: 1,
+            },
+          ])
+          setCards(expandWorkoutToCards(exerciseData, undefined, { emomBlockId: blockId }))
         }
-      }
+        setAmrapBlocks([])
+      } else if (detectedWorkoutType === 'amrap') {
+        if (amrapBlocksFromAI.length > 0) {
+          const blockCards: WorkoutCard[] = []
+          const blockDrafts: AMRAPBlockDraft[] = []
+          const baseId = Date.now()
 
-      // Load AMRAP data
-      if (data.llmData?.workoutType === 'amrap') {
-        setWorkoutType('amrap')
-        const timeLimitSeconds = data.llmData?.structure?.timeLimit || 1200
-        setAmrapTimeLimit(timeLimitSeconds)
-      }
+          amrapBlocksFromAI.forEach((block: any, index: number) => {
+            const blockId = block.id || `amrap-${baseId}-${index}`
+            blockDrafts.push({
+              id: blockId,
+              label: block.label || 'AMRAP',
+              timeLimitSeconds: block.timeLimit || 1200,
+              order: block.order || index + 1,
+            })
 
-      const expandedCards = expandWorkoutToCards(exerciseData, repetition)
-      setCards(expandedCards)
+            const blockExercises = (block.exercises || []).map(mapExercise)
+            blockCards.push(
+              ...expandWorkoutToCards(blockExercises, undefined, { amrapBlockId: blockId })
+            )
+          })
+
+          setAmrapBlocks(blockDrafts)
+          setCards(blockCards)
+        } else {
+          const timeLimitSeconds = data.llmData?.structure?.timeLimit || 1200
+          const blockId = `amrap-${Date.now()}`
+          setAmrapBlocks([
+            {
+              id: blockId,
+              label: 'AMRAP',
+              timeLimitSeconds,
+              order: 1,
+            },
+          ])
+          setCards(expandWorkoutToCards(exerciseData, undefined, { amrapBlockId: blockId }))
+        }
+        setEmomBlocks([])
+      } else {
+        setAmrapBlocks([])
+        setEmomBlocks([])
+
+        // Detect repetition pattern and expand to cards
+        // For "rounds" workout type, use structure.rounds instead of exercise.sets
+        let repetition = detectRepetitionPattern(exerciseData, detectedWorkoutType)
+
+        // Override for rounds-based workouts
+        if (detectedWorkoutType === 'rounds' && data.llmData?.structure?.rounds) {
+          repetition = {
+            rounds: data.llmData.structure.rounds,
+            pattern: 'circuit' as const,
+            restBetweenExercises: false,  // No rest between exercises in same round
+            restBetweenRounds: true,  // Rest between rounds
+            defaultRestDuration: 60,
+          }
+        }
+
+        const expandedCards = expandWorkoutToCards(exerciseData, repetition)
+        setCards(expandedCards)
+      }
 
       // Auto-fill workout title from first exercise if title is empty
       if (!data.title && exerciseData.length > 0 && exerciseData[0].name) {
@@ -170,6 +289,58 @@ export default function EditWorkoutPage() {
     try {
       // Collapse cards back to exercises for saving
       const exercises = collapseCardsToExercises(cards)
+      const cardLayout = buildCardLayout(cards)
+      const resolvedWorkoutType =
+        emomBlocks.length > 0
+          ? 'emom'
+          : amrapBlocks.length > 0
+          ? 'amrap'
+          : workoutType === 'amrap' || workoutType === 'emom'
+          ? 'standard'
+          : workoutType
+      const amrapBlocksPayload = amrapBlocks.length
+        ? amrapBlocks.map((block) => ({
+            id: block.id,
+            label: block.label,
+            timeLimit: block.timeLimitSeconds,
+            order: block.order,
+            exercises: collapseCardsToExercises(
+              cards.filter(
+                (card) => card.type === 'exercise' && card.amrapBlockId === block.id
+              )
+            ),
+          }))
+        : null
+      const emomBlocksPayload = emomBlocks.length
+        ? emomBlocks.map((block) => ({
+            id: block.id,
+            label: block.label,
+            intervalSeconds: block.intervalSeconds,
+            order: block.order,
+            exercises: collapseCardsToExercises(
+              cards.filter(
+                (card) => card.type === 'exercise' && card.emomBlockId === block.id
+              )
+            ),
+          }))
+        : null
+      const emomStructure =
+        emomBlocks.length > 0
+          ? {
+              rounds: emomBlocks.length,
+              timePerRound: emomBlocks[0].intervalSeconds,
+              totalTime: emomBlocks.reduce((sum, block) => sum + block.intervalSeconds, 0),
+            }
+          : null
+      const structure =
+        resolvedWorkoutType === 'amrap'
+          ? amrapBlocks.length === 1
+            ? { timeLimit: amrapBlocks[0].timeLimitSeconds }
+            : null
+          : resolvedWorkoutType === 'emom'
+          ? workoutStructure ?? emomStructure
+          : workoutStructure
+      const structureWithLayout = { ...(structure ?? {}), cardLayout }
 
       // Prepare workout data for DynamoDB
       const workoutToSave = {
@@ -186,10 +357,10 @@ export default function EditWorkoutPage() {
         difficulty: workoutData.llmData?.workoutV1?.difficulty || 'moderate',
         tags: workoutData.llmData?.workoutV1?.tags || [],
         llmData: workoutData.llmData,
-        workoutType: workoutType,
-        structure: workoutType === 'amrap' ? {
-          timeLimit: amrapTimeLimit
-        } : workoutStructure,
+        workoutType: resolvedWorkoutType,
+        structure: structureWithLayout,
+        amrapBlocks: amrapBlocksPayload,
+        emomBlocks: emomBlocksPayload,
         aiNotes: null,  // AI notes now merged into description
         aiEnhanced: workoutDescription.includes('**AI Insights:**'), // Mark as AI enhanced if description contains AI insights
         thumbnailUrl: workoutData.thumbnailUrl || null,  // Include Instagram image URL if available
@@ -267,51 +438,145 @@ export default function EditWorkoutPage() {
     }
     setWorkoutDescription(updatedDescription)
 
-    // Update workout type and structure
-    if (enhancedWorkout.workoutType) {
-      setWorkoutType(enhancedWorkout.workoutType)
-    }
-    if (enhancedWorkout.structure) {
-      setWorkoutStructure(enhancedWorkout.structure)
-    }
+    const mapExercise = (exercise: any) => ({
+      id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
+      name: exercise.name || '',
+      sets: exercise.sets || 1,
+      reps: exercise.reps || '',
+      weight: exercise.weight || '',
+      distance: exercise.distance || null,
+      timing: exercise.timing || null,
+      restSeconds: exercise.restSeconds || null,
+      notes: exercise.notes || '',
+      duration: exercise.duration || null,
+      setDetails: Array.isArray(exercise.setDetails) ? exercise.setDetails : null,
+    })
 
-    // Convert enhanced exercises to card format
-    if (enhancedWorkout.exercises && enhancedWorkout.exercises.length > 0) {
-      const exerciseData = enhancedWorkout.exercises.map((exercise: any) => ({
-        id: exercise.id || `ex-${Date.now()}-${Math.random()}`,
-        name: exercise.name || '',
-        sets: exercise.sets || 1,
-        reps: exercise.reps || '',
-        weight: exercise.weight || '',
-        distance: exercise.distance || null,
-        timing: exercise.timing || null,
-        restSeconds: exercise.restSeconds || null,
-        notes: exercise.notes || '',
-        duration: exercise.duration || null,
-      }))
+    const emomBlocksFromAI = Array.isArray(enhancedWorkout.emomBlocks)
+      ? enhancedWorkout.emomBlocks
+      : []
+    const amrapBlocksFromAI = Array.isArray(enhancedWorkout.amrapBlocks)
+      ? enhancedWorkout.amrapBlocks
+      : []
 
-      // Detect repetition pattern and expand to cards
-      // For "rounds" workout type, use structure.rounds instead of exercise.sets
-      let repetition = detectRepetitionPattern(exerciseData, enhancedWorkout.workoutType)
+    const detectedWorkoutType = emomBlocksFromAI.length > 0
+      ? 'emom'
+      : amrapBlocksFromAI.length > 0
+      ? 'amrap'
+      : enhancedWorkout.workoutType || 'standard'
+    setWorkoutType(detectedWorkoutType)
+    setWorkoutStructure(enhancedWorkout.structure || null)
 
-      // Override for rounds-based workouts
-      if (enhancedWorkout.workoutType === 'rounds' && enhancedWorkout.structure?.rounds) {
-        repetition = {
-          rounds: enhancedWorkout.structure.rounds,
-          pattern: 'circuit' as const,
-          restBetweenExercises: false,  // No rest between exercises in same round
-          restBetweenRounds: true,  // Rest between rounds
-          defaultRestDuration: 60,
+    const exerciseData = Array.isArray(enhancedWorkout.exercises)
+      ? enhancedWorkout.exercises.map(mapExercise)
+      : []
+
+    if (detectedWorkoutType === 'emom') {
+      const defaultIntervalSeconds = Math.max(
+        1,
+        Math.floor(enhancedWorkout.structure?.timePerRound || 60)
+      )
+
+      if (emomBlocksFromAI.length > 0) {
+        const blockCards: WorkoutCard[] = []
+        const blockDrafts: EMOMBlockDraft[] = []
+        const baseId = Date.now()
+
+        emomBlocksFromAI.forEach((block: any, index: number) => {
+          const blockId = block.id || `emom-${baseId}-${index}`
+          blockDrafts.push({
+            id: blockId,
+            label: block.label || 'EMOM',
+            intervalSeconds: block.intervalSeconds || defaultIntervalSeconds,
+            order: block.order || index + 1,
+          })
+
+          const blockExercises = (block.exercises || []).map(mapExercise)
+          blockCards.push(
+            ...expandWorkoutToCards(blockExercises, undefined, { emomBlockId: blockId })
+          )
+        })
+
+        setEmomBlocks(blockDrafts)
+        setCards(blockCards)
+      } else {
+        const blockId = `emom-${Date.now()}`
+        setEmomBlocks([
+          {
+            id: blockId,
+            label: 'EMOM',
+            intervalSeconds: defaultIntervalSeconds,
+            order: 1,
+          },
+        ])
+        setCards(expandWorkoutToCards(exerciseData, undefined, { emomBlockId: blockId }))
+      }
+      setAmrapBlocks([])
+    } else if (detectedWorkoutType === 'amrap') {
+      if (amrapBlocksFromAI.length > 0) {
+        const blockCards: WorkoutCard[] = []
+        const blockDrafts: AMRAPBlockDraft[] = []
+        const baseId = Date.now()
+
+        amrapBlocksFromAI.forEach((block: any, index: number) => {
+          const blockId = block.id || `amrap-${baseId}-${index}`
+          blockDrafts.push({
+            id: blockId,
+            label: block.label || 'AMRAP',
+            timeLimitSeconds: block.timeLimit || 1200,
+            order: block.order || index + 1,
+          })
+
+          const blockExercises = (block.exercises || []).map(mapExercise)
+          blockCards.push(
+            ...expandWorkoutToCards(blockExercises, undefined, { amrapBlockId: blockId })
+          )
+        })
+
+        setAmrapBlocks(blockDrafts)
+        setCards(blockCards)
+      } else {
+        const timeLimitSeconds = enhancedWorkout.structure?.timeLimit || 1200
+        const blockId = `amrap-${Date.now()}`
+        setAmrapBlocks([
+          {
+            id: blockId,
+            label: 'AMRAP',
+            timeLimitSeconds,
+            order: 1,
+          },
+        ])
+        setCards(expandWorkoutToCards(exerciseData, undefined, { amrapBlockId: blockId }))
+      }
+      setEmomBlocks([])
+    } else {
+      setAmrapBlocks([])
+      setEmomBlocks([])
+
+      if (exerciseData.length > 0) {
+        // Detect repetition pattern and expand to cards
+        // For "rounds" workout type, use structure.rounds instead of exercise.sets
+        let repetition = detectRepetitionPattern(exerciseData, detectedWorkoutType)
+
+        // Override for rounds-based workouts
+        if (detectedWorkoutType === 'rounds' && enhancedWorkout.structure?.rounds) {
+          repetition = {
+            rounds: enhancedWorkout.structure.rounds,
+            pattern: 'circuit' as const,
+            restBetweenExercises: false,  // No rest between exercises in same round
+            restBetweenRounds: true,  // Rest between rounds
+            defaultRestDuration: 60,
+          }
         }
-      }
 
-      const expandedCards = expandWorkoutToCards(exerciseData, repetition)
-      setCards(expandedCards)
-
-      // Auto-fill title from first exercise if not provided
-      if (!enhancedWorkout.title && !workoutTitle && exerciseData.length > 0 && exerciseData[0].name) {
-        setWorkoutTitle(String(exerciseData[0].name))
+        const expandedCards = expandWorkoutToCards(exerciseData, repetition)
+        setCards(expandedCards)
       }
+    }
+
+    // Auto-fill title from first exercise if not provided
+    if (!enhancedWorkout.title && !workoutTitle && exerciseData.length > 0 && exerciseData[0].name) {
+      setWorkoutTitle(String(exerciseData[0].name))
     }
   }
 
@@ -446,14 +711,6 @@ export default function EditWorkoutPage() {
                     />
                   </div>
 
-                  {workoutType === 'amrap' && (
-                    <AMRAPHeaderCard
-                      timeLimit={amrapTimeLimit}
-                      onTimeLimitChange={setAmrapTimeLimit}
-                      isEditable={true}
-                    />
-                  )}
-
                   <div className="pt-4 border-t border-border">
                     <h4 className="font-medium text-text-primary mb-2">Summary</h4>
                     <div className="text-sm text-text-secondary space-y-1">
@@ -498,6 +755,10 @@ export default function EditWorkoutPage() {
                   <WorkoutCardList
                     cards={cards}
                     onCardsChange={setCards}
+                    amrapBlocks={amrapBlocks}
+                    onAmrapBlocksChange={setAmrapBlocks}
+                    emomBlocks={emomBlocks}
+                    onEmomBlocksChange={setEmomBlocks}
                     showAddButton={true}
                   />
                 </CardContent>

@@ -24,8 +24,8 @@ export default async function AdminUsersPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="max-w-md mx-auto mt-20 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-destructive mb-4">Access Denied</h1>
+          <p className="text-text-secondary">
             You need administrator privileges to access this page.
           </p>
         </div>
@@ -37,8 +37,8 @@ export default async function AdminUsersPage() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">User Management</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-text-primary mb-2">User Management</h1>
+        <p className="text-text-secondary">
           View and manage all registered users
         </p>
       </div>

@@ -10,7 +10,7 @@ SERVICE_NAME="spotter-web-service"
 TASK_FAMILY="spotter-app-task"
 
 # Get AWS Account ID
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text | tr -d '\r')
 echo "✅ AWS Account ID: $ACCOUNT_ID"
 
 ECR_REPO="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/spotter-app"
@@ -22,7 +22,7 @@ echo "✅ Docker image built successfully"
 
 # Step 2: Login to ECR
 echo "🔑 Step 2: Logging into ECR..."
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com" || { echo "❌ ECR login failed"; exit 1; }
+aws ecr get-login-password --region $REGION | tr -d '\r' | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com" || { echo "❌ ECR login failed"; exit 1; }
 echo "✅ Logged into ECR successfully"
 
 # Step 3: Tag and push image
