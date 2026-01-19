@@ -18,7 +18,7 @@
  * 4. User reviews and saves enhanced workout
  */
 
-import { invokeClaude, logUsage, type BedrockResponse, type ClaudeContentBlock } from './bedrock-client';
+import { invokeClaude, logUsage, type BedrockResponse, type ClaudeContentBlock, type ClaudeModel } from './bedrock-client';
 import { parseWorkoutStructure, generateExerciseContext } from '../knowledge-base/exercise-matcher';
 import type { OrganizedContent } from './workout-content-organizer';
 
@@ -643,7 +643,8 @@ export async function enhanceWorkout(
  */
 export async function structureWorkout(
   organized: OrganizedContent,
-  context?: TrainingContext
+  context?: TrainingContext,
+  options?: { model?: ClaudeModel }
 ): Promise<EnhancementResult> {
   // Build a focused prompt for Agent 2 using the filtered content
   const systemPrompt = buildStructurePrompt(organized, context);
@@ -664,7 +665,7 @@ export async function structureWorkout(
       systemPrompt,
       maxTokens: 4096,
       temperature: 0.3,
-      model: 'sonnet', // Use Sonnet for better structuring
+      model: options?.model || 'sonnet', // Default to Sonnet for better structuring
       latencyOptimized: true, // 42-77% faster responses
     });
 

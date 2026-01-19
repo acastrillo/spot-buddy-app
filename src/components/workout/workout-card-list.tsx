@@ -20,7 +20,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { Dumbbell, GripVertical, Moon, Plus, Repeat, Timer } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ExerciseCard } from "./exercise-card"
@@ -49,6 +49,7 @@ interface WorkoutCardListProps {
 }
 
 const ROOT_CONTAINER_ID = "root"
+const normalizeId = (value: string | number) => String(value)
 
 /**
  * WorkoutCardList Component
@@ -89,30 +90,30 @@ export function WorkoutCardList({
   )
   const orderedBlockIds = useMemo(
     () => [
-      ...orderedEmomBlocks.map((block) => block.id),
-      ...orderedAmrapBlocks.map((block) => block.id),
+      ...orderedEmomBlocks.map((block) => normalizeId(block.id)),
+      ...orderedAmrapBlocks.map((block) => normalizeId(block.id)),
     ],
     [orderedEmomBlocks, orderedAmrapBlocks]
   )
   const blockTypeById = useMemo(() => {
     const map = new Map<string, "amrap" | "emom">()
-    orderedAmrapBlocks.forEach((block) => map.set(block.id, "amrap"))
-    orderedEmomBlocks.forEach((block) => map.set(block.id, "emom"))
+    orderedAmrapBlocks.forEach((block) => map.set(normalizeId(block.id), "amrap"))
+    orderedEmomBlocks.forEach((block) => map.set(normalizeId(block.id), "emom"))
     return map
   }, [orderedAmrapBlocks, orderedEmomBlocks])
 
   const getCardById = (cardId: string) =>
-    cards.find((card) => card.id === cardId)
+    cards.find((card) => normalizeId(card.id) === cardId)
 
   const getContainerId = (cardId: string) => {
     const card = getCardById(cardId)
     if (!card) return ROOT_CONTAINER_ID
     if (isExerciseCard(card)) {
-      if (card.amrapBlockId) {
-        return card.amrapBlockId
+      if (card.amrapBlockId != null) {
+        return normalizeId(card.amrapBlockId)
       }
-      if (card.emomBlockId) {
-        return card.emomBlockId
+      if (card.emomBlockId != null) {
+        return normalizeId(card.emomBlockId)
       }
     }
     return ROOT_CONTAINER_ID
@@ -121,15 +122,15 @@ export function WorkoutCardList({
   const splitCardsByContainer = () => {
     const blockMap: Record<string, WorkoutCard[]> = {}
     orderedEmomBlocks.forEach((block) => {
-      blockMap[block.id] = []
+      blockMap[normalizeId(block.id)] = []
     })
     orderedAmrapBlocks.forEach((block) => {
-      blockMap[block.id] = []
+      blockMap[normalizeId(block.id)] = []
     })
     const root: WorkoutCard[] = []
 
     cards.forEach((card) => {
-      const containerId = getContainerId(card.id)
+      const containerId = getContainerId(normalizeId(card.id))
       if (containerId === ROOT_CONTAINER_ID || !blockMap[containerId]) {
         root.push(card)
         return
@@ -148,11 +149,12 @@ export function WorkoutCardList({
     return merged
   }
 
+  const { root: rootCards, blockMap: blockCardsMap } = splitCardsByContainer()
+
   const { setNodeRef: setRootDropRef, isOver: isOverRoot } = useDroppable({
     id: "root-drop",
+    disabled: rootCards.length > 0,
   })
-
-  const { root: rootCards, blockMap: blockCardsMap } = splitCardsByContainer()
 
   const rootItems = useMemo(() => rootCards.map((card) => card.id), [rootCards])
 
@@ -276,7 +278,9 @@ export function WorkoutCardList({
         ? root
         : blockMap[targetContainerId] || []
 
-    const sourceIndex = sourceList.findIndex((item) => item.id === cardId)
+    const sourceIndex = sourceList.findIndex(
+      (item) => normalizeId(item.id) === cardId
+    )
     if (sourceIndex === -1) return
 
     const [removed] = sourceList.splice(sourceIndex, 1)
@@ -307,8 +311,8 @@ export function WorkoutCardList({
     const list =
       containerId === ROOT_CONTAINER_ID ? root : blockMap[containerId] || []
 
-    const oldIndex = list.findIndex((item) => item.id === activeId)
-    const newIndex = list.findIndex((item) => item.id === overId)
+    const oldIndex = list.findIndex((item) => normalizeId(item.id) === activeId)
+    const newIndex = list.findIndex((item) => normalizeId(item.id) === overId)
     if (oldIndex === -1 || newIndex === -1) return
 
     const reordered = arrayMove(list, oldIndex, newIndex)
@@ -368,7 +372,9 @@ export function WorkoutCardList({
         overContainer === ROOT_CONTAINER_ID
           ? root
           : blockMap[overContainer] || []
-      const targetIndex = targetList.findIndex((item) => item.id === overId)
+      const targetIndex = targetList.findIndex(
+        (item) => normalizeId(item.id) === overId
+      )
       moveCardToContainer(activeId, overContainer, Math.max(targetIndex, 0))
     }
   }
@@ -471,7 +477,8 @@ export function WorkoutCardList({
       >
         <div className="space-y-4">
           {orderedEmomBlocks.map((block) => {
-            const blockCards = blockCardsMap[block.id] || []
+            const blockId = normalizeId(block.id)
+            const blockCards = blockCardsMap[blockId] || []
             const blockItems = blockCards.map((card) => card.id)
 
             return (
@@ -489,7 +496,7 @@ export function WorkoutCardList({
                     <SortableCard
                       key={card.id}
                       card={card}
-                      containerId={block.id}
+                      containerId={blockId}
                     >
                       {isExerciseCard(card) ? (
                         <ExerciseCard
@@ -513,7 +520,8 @@ export function WorkoutCardList({
           })}
 
           {orderedAmrapBlocks.map((block) => {
-            const blockCards = blockCardsMap[block.id] || []
+            const blockId = normalizeId(block.id)
+            const blockCards = blockCardsMap[blockId] || []
             const blockItems = blockCards.map((card) => card.id)
 
             return (
@@ -532,7 +540,7 @@ export function WorkoutCardList({
                     <SortableCard
                       key={card.id}
                       card={card}
-                      containerId={block.id}
+                      containerId={blockId}
                     >
                       {isExerciseCard(card) ? (
                         <ExerciseCard
@@ -760,9 +768,9 @@ function TimingDialog({
             onChange={(event) => onMinutesChange(event.target.value)}
             placeholder="12"
           />
-          <p className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground">
             This becomes the block timer shown in the AMRAP view.
-          </p>
+          </DialogDescription>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -809,9 +817,9 @@ function RestTimingDialog({
             onChange={(event) => onSecondsChange(event.target.value)}
             placeholder="60"
           />
-          <p className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground">
             This becomes a dedicated rest move in the workout.
-          </p>
+          </DialogDescription>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

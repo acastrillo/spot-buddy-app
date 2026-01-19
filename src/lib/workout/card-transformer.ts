@@ -85,7 +85,7 @@ export function expandWorkoutToCards(
             type: 'exercise',
             name: exercise.name,
             sets: 1,
-            reps: detail?.reps ?? exercise.reps,
+            reps: detail?.reps ?? exercise.reps ?? "",
             weight: typeof resolvedWeight === "number" ? String(resolvedWeight) : resolvedWeight,
             distance: exercise.distance || null,
             timing: exercise.timing || null,
@@ -108,7 +108,7 @@ export function expandWorkoutToCards(
           type: 'exercise',
           name: exercise.name,
           sets: 1,  // Each card represents 1 set
-          reps: exercise.reps,
+          reps: exercise.reps ?? "",
           weight: exercise.weight || null,
           distance: exercise.distance || null,
           timing: exercise.timing || null,
@@ -286,7 +286,9 @@ export function buildCardLayout(cards: WorkoutCard[]): WorkoutCardLayout[] {
  */
 export function normaliseCardLayout(layout: WorkoutCardLayout[]): WorkoutCard[] {
   return layout.map((card) =>
-    card.type === 'exercise' ? { ...card, isEditing: false } : card
+    card.type === 'exercise'
+      ? { ...card, reps: card.reps ?? "", isEditing: false }
+      : card
   );
 }
 

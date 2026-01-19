@@ -29,7 +29,10 @@ export function AMRAPBlockCard({
   onEditTime,
   children,
 }: AMRAPBlockCardProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: `amrap-drop-${block.id}` })
+  const { setNodeRef, isOver } = useDroppable({
+    id: `amrap-drop-${block.id}`,
+    disabled: !isEmpty,
+  })
 
   return (
     <div

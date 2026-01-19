@@ -262,9 +262,10 @@ export default function ImportWorkoutPage() {
 
       if (processResponse.ok) {
         const workoutResult = await processResponse.json()
+        const resolvedTitle = workoutResult?.title || 'OCR Extracted Workout'
         const workoutForEdit = {
           id: Date.now().toString(),
-          title: 'OCR Extracted Workout',
+          title: resolvedTitle,
           content: data.text,
           llmData: workoutResult,
           author: null,
@@ -275,7 +276,7 @@ export default function ImportWorkoutPage() {
         }
         sessionStorage.setItem('workoutToEdit', JSON.stringify(workoutForEdit))
         setWorkoutData(workoutResult)
-        setWorkoutTitle('OCR Extracted Workout')
+        setWorkoutTitle(resolvedTitle)
         // User can now click "Continue to Edit" button to proceed
       }
 
@@ -338,12 +339,13 @@ export default function ImportWorkoutPage() {
 
       const workoutResult = await processResponse.json()
       setWorkoutData(workoutResult)
-      setWorkoutTitle(fetchData.title || 'Imported Workout')
+      const resolvedTitle = workoutResult?.title || fetchData.title || 'Imported Workout'
+      setWorkoutTitle(resolvedTitle)
 
       // Store workout data for edit page (but don't auto-navigate)
       const workoutForEdit = {
         id: Date.now().toString(),
-        title: fetchData.title || 'Imported Workout',
+        title: resolvedTitle,
         content: fetchData.content,
         llmData: workoutResult,
         author: fetchData?.author || null,

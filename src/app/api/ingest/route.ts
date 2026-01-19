@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/lib/api-auth";
-import { parseWorkoutContent } from "@/lib/smartWorkoutParser";
+import { parseWorkoutContentWithFallback } from "@/lib/workout-parser";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -49,7 +49,9 @@ export async function POST(req: NextRequest){
     const { caption } = parsed.data;
 
     // Use smart workout parser
-    const parsedWorkout = parseWorkoutContent(caption);
+    const parsedWorkout = await parseWorkoutContentWithFallback(caption, {
+      context: { userId },
+    });
 
     // Create backward-compatible rows format
     const rows = parsedWorkout.exercises.map(exercise => ({
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest){
     }));
 
     // Estimate duration based on workout structure
-    let estimatedDuration = 20; // default
+    let estimatedDuration = 20; // default in minutes
     switch (parsedWorkout.structure.type) {
       case 'ladder':
         estimatedDuration = (parsedWorkout.structure.values?.length || 1) * parsedWorkout.exercises.length * 2;
@@ -71,9 +73,20 @@ export async function POST(req: NextRequest){
         estimatedDuration = (parsedWorkout.structure.rounds || 1) * parsedWorkout.exercises.length * 2;
         break;
       case 'amrap':
-      case 'emom':
-        estimatedDuration = parsedWorkout.structure.timeLimit || 20;
+        if (parsedWorkout.structure.timeLimit) {
+          estimatedDuration = Math.max(1, Math.ceil(parsedWorkout.structure.timeLimit / 60));
+        }
         break;
+      case 'emom': {
+        const totalTime = parsedWorkout.structure.totalTime
+          || (parsedWorkout.structure.rounds && parsedWorkout.structure.timePerRound
+            ? parsedWorkout.structure.rounds * parsedWorkout.structure.timePerRound
+            : undefined);
+        if (totalTime) {
+          estimatedDuration = Math.max(1, Math.ceil(totalTime / 60));
+        }
+        break;
+      }
       case 'tabata':
         estimatedDuration = 8 * 0.5; // 8 rounds of 30s each
         break;
@@ -82,14 +95,18 @@ export async function POST(req: NextRequest){
     }
 
     return NextResponse.json({
+      title: parsedWorkout.title,
+      workoutType: parsedWorkout.workoutType,
       exercises: parsedWorkout.exercises,
       rows,
       summary: parsedWorkout.summary,
       breakdown: parsedWorkout.breakdown,
       structure: parsedWorkout.structure,
-      usedLLM: false,
+      amrapBlocks: parsedWorkout.amrapBlocks,
+      emomBlocks: parsedWorkout.emomBlocks,
+      usedLLM: parsedWorkout.usedLLM,
       workoutV1: {
-        name: `Smart Parsed Workout (${parsedWorkout.structure.type})`,
+        name: parsedWorkout.title || `Smart Parsed Workout (${parsedWorkout.structure.type})`,
         totalDuration: estimatedDuration,
         difficulty: parsedWorkout.exercises.length > 4 ? 'hard' : 'moderate',
         tags: ['smart-parsed', parsedWorkout.structure.type]

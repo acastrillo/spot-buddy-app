@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { parseWorkoutContent } from '@/lib/smartWorkoutParser'
+import { parseWorkoutContentWithFallback } from '@/lib/workout-parser'
 import { dynamoDBUsers } from '@/lib/dynamodb'
 import { getQuotaLimit, normalizeSubscriptionTier } from '@/lib/subscription-tiers'
 import { hasRole } from '@/lib/rbac'
@@ -262,11 +262,15 @@ export async function POST(request: NextRequest) {
           const timestamp = post.timestamp || new Date().toISOString()
 
           // Use smart workout parser for better accuracy
-          const parsedWorkout = parseWorkoutContent(caption);
+          const parsedWorkout = await parseWorkoutContentWithFallback(caption, {
+            context: { userId, subscriptionTier: user.subscriptionTier },
+          });
+          const resolvedTitle = parsedWorkout.title
+            || `Instagram Workout - ${new Date(timestamp).toLocaleDateString()}`;
 
           const workoutData = {
             url: postUrl,
-            title: `Instagram Workout - ${new Date(timestamp).toLocaleDateString()}`,
+            title: resolvedTitle,
             content: caption,
             author: {
               username: post.ownerUsername || 'unknown',
@@ -289,6 +293,13 @@ export async function POST(request: NextRequest) {
               rawText: caption,
               totalExercises: parsedWorkout.exercises.length,
               workoutInstructions: parsedWorkout.summary,
+              workoutType: parsedWorkout.workoutType,
+              structure: parsedWorkout.structure,
+              amrapBlocks: parsedWorkout.amrapBlocks,
+              emomBlocks: parsedWorkout.emomBlocks,
+              confidence: parsedWorkout.confidence,
+              usedLLM: parsedWorkout.usedLLM,
+              source: parsedWorkout.source,
             },
           }
 

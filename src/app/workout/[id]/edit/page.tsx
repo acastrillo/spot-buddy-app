@@ -194,11 +194,15 @@ export default function EditWorkoutPage() {
         setWorkoutMeta(normalised.meta);
         const hasEmomBlocks = (workout.emomBlocks?.length ?? 0) > 0;
         const hasAmrapBlocks = (workout.amrapBlocks?.length ?? 0) > 0;
-        const detectedWorkoutType = hasEmomBlocks
-          ? "emom"
-          : hasAmrapBlocks
-          ? "amrap"
-          : workout.workoutType || "standard";
+        const fallbackAmrapByTimeLimit =
+          Boolean(workout.structure?.timeLimit) &&
+          (!workout.workoutType || workout.workoutType === "standard");
+        const detectedWorkoutType =
+          hasEmomBlocks || workout.workoutType === "emom"
+            ? "emom"
+            : hasAmrapBlocks || workout.workoutType === "amrap" || fallbackAmrapByTimeLimit
+            ? "amrap"
+            : workout.workoutType || "standard";
         const nextWorkoutStructure = workout.structure ?? null;
         const storedCardLayout =
           Array.isArray(nextWorkoutStructure?.cardLayout) && nextWorkoutStructure.cardLayout.length > 0
@@ -323,6 +327,56 @@ export default function EditWorkoutPage() {
 
         if (storedCardLayout) {
           nextCards = storedCardLayout;
+        }
+
+        if (detectedWorkoutType === "amrap" && nextAmrapBlocks.length > 0) {
+          const validBlockIds = new Set(
+            nextAmrapBlocks.map((block) => String(block.id))
+          );
+          const fallbackBlockId = String(nextAmrapBlocks[0].id);
+          const hasValidAssignments = nextCards.some(
+            (card) =>
+              card.type === "exercise" &&
+              card.amrapBlockId &&
+              validBlockIds.has(String(card.amrapBlockId))
+          );
+
+          nextCards = nextCards.map((card) => {
+            if (card.type !== "exercise") return card;
+            if (
+              hasValidAssignments &&
+              card.amrapBlockId &&
+              validBlockIds.has(String(card.amrapBlockId))
+            ) {
+              return card;
+            }
+            return { ...card, amrapBlockId: fallbackBlockId, emomBlockId: null };
+          });
+        }
+
+        if (detectedWorkoutType === "emom" && nextEmomBlocks.length > 0) {
+          const validBlockIds = new Set(
+            nextEmomBlocks.map((block) => String(block.id))
+          );
+          const fallbackBlockId = String(nextEmomBlocks[0].id);
+          const hasValidAssignments = nextCards.some(
+            (card) =>
+              card.type === "exercise" &&
+              card.emomBlockId &&
+              validBlockIds.has(String(card.emomBlockId))
+          );
+
+          nextCards = nextCards.map((card) => {
+            if (card.type !== "exercise") return card;
+            if (
+              hasValidAssignments &&
+              card.emomBlockId &&
+              validBlockIds.has(String(card.emomBlockId))
+            ) {
+              return card;
+            }
+            return { ...card, emomBlockId: fallbackBlockId, amrapBlockId: null };
+          });
         }
 
         setCards(nextCards);
@@ -790,7 +844,7 @@ export default function EditWorkoutPage() {
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-3xl px-4 pb-6">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-3xl px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-6">
         <Button
           onClick={handleSave}
           disabled={saving || !isDirty}

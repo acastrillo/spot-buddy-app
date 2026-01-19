@@ -139,6 +139,14 @@ function flattenExercisesToCards(exercises: Exercise[]): WorkoutCard[] {
   return cards
 }
 
+const isAmrapWorkout = (workout: Workout | null) => {
+  if (!workout) return false
+  if (workout.workoutType === 'amrap') return true
+  if (workout.workoutType && workout.workoutType !== 'standard') return false
+  const hasBlocks = (workout.amrapBlocks?.length ?? 0) > 0
+  return hasBlocks || Boolean(workout.structure?.timeLimit)
+}
+
 export default function WorkoutSessionPage() {
   const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
@@ -425,7 +433,7 @@ export default function WorkoutSessionPage() {
 
   const handleEndWorkout = () => {
     // For AMRAP workouts, navigate directly to calendar
-    if (workout?.workoutType === 'amrap') {
+    if (isAmrapWorkout(workout)) {
       if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current)
       router.push('/calendar')
       return
@@ -490,7 +498,7 @@ export default function WorkoutSessionPage() {
   const progress = workoutCards.length > 0 ? ((completedCards.size) / workoutCards.length) * 100 : 0
 
   // Check if this is an AMRAP workout
-  const isAMRAP = workout.workoutType === 'amrap'
+  const isAMRAP = isAmrapWorkout(workout)
 
   // Extract time limit for AMRAP
   const amrapTimeLimit =

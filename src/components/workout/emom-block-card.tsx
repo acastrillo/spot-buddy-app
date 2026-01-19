@@ -22,7 +22,10 @@ const formatTime = (seconds: number) => {
 }
 
 export function EMOMBlockCard({ block, isEmpty, onDelete, children }: EMOMBlockCardProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: `emom-drop-${block.id}` })
+  const { setNodeRef, isOver } = useDroppable({
+    id: `emom-drop-${block.id}`,
+    disabled: !isEmpty,
+  })
 
   return (
     <div

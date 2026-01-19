@@ -17,11 +17,20 @@ import type { AMRAPBlock, AMRAPWorkout, Exercise } from '@/types/amrap'
 export function normalizeAMRAPWorkout(workout: AMRAPWorkout): AMRAPBlock[] {
   // If already multi-block format, return as-is
   if (workout.amrapBlocks && workout.amrapBlocks.length > 0) {
-    return workout.amrapBlocks.sort((a, b) => a.order - b.order)
+    const hasBlockExercises = workout.amrapBlocks.some(
+      (block) => (block.exercises?.length ?? 0) > 0
+    )
+    if (hasBlockExercises) {
+      return workout.amrapBlocks.sort((a, b) => a.order - b.order)
+    }
   }
 
   // Convert single-block to array format (backward compatible)
-  const timeLimit = workout.structure?.timeLimit || 720 // Default 12 minutes
+  const fallbackTimeLimit =
+    workout.amrapBlocks?.reduce((sum, block) => sum + (block.timeLimit || 0), 0) ||
+    0
+  const timeLimit =
+    fallbackTimeLimit > 0 ? fallbackTimeLimit : workout.structure?.timeLimit || 720 // Default 12 minutes
   const exercises = workout.exercises || []
 
   return [

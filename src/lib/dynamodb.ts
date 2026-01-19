@@ -23,7 +23,12 @@ function getDynamoDb(): DynamoDBDocumentClient {
     const client = new DynamoDBClient({
       region: process.env.AWS_REGION || "us-east-1",
     });
-    dynamoDbInstance = DynamoDBDocumentClient.from(client);
+    dynamoDbInstance = DynamoDBDocumentClient.from(client, {
+      marshallOptions: {
+        convertEmptyValues: true,
+        removeUndefinedValues: true,
+      },
+    });
   }
   return dynamoDbInstance;
 }
