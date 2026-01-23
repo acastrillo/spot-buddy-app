@@ -49,12 +49,12 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm overflow-x-hidden">
+    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/5 backdrop-blur-md overflow-x-hidden">
       <div className="w-full max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
           <Dumbbell className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-          <span className="font-bold text-lg md:text-xl text-text-primary">Kinex Fit</span>
+          <span className="font-bold text-lg md:text-xl text-foreground">Kinex Fit</span>
         </Link>
 
         {/* Desktop Navigation */}

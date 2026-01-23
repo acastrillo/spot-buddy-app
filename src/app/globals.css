@@ -3,26 +3,40 @@
 @tailwind utilities;
 
 :root {
-  /* Updated Spotter Dark Theme Colors - Higher Contrast */
-  --background: #1A1A1A;
-  --surface: #2A2A2A;
-  --surface-elevated: #3A3A3A;
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0A0A0;
-  --text-tertiary: #666666;
-  --primary: #00D0BD;
-  --accent: #FF6B6B;
-  --border: #404040;
-  --border-light: #2A2A2A;
-  --input: #2A2A2A;
-  --muted: #2A2A2A;
+  /* Updated Kinex Fit "Pro Max" Theme - Orange/Zinc */
+  --background: #09090b; /* Zinc 950 */
+  --surface: #18181b;    /* Zinc 900 */
+  --surface-elevated: #27272a; /* Zinc 800 */
+  --popover: var(--surface-elevated);
+  --popover-foreground: var(--text-primary);
   
-  /* Legacy colors for compatibility */
-  --secondary: #7A7EFF;
-  --rest-color: #FFC247;
+  --text-primary: #FAFAFA; /* Zinc 50 */
+  --text-secondary: #A1A1AA; /* Zinc 400 */
+  --text-tertiary: #71717A; /* Zinc 500 */
+  
+  --primary: #FF6B35;   /* Energetic Orange */
+  --primary-foreground: #FFFFFF;
+  
+  --accent: #FF9F2E;    /* Lighter Amber/Orange */
+  --accent-foreground: #FFFFFF;
+  
+  --border: #27272a;    /* Zinc 800 */
+  --border-light: #3f3f46; /* Zinc 700 */
+  
+  --input: #27272a;     /* Zinc 800 */
+  --muted: #27272a;     /* Zinc 800 */
+  --ring: #FF6B35;
+
+  /* Legacy colors mapping */
+  --secondary: #27272a; /* Mapped to surface-elevated/zinc-800 for buttons */
+  --secondary-foreground: #FAFAFA;
+  
+  --rest-color: #3b82f6; /* Blue for rest/neutral actions */
   
   /* Semantic colors */
-  --destructive: #ef4444;
+  --destructive: #ef4444; 
+  --destructive-foreground: #FAFAFA;
+  
   --warning: #f59e0b;
   --success: #22c55e;
   

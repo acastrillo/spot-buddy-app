@@ -174,8 +174,8 @@ export function Login() {
   }, [devLogin]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
-      <Card className="w-full max-w-md bg-[var(--surface)] border-[var(--border)]">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-surface/50 backdrop-blur-md border-white/10">
         <CardHeader className="space-y-1 text-center">
           {/* Back button */}
           <div className="flex justify-start mb-2">

@@ -24,6 +24,8 @@ interface BetaSignupAlertData {
   email: string;
   firstName: string;
   lastName?: string;
+  referredBy?: string;
+  status?: "beta" | "waitlist";
   createdAt: string;
 }
 
@@ -206,6 +208,10 @@ export async function sendBetaSignupAlert(signup: BetaSignupAlertData): Promise<
   const userName = [signup.firstName, signup.lastName].filter(Boolean).join(' ') || 'N/A';
   const signupTime = new Date(signup.createdAt).toUTCString();
 
+  const isWaitlist = signup.status === "waitlist";
+  const headerTitle = isWaitlist ? "New Waitlist Signup" : "New Beta Signup";
+  const headerColor = isWaitlist ? "#f59e0b" : "#00d0bd";
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -214,21 +220,30 @@ export async function sendBetaSignupAlert(signup: BetaSignupAlertData): Promise<
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #00d0bd 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
+          .header { background: linear-gradient(135deg, ${headerColor} 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
           .header h1 { margin: 0; font-size: 24px; }
           .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
           .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
           .info-label { font-weight: 600; width: 140px; color: #6b7280; }
           .info-value { flex: 1; color: #111827; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+          .status-beta { background: #00d0bd; color: white; }
+          .status-waitlist { background: #f59e0b; color: white; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>New Beta Signup</h1>
+            <h1>${headerTitle}</h1>
           </div>
           <div class="content">
+            <div class="info-row">
+              <div class="info-label">Status:</div>
+              <div class="info-value">
+                <span class="status-badge status-${signup.status || 'beta'}">${signup.status === 'waitlist' ? 'Waitlist' : 'Beta'}</span>
+              </div>
+            </div>
             <div class="info-row">
               <div class="info-label">Name:</div>
               <div class="info-value">${userName}</div>
@@ -241,6 +256,12 @@ export async function sendBetaSignupAlert(signup: BetaSignupAlertData): Promise<
               <div class="info-label">Signup time:</div>
               <div class="info-value">${signupTime}</div>
             </div>
+            ${signup.referredBy ? `
+            <div class="info-row">
+              <div class="info-label">Referred by:</div>
+              <div class="info-value"><strong style="color: #00d0bd;">${signup.referredBy}</strong></div>
+            </div>
+            ` : ''}
           </div>
           <div class="footer">
             <p>Automated alert from Kinex Fit</p>
@@ -251,11 +272,12 @@ export async function sendBetaSignupAlert(signup: BetaSignupAlertData): Promise<
   `;
 
   const textContent = `
-New Beta Signup
+${isWaitlist ? 'New Waitlist Signup' : 'New Beta Signup'}
 
+Status: ${signup.status === 'waitlist' ? 'WAITLIST' : 'BETA'}
 Name: ${userName}
 Email: ${signup.email}
-Signup Time: ${signupTime}
+Signup Time: ${signupTime}${signup.referredBy ? `\nReferred by: ${signup.referredBy}` : ''}
   `.trim();
 
   let lastError: any = null;
@@ -269,7 +291,7 @@ Signup Time: ${signupTime}
         },
         Message: {
           Subject: {
-            Data: `New Beta Signup: ${signup.firstName}${signup.lastName ? ' ' + signup.lastName : ''} (${signup.email})`,
+            Data: `${isWaitlist ? '[WAITLIST]' : '[BETA]'} ${signup.firstName}${signup.lastName ? ' ' + signup.lastName : ''} (${signup.email})`,
             Charset: 'UTF-8',
           },
           Body: {

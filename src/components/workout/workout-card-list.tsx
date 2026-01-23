@@ -475,135 +475,139 @@ export function WorkoutCardList({
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="space-y-4">
-          {orderedEmomBlocks.map((block) => {
-            const blockId = normalizeId(block.id)
-            const blockCards = blockCardsMap[blockId] || []
-            const blockItems = blockCards.map((card) => card.id)
-
-            return (
-              <EMOMBlockCard
-                key={block.id}
-                block={block}
-                isEmpty={blockCards.length === 0}
-                onDelete={() => handleDeleteEmomBlock(block.id)}
-              >
-                <SortableContext
-                  items={blockItems}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {blockCards.map((card) => (
-                    <SortableCard
-                      key={card.id}
-                      card={card}
-                      containerId={blockId}
-                    >
-                      {isExerciseCard(card) ? (
-                        <ExerciseCard
-                          card={card}
-                          onChange={(updatedCard) =>
-                            handleCardUpdate(card.id, updatedCard)
-                          }
-                          onDuplicate={(updatedCard) =>
-                            handleCardDuplicate(card.id, updatedCard)
-                          }
-                          onDelete={handleCardDelete}
-                        />
-                      ) : isRestCard(card) ? (
-                        <RestCard card={card} onDelete={handleCardDelete} />
-                      ) : null}
-                    </SortableCard>
-                  ))}
-                </SortableContext>
-              </EMOMBlockCard>
-            )
-          })}
-
-          {orderedAmrapBlocks.map((block) => {
-            const blockId = normalizeId(block.id)
-            const blockCards = blockCardsMap[blockId] || []
-            const blockItems = blockCards.map((card) => card.id)
-
-            return (
-              <AMRAPBlockCard
-                key={block.id}
-                block={block}
-                isEmpty={blockCards.length === 0}
-                onDelete={() => handleDeleteAmrapBlock(block.id)}
-                onEditTime={() => handleEditBlockTime(block.id)}
-              >
-                <SortableContext
-                  items={blockItems}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {blockCards.map((card) => (
-                    <SortableCard
-                      key={card.id}
-                      card={card}
-                      containerId={blockId}
-                    >
-                      {isExerciseCard(card) ? (
-                        <ExerciseCard
-                          card={card}
-                          onChange={(updatedCard) =>
-                            handleCardUpdate(card.id, updatedCard)
-                          }
-                          onDuplicate={(updatedCard) =>
-                            handleCardDuplicate(card.id, updatedCard)
-                          }
-                          onDelete={handleCardDelete}
-                        />
-                      ) : isRestCard(card) ? (
-                        <RestCard card={card} onDelete={handleCardDelete} />
-                      ) : null}
-                    </SortableCard>
-                  ))}
-                </SortableContext>
-              </AMRAPBlockCard>
-            )
-          })}
-
-          <SortableContext items={rootItems} strategy={verticalListSortingStrategy}>
-            <div
-              ref={setRootDropRef}
-              className={cn(
-                "space-y-3 rounded-2xl",
-                isOverRoot && "ring-2 ring-primary/40"
-              )}
-            >
-              {rootCards.map((card) => (
-                <SortableCard
-                  key={card.id}
-                  card={card}
-                  containerId={ROOT_CONTAINER_ID}
-                >
-                  {isExerciseCard(card) ? (
-                    <ExerciseCard
-                      card={card}
-                      onChange={(updatedCard) => handleCardUpdate(card.id, updatedCard)}
-                      onDuplicate={(updatedCard) =>
-                        handleCardDuplicate(card.id, updatedCard)
-                      }
-                      onDelete={handleCardDelete}
-                    />
-                  ) : isRestCard(card) ? (
-                    <RestCard card={card} onDelete={handleCardDelete} />
-                  ) : null}
-                </SortableCard>
-              ))}
-            </div>
-          </SortableContext>
-
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           {showAddButton && (
-            <AddMenuButton
-              isOpen={isAddMenuOpen}
-              onOpenChange={setIsAddMenuOpen}
-              onAddMove={handleAddMove}
-              onAddAMRAP={handleAddAMRAP}
-              onAddEMOM={handleAddEMOM}
-              onAddRest={handleAddRest}
-            />
+            <div className="order-1 lg:order-2 lg:sticky lg:top-24 lg:w-44 xl:w-56">
+              <AddMenuButton
+                isOpen={isAddMenuOpen}
+                onOpenChange={setIsAddMenuOpen}
+                onAddMove={handleAddMove}
+                onAddAMRAP={handleAddAMRAP}
+                onAddEMOM={handleAddEMOM}
+                onAddRest={handleAddRest}
+              />
+            </div>
           )}
+
+          <div className="order-2 flex-1 space-y-4 lg:order-1">
+            {orderedEmomBlocks.map((block) => {
+              const blockId = normalizeId(block.id)
+              const blockCards = blockCardsMap[blockId] || []
+              const blockItems = blockCards.map((card) => card.id)
+
+              return (
+                <EMOMBlockCard
+                  key={block.id}
+                  block={block}
+                  isEmpty={blockCards.length === 0}
+                  onDelete={() => handleDeleteEmomBlock(block.id)}
+                >
+                  <SortableContext
+                    items={blockItems}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {blockCards.map((card) => (
+                      <SortableCard
+                        key={card.id}
+                        card={card}
+                        containerId={blockId}
+                      >
+                        {isExerciseCard(card) ? (
+                          <ExerciseCard
+                            card={card}
+                            onChange={(updatedCard) =>
+                              handleCardUpdate(card.id, updatedCard)
+                            }
+                            onDuplicate={(updatedCard) =>
+                              handleCardDuplicate(card.id, updatedCard)
+                            }
+                            onDelete={handleCardDelete}
+                          />
+                        ) : isRestCard(card) ? (
+                          <RestCard card={card} onDelete={handleCardDelete} />
+                        ) : null}
+                      </SortableCard>
+                    ))}
+                  </SortableContext>
+                </EMOMBlockCard>
+              )
+            })}
+
+            {orderedAmrapBlocks.map((block) => {
+              const blockId = normalizeId(block.id)
+              const blockCards = blockCardsMap[blockId] || []
+              const blockItems = blockCards.map((card) => card.id)
+
+              return (
+                <AMRAPBlockCard
+                  key={block.id}
+                  block={block}
+                  isEmpty={blockCards.length === 0}
+                  onDelete={() => handleDeleteAmrapBlock(block.id)}
+                  onEditTime={() => handleEditBlockTime(block.id)}
+                >
+                  <SortableContext
+                    items={blockItems}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {blockCards.map((card) => (
+                      <SortableCard
+                        key={card.id}
+                        card={card}
+                        containerId={blockId}
+                      >
+                        {isExerciseCard(card) ? (
+                          <ExerciseCard
+                            card={card}
+                            onChange={(updatedCard) =>
+                              handleCardUpdate(card.id, updatedCard)
+                            }
+                            onDuplicate={(updatedCard) =>
+                              handleCardDuplicate(card.id, updatedCard)
+                            }
+                            onDelete={handleCardDelete}
+                          />
+                        ) : isRestCard(card) ? (
+                          <RestCard card={card} onDelete={handleCardDelete} />
+                        ) : null}
+                      </SortableCard>
+                    ))}
+                  </SortableContext>
+                </AMRAPBlockCard>
+              )
+            })}
+
+            <SortableContext items={rootItems} strategy={verticalListSortingStrategy}>
+              <div
+                ref={setRootDropRef}
+                className={cn(
+                  "space-y-3 rounded-2xl",
+                  isOverRoot && "ring-2 ring-primary/40"
+                )}
+              >
+                {rootCards.map((card) => (
+                  <SortableCard
+                    key={card.id}
+                    card={card}
+                    containerId={ROOT_CONTAINER_ID}
+                  >
+                    {isExerciseCard(card) ? (
+                      <ExerciseCard
+                        card={card}
+                        onChange={(updatedCard) => handleCardUpdate(card.id, updatedCard)}
+                        onDuplicate={(updatedCard) =>
+                          handleCardDuplicate(card.id, updatedCard)
+                        }
+                        onDelete={handleCardDelete}
+                      />
+                    ) : isRestCard(card) ? (
+                      <RestCard card={card} onDelete={handleCardDelete} />
+                    ) : null}
+                  </SortableCard>
+                ))}
+              </div>
+            </SortableContext>
+          </div>
         </div>
       </DndContext>
 

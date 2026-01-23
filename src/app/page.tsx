@@ -42,11 +42,16 @@ function PublicHome() {
   ]
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-text-primary">
+    // Force re-render to fix hydration mismatch
+    <div
+      className="relative min-h-screen overflow-hidden bg-transparent text-text-primary"
+      suppressHydrationWarning
+    >
+      {/* Local blobs for Public Home - blending with global background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-28 right-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.05),_transparent_55%)]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col px-6 py-16">
@@ -333,7 +338,7 @@ export default function HomePage() {
     },
     {
       title: "Total Workouts",
-      value: workoutStats.total.toString(), 
+      value: workoutStats.total.toString(),
       icon: Dumbbell,
       color: "text-secondary",
     },
@@ -529,17 +534,15 @@ export default function HomePage() {
                 const Icon = action.icon
                 return (
                   <Link key={index} href={action.href}>
-                    <Card className={`hover:shadow-lg transition-all duration-200 cursor-pointer group ${
-                      action.primary ? 'border-primary/30 bg-primary/10 hover:bg-primary/15' : 'hover:border-border/80'
-                    }`}>
+                    <Card className={`hover:shadow-lg transition-all duration-200 cursor-pointer group ${action.primary ? 'border-primary/30 bg-primary/10 hover:bg-primary/15' : 'hover:border-border/80'
+                      }`}>
                       <CardHeader className="pb-4">
                         <div className="flex items-center space-x-3">
-                          <div 
-                            className={`p-3 rounded-xl transition-colors duration-200 ${
-                              action.primary 
-                                ? 'bg-primary text-primary-foreground group-hover:bg-primary/90' 
-                                : 'bg-surface text-text-secondary group-hover:bg-surface/80'
-                            }`}
+                          <div
+                            className={`p-3 rounded-xl transition-colors duration-200 ${action.primary
+                              ? 'bg-primary text-primary-foreground group-hover:bg-primary/90'
+                              : 'bg-surface text-text-secondary group-hover:bg-surface/80'
+                              }`}
                           >
                             <Icon className="h-5 w-5" />
                           </div>

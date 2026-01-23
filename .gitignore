@@ -33,7 +33,11 @@ tmp-*.log
 *.log
 build-log*.txt
 build.log
+build-output.txt
 deployment.log
+task-logs*.json
+task-logs*.txt
+nul
 
 # Temporary config/policy files
 cert-validation.json
@@ -45,6 +49,9 @@ tmp-iam-policy.json
 # TypeScript build artifacts
 tsconfig.temp.json
 tsconfig.tsbuildinfo
+
+# Local database artifacts
+prisma/**/*.db
 
 # Stripe configuration scripts with live keys (but not templates)
 scripts/update-stripe-to-live.ps1

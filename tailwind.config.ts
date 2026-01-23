@@ -33,7 +33,7 @@ const config: Config = {
         },
         primary: {
           DEFAULT: "var(--primary)",
-          foreground: "#000000",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
           DEFAULT: "var(--secondary)",
@@ -48,6 +48,10 @@ const config: Config = {
         muted: {
           DEFAULT: "var(--muted)",
           foreground: "var(--text-secondary)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
         },
         accent: {
           DEFAULT: "var(--accent)",

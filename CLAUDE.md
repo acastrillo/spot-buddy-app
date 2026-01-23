@@ -4,102 +4,122 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Kinex Fit is a fitness tracking web app with AI-powered workout features. It uses Next.js 15 (App Router) with React 19, DynamoDB for persistence, AWS Bedrock (Claude) for AI features, and Stripe for subscriptions.
+Kinex Fit is an AI-powered fitness application built with Next.js 15, TypeScript, and AWS infrastructure. It provides workout tracking, AI-assisted workout generation via AWS Bedrock (Claude models), progress analytics, and Stripe-based subscriptions.
 
-## Development Commands
+## Common Commands
 
 ```bash
-# Development server with Turbopack
-npm run dev
+npm run dev          # Start dev server with Turbopack (port 3000)
+npm run build        # Build for production
+npm run lint         # Run ESLint
+npm run db:push      # Push Prisma schema to SQLite (local dev)
+npm run db:generate  # Generate Prisma client
+```
 
-# Production build
-npm run build
-
-# Linting
-npm run lint
-
-# Playwright tests (E2E)
-npx playwright test
-npx playwright test --project=chromium  # Single browser
-
-# Generate Prisma client (if schema changes)
-npm run db:generate
+Testing with Playwright:
+```bash
+npx playwright test                    # Run all E2E tests
+npx playwright test tests/auth-flow.spec.ts  # Run specific test file
 ```
 
 ## Architecture
 
-### Data Layer (DynamoDB-First)
-- **Primary data source**: DynamoDB (not Prisma/SQLite in production)
-- **Tables**: `spotter-users`, `spotter-workouts`, `spotter-body-metrics`, `spotter-workout-completions`, `spotter-webhook-events`, `spotter-audit-logs`
-- **Key file**: `src/lib/dynamodb.ts` - all DynamoDB operations (`dynamoDBUsers`, `dynamoDBWorkouts`, etc.)
-- Prisma exists but is secondary; DynamoDB is the source of truth
+### Tech Stack
+- **Frontend**: Next.js 15 App Router, React 19, Tailwind CSS, shadcn/ui (Radix primitives)
+- **Backend**: Next.js API Routes, TypeScript strict mode
+- **Database**: SQLite + Prisma (local dev), DynamoDB (production)
+- **Auth**: NextAuth.js with Google, Facebook, and credentials providers
+- **AI**: AWS Bedrock (Claude Opus 4.5, Sonnet 4.5, Haiku 4.5)
+- **Payments**: Stripe subscriptions with webhook handling
+- **State**: Zustand for client state (`useAuthStore`)
 
-### Authentication
-- NextAuth v4 with JWT sessions (30-day max age, 5-minute refresh)
-- Providers: Google, Facebook, Email/Password credentials
-- **Auth config**: `src/lib/auth-options.ts`
-- Session augmented with subscription tier, quotas, onboarding status
-- Type declarations in `src/types/next-auth.d.ts`
+### Directory Structure
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes (REST endpoints)
+│   │   ├── ai/           # AI generation endpoints
+│   │   ├── auth/         # NextAuth handlers
+│   │   ├── stripe/       # Payment endpoints
+│   │   ├── workouts/     # Workout CRUD
+│   │   └── admin/        # Admin endpoints
+│   └── [routes]/         # Page components
+├── components/
+│   ├── ui/               # shadcn UI components
+│   └── [feature]/        # Feature-specific components
+├── lib/                   # Server utilities
+│   ├── ai/               # Bedrock client, generators
+│   ├── dynamodb.ts       # DynamoDB operations
+│   ├── auth-options.ts   # NextAuth configuration
+│   ├── api-auth.ts       # API auth middleware
+│   ├── subscription-tiers.ts  # Tier definitions
+│   └── smartWorkoutParser.ts  # Workout text parsing
+└── types/                 # TypeScript definitions
+```
+
+### Key Patterns
+
+**API Route Authentication**:
+```typescript
+import { getAuthenticatedUserId } from "@/lib/api-auth";
+
+export async function GET(request: NextRequest) {
+  const auth = await getAuthenticatedUserId();
+  if ('error' in auth) return auth.error;
+  const { userId } = auth;
+  // ... rest of handler
+}
+```
+
+**Database Access** (production uses DynamoDB wrappers):
+```typescript
+import { dynamoDBUsers, dynamoDBWorkouts } from "@/lib/dynamodb";
+
+await dynamoDBWorkouts.list(userId, limit);
+await dynamoDBUsers.get(userId);
+```
+
+**Rate Limiting**:
+```typescript
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const rateLimit = await checkRateLimit(userId, 'api:read');
+if (!rateLimit.success) { /* return 429 */ }
+```
 
 ### Subscription Tiers
-- **Tiers**: `free`, `core`, `pro`, `elite` (4-tier system)
-- Legacy "starter" tier maps to "core" via `normalizeSubscriptionTier()`
-- **Config file**: `src/lib/subscription-tiers.ts`
-- Stripe integration for payments via `src/lib/stripe-server.ts`
+- **Free**: 3 workouts/week, 1 AI request/month, 90-day history
+- **Core** ($8.99/mo): Unlimited workouts, 10 AI requests/month
+- **Pro** ($13.99/mo): 30 AI requests/month, unlimited imports
+- **Elite** ($19.99/mo): 50 AI requests/month, priority support
 
-### AI Features (Bedrock)
-- Claude models via AWS Bedrock: Opus, Sonnet (default), Haiku
-- **Client**: `src/lib/ai/bedrock-client.ts`
-- Features: workout generation, enhancement, timer suggestions
-- Prompt caching and cost tracking built-in
-- Usage tracked per user with monthly limits by tier
+### Path Alias
+Use `@/*` which maps to `./src/*` (configured in tsconfig.json).
 
-### Timer System
-- Platform-agnostic timer engine (designed for React Native portability)
-- **Types**: `src/timers/types.ts` - EMOM, AMRAP, Interval, Tabata
-- **Engine**: `src/timers/engine.ts`
-- Timer configs can be attached to workouts or blocks
+## Key Files
 
-### Workout Card System
-- Workouts display as card sequences (exercises + rest periods)
-- **Types**: `src/types/workout-card.ts` - `ExerciseCard`, `RestCard`
-- Supports AMRAP/EMOM blocks with `amrapBlocks`/`emomBlocks` arrays
-- Card transformer: `src/lib/workout/card-transformer.ts`
+- `src/lib/auth-options.ts` - NextAuth providers and callbacks
+- `src/lib/dynamodb.ts` - All DynamoDB table operations
+- `src/lib/ai/bedrock-client.ts` - Claude model invocation
+- `src/lib/smartWorkoutParser.ts` - Heuristic workout text parser
+- `src/middleware.ts` - Security headers (CSP, HSTS, etc.)
+- `src/lib/subscription-tiers.ts` - Tier definitions and limits
 
-### Component Patterns
-- UI components in `src/components/ui/` (shadcn/ui based)
-- Feature components organized by domain: `workout/`, `timer/`, `admin/`, `ai/`
-- Session provider wraps app in `src/components/providers/session-provider.tsx`
+## Documentation
 
-## Key Type Definitions
+Detailed documentation is in `docs/`:
+- `docs/COMPREHENSIVE-GUIDE.md` - Full project overview
+- `docs/ARCHITECTURE.md` - System design with diagrams
+- `docs/DATABASE.md` - DynamoDB schema and patterns
+- `docs/AI-INTEGRATION.md` - Bedrock setup and usage
+- `docs/AUTHENTICATION.md` - NextAuth deep dive
 
-- `DynamoDBUser` - User model with subscription, quotas, training profile
-- `DynamoDBWorkout` - Workout with exercises, scheduling, AI enhancements
-- `WorkoutCard`, `ExerciseCard`, `RestCard` - Card-based workout representation
-- `TimerParams` - Discriminated union for timer configurations
-- `SubscriptionTier` - `'free' | 'core' | 'pro' | 'elite'`
+## Environment Variables
 
-## API Routes
-
-API routes follow Next.js App Router conventions under `src/app/api/`:
-- `/api/workouts/[id]` - CRUD for individual workouts
-- `/api/ai/*` - AI endpoints (generate, enhance, test)
-- `/api/stripe/*` - Checkout, portal, webhooks
-- `/api/admin/*` - Admin operations (users, logs, settings)
-
-## Environment Configuration
-
-Copy `.env.example` to `.env.local`. Key variables:
-- `AUTH_SECRET` - Required for NextAuth
-- `DYNAMODB_*` - Table names
-- `AWS_REGION` / `AWS_BEDROCK_REGION` - AWS configuration
-- `STRIPE_*` - Stripe keys and price IDs
+Key variables needed (see `.env.example`):
+- `AUTH_SECRET` - NextAuth signing secret
+- `GOOGLE_CLIENT_ID/SECRET` - OAuth
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` - Payments
+- `AWS_REGION`, `AWS_BEDROCK_REGION` - AWS services
+- `DYNAMODB_*_TABLE` - Table names
 - `UPSTASH_REDIS_*` - Rate limiting
-
-## Path Alias
-
-Use `@/*` for imports from `src/*`:
-```typescript
-import { dynamoDBUsers } from '@/lib/dynamodb';
-import { Button } from '@/components/ui/button';
-```

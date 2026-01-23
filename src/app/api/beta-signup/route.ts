@@ -11,6 +11,8 @@ const betaSignupSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
   lastName: z.string().trim().max(100).optional(),
   email: z.string().trim().email("Invalid email address").max(254),
+  referredBy: z.string().trim().max(100).optional(),
+  status: z.enum(["beta", "waitlist"]).optional().default("beta"),
 })
 
 export async function POST(req: NextRequest) {
@@ -47,14 +49,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { firstName, lastName, email } = parsed.data
+    const { firstName, lastName, email, referredBy, status } = parsed.data
 
-    console.log("[BetaSignup] Request received:", { email: maskEmail(email) })
+    console.log("[BetaSignup] Request received:", {
+      email: maskEmail(email),
+      referredBy: referredBy || "none",
+      status
+    })
 
     await sendBetaSignupAlert({
       firstName,
       lastName,
       email,
+      referredBy,
+      status,
       createdAt: new Date().toISOString(),
     })
 

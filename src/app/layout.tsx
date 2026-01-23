@@ -105,8 +105,14 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: chunkErrorHandler }} />
       </head>
       <body
-        className="antialiased"
+        className="antialiased relative min-h-screen bg-background text-text-primary overflow-x-hidden selection:bg-primary selection:text-white"
       >
+        {/* Global PRO MAX Background Effects */}
+        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-primary/10 rounded-full blur-[100px] mix-blend-screen opacity-50 animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-blue-500/5 rounded-full blur-[100px] mix-blend-screen opacity-50" />
+        </div>
+
         <AuthSessionProvider>
           <VersionChecker />
           {children}
