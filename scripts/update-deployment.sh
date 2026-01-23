@@ -17,7 +17,7 @@ ACCOUNT_ID="920013187591"
 ECR_REPO="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/spotter-app"
 CLUSTER_NAME="spotter-cluster"
 SERVICE_NAME="spotter-web-service"
-APP_URL="https://spotter.cannashieldct.com"
+APP_URL="https://kinexfit.com"
 
 echo -e "${GREEN}🚀 Starting Kinex Fit deployment to AWS ECS...${NC}"
 echo ""
